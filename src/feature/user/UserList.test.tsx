@@ -142,22 +142,6 @@ describe("UserList", () => {
     });
   });
 
-  it("renders Edit menu item enabled for deleted users (opens Restore dialog)", async () => {
-    const user = userEvent.setup();
-    renderUserList();
-
-    await waitFor(() => {
-      expect(screen.getByText("Trashed User")).toBeInTheDocument();
-    });
-
-    const menuButtons = screen.getAllByRole("button", { name: /actions/i });
-    // Trashed user is the 5th row (index 4)
-    await user.click(menuButtons[4]);
-    const editItem = await screen.findByRole("menuitem", { name: /edit/i });
-    expect(editItem).toBeInTheDocument();
-    expect(editItem).not.toHaveAttribute("data-disabled");
-  });
-
   it("shows actions dropdown menu for each row", async () => {
     renderUserList();
     await waitFor(() =>
@@ -196,7 +180,7 @@ describe("UserList", () => {
     const menuButtons = screen.getAllByRole("button", { name: /actions/i });
     await user.click(menuButtons[2]);
 
-    await screen.findByRole("menuitem", { name: /edit/i });
+    await screen.findByRole("menuitem", { name: /view/i });
     expect(screen.queryByText(/Transfer Super Admin/i)).not.toBeInTheDocument();
   });
 
@@ -214,7 +198,7 @@ describe("UserList", () => {
     const menuButtons = screen.getAllByRole("button", { name: /actions/i });
     await user.click(menuButtons[0]);
 
-    await screen.findByRole("menuitem", { name: /edit/i });
+    await screen.findByRole("menuitem", { name: /view/i });
     expect(screen.queryByText(/Transfer Super Admin/i)).not.toBeInTheDocument();
   });
 
@@ -235,13 +219,6 @@ describe("UserList", () => {
     renderUserList();
     await waitFor(() => expect(screen.getByText("Jane Doe")).toBeInTheDocument());
     expect(screen.getByText("holder@credchain.demo")).toBeInTheDocument();
-  });
-
-  it("renders phone placeholder when phone data is absent", async () => {
-    renderUserList();
-    await waitFor(() => expect(screen.getByText("Jane Doe")).toBeInTheDocument());
-    const row = screen.getByText("Jane Doe").closest("tr");
-    expect(row?.textContent).toContain("—");
   });
 
   it("renders wallet address in each row", async () => {
@@ -298,19 +275,6 @@ describe("UserList", () => {
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
   });
 
-  it("hides Edit menu item for super admin row when current user is admin", async () => {
-    const user = userEvent.setup();
-    renderUserList();
-
-    await waitFor(() => expect(screen.getAllByText("Super Admin").length).toBeGreaterThan(0));
-
-    const menuButtons = screen.getAllByRole("button", { name: /actions/i });
-    await user.click(menuButtons[0]);
-
-    await screen.findByRole("menuitem", { name: /view/i });
-    expect(screen.queryByRole("menuitem", { name: /edit/i })).not.toBeInTheDocument();
-  });
-
   it("shows Edit menu item for super admin row when current user is super admin", async () => {
     useStore.setState({
       user: { ...mockUsers[0] },
@@ -325,7 +289,7 @@ describe("UserList", () => {
     const menuButtons = screen.getAllByRole("button", { name: /actions/i });
     await user.click(menuButtons[0]);
 
-    expect(await screen.findByRole("menuitem", { name: /edit/i })).toBeInTheDocument();
+    expect(await screen.findByRole("menuitem", { name: /view/i })).toBeInTheDocument();
   });
 
   it("hides Edit and Delete options for issuer role on live users", async () => {
@@ -364,15 +328,15 @@ describe("UserList", () => {
     expect(screen.queryByRole("menuitem", { name: /restore/i })).not.toBeInTheDocument();
   });
 
-  it("shows Edit, Delete, and Restore options for admin role", async () => {
+  it("shows Delete and Restore options for admin role but never Edit", async () => {
     const ue = userEvent.setup();
     renderUserList();
     await waitFor(() => expect(screen.getByText("Default Issuer")).toBeInTheDocument());
 
     const menuButtons = screen.getAllByRole("button", { name: /actions/i });
     await ue.click(menuButtons[2]);
-    expect(await screen.findByRole("menuitem", { name: /edit/i })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /delete/i })).toBeInTheDocument();
+    expect(await screen.findByRole("menuitem", { name: /delete/i })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /edit/i })).not.toBeInTheDocument();
 
     await ue.keyboard("{Escape}");
     await waitFor(() => expect(screen.getByText("Trashed User")).toBeInTheDocument());
@@ -380,6 +344,7 @@ describe("UserList", () => {
     const menuButtons2 = screen.getAllByRole("button", { name: /actions/i });
     await ue.click(menuButtons2[4]);
     expect(await screen.findByRole("menuitem", { name: /restore/i })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /edit/i })).not.toBeInTheDocument();
   });
 
   it("navigates to user detail on View click", async () => {
@@ -418,5 +383,37 @@ describe("UserList", () => {
     await ue.click(menuButtons[3]);
 
     expect(await screen.findByRole("menuitem", { name: /delete/i })).toBeInTheDocument();
+  });
+
+  it("renders a Joined column header and joined years in rows", async () => {
+    renderUserList();
+    await waitFor(() => expect(screen.getByText("Jane Doe")).toBeInTheDocument());
+
+    expect(screen.getByRole("columnheader", { name: /joined/i })).toBeInTheDocument();
+    expect(screen.getByText("2022")).toBeInTheDocument();
+    expect(screen.getByText("2023")).toBeInTheDocument();
+  });
+
+  it("renders an em dash placeholder when joined_year is null", async () => {
+    renderUserList();
+    await waitFor(() => expect(screen.getAllByText("Super Admin").length).toBeGreaterThan(0));
+    const joinedCells = screen.getAllByRole("cell").filter((c) => c.textContent === "—");
+    expect(joinedCells.length).toBeGreaterThan(0);
+  });
+
+  it("selecting a unit filter updates the URL with unit_id param", async () => {
+    const user = userEvent.setup();
+    renderUserList();
+    await screen.findByText("User Directory");
+
+    await user.click(screen.getByRole("button", { name: /unit \(includes sub-units\): all/i }));
+    const unitItem = await screen.findByRole("menuitem", {
+      name: /computer science department/i,
+    });
+    await user.click(unitItem);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location-search").textContent).toContain("unit=unit_02");
+    });
   });
 });

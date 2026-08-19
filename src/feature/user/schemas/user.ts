@@ -10,6 +10,17 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const optionalEmptyToNull = (schema: z.ZodString) =>
   schema.optional().or(z.literal("").transform(() => undefined));
 
+const joinedYearSchema = z.coerce
+  .number()
+  .int()
+  .min(1900, "zod.user.joinedYearRange")
+  .max(2200, "zod.user.joinedYearRange");
+
+const optionalJoinedYear = z.preprocess(
+  (val) => (val === "" || val === undefined ? undefined : val),
+  joinedYearSchema.nullable().optional(),
+);
+
 /**
  * For update payloads where a field can be:
  * - a valid string  → keep
@@ -39,7 +50,8 @@ export const genderSchema = z.enum(["male", "female"]);
 const baseUserFields = {
   name: z.string().min(1, "zod.user.nameRequired").max(256, "zod.user.nameTooLong"),
   number: nullableOptionalEmptyToUndefined(z.string().max(256, "zod.user.numberTooLong")),
-  phone_number: optionalEmptyToNull(phoneSchema),
+  unit_id: nullableOptionalEmptyToUndefined(z.string().max(26, "zod.user.unitIdTooLong")),
+  joined_year: optionalJoinedYear,
   email: z
     .string()
     .min(1, "zod.user.emailRequired")
@@ -69,7 +81,8 @@ export const userUpdateSchema = z.object({
   id: z.string().min(1, "zod.user.idRequired"),
   name: z.string().min(1, "zod.user.nameRequired").max(256, "zod.user.nameTooLong").optional(),
   number: nullableOptionalEmptyToUndefined(z.string().max(256, "zod.user.numberTooLong")),
-  phone_number: nullableOptionalEmptyToUndefined(phoneSchema),
+  unit_id: nullableOptionalEmptyToUndefined(z.string().max(26, "zod.user.unitIdTooLong")),
+  joined_year: optionalJoinedYear,
   birth_date: nullableOptionalEmptyToUndefined(birthDateSchema),
   gender: genderSchema.nullable().optional(),
   meta: metaSchema.nullable().optional(),
@@ -88,11 +101,11 @@ export const userBatchUpdateSchema = z.object({
 export type UserBatchUpdateInput = z.infer<typeof userBatchUpdateSchema>;
 
 export const userBatchUpdateRoleSchema = z.object({
-  users: z
+  user_roles: z
     .array(
       z.object({
-        id: z.string().min(1, "zod.user.idRequired"),
-        role: z.enum([Role.HOLDER, Role.ISSUER, Role.ADMIN], {
+        user_id: z.string().min(1, "zod.user.idRequired"),
+        role: z.enum([Role.HOLDER, Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN], {
           message: "zod.user.roleRequired",
         }),
       }),
@@ -135,11 +148,24 @@ export const userInlineEditFormSchema = userUpdateSchema
 
 export type UserInlineEditFormInput = z.infer<typeof userInlineEditFormSchema>;
 
+export const userDetailEditSchema = z.object({
+  name: z.string().min(1, "zod.user.nameRequired").max(256, "zod.user.nameTooLong").optional(),
+  number: nullableOptionalEmptyToUndefined(z.string().max(256, "zod.user.numberTooLong")),
+  unit_id: nullableOptionalEmptyToUndefined(z.string().max(26, "zod.user.unitIdTooLong")),
+  joined_year: optionalJoinedYear,
+  birth_date: nullableOptionalEmptyToUndefined(birthDateSchema),
+  gender: genderSchema.nullable().optional(),
+  meta_entries: metaEntriesSchema.optional(),
+});
+
+export type UserDetailEditInput = z.infer<typeof userDetailEditSchema>;
+
 export function defaultUserStoreRow(): UserStoreInput {
   return {
     name: "",
     number: undefined,
-    phone_number: undefined,
+    unit_id: undefined,
+    joined_year: undefined,
     email: "",
     birth_date: undefined,
     gender: undefined,
@@ -164,7 +190,8 @@ export function defaultUserStoreFormRow(): UserStoreFormInput {
   return {
     name: "",
     number: undefined,
-    phone_number: undefined,
+    unit_id: undefined,
+    joined_year: undefined,
     email: "",
     birth_date: undefined,
     gender: undefined,

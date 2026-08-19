@@ -6,63 +6,12 @@ import {
   userBatchStoreSchema,
   userBatchUpdateRoleSchema,
   userBatchUpdateSchema,
+  userDetailEditSchema,
   userSelfEmailSchema,
   userSelfProfileSchema,
   userStoreSchema,
   userUpdateSchema,
 } from "./user";
-
-describe("userStoreSchema - phone validation (strictE164)", () => {
-  it("accepts valid international phone numbers", () => {
-    const result = userStoreSchema.safeParse({
-      name: "Jane Doe",
-      email: "jane@example.com",
-      phone_number: "+6281234567890",
-      role: Role.HOLDER,
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects phone without + prefix", () => {
-    const result = userStoreSchema.safeParse({
-      name: "Jane",
-      email: "jane@example.com",
-      phone_number: "6281234567890",
-      role: Role.HOLDER,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects phone starting with +0", () => {
-    const result = userStoreSchema.safeParse({
-      name: "Jane",
-      email: "jane@example.com",
-      phone_number: "+0281234567890",
-      role: Role.HOLDER,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects phone with letters", () => {
-    const result = userStoreSchema.safeParse({
-      name: "Jane",
-      email: "jane@example.com",
-      phone_number: "+62812abc4567",
-      role: Role.HOLDER,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("treats empty phone string as undefined (optional)", () => {
-    const result = userStoreSchema.safeParse({
-      name: "Jane",
-      email: "jane@example.com",
-      phone_number: "",
-      role: Role.HOLDER,
-    });
-    expect(result.success).toBe(true);
-  });
-});
 
 describe("userStoreSchema - email validation", () => {
   it("accepts valid emails", () => {
@@ -174,6 +123,90 @@ describe("userStoreSchema - role validation", () => {
       role: Role.SUPER_ADMIN,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("userStoreSchema - unit_id and joined_year (D2)", () => {
+  const baseValid = {
+    name: "Jane",
+    email: "jane@example.com",
+    role: Role.HOLDER,
+  };
+
+  it("accepts absent unit_id and joined_year", () => {
+    expect(userStoreSchema.safeParse(baseValid).success).toBe(true);
+  });
+
+  it("accepts unit_id up to 26 chars", () => {
+    expect(
+      userStoreSchema.safeParse({ ...baseValid, unit_id: "unit_0123456789abcdef" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects unit_id longer than 26 chars", () => {
+    const result = userStoreSchema.safeParse({ ...baseValid, unit_id: "x".repeat(27) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.user.unitIdTooLong");
+    }
+  });
+
+  it("treats empty unit_id as undefined", () => {
+    const result = userStoreSchema.safeParse({ ...baseValid, unit_id: "" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.unit_id).toBeUndefined();
+  });
+
+  it("accepts joined_year within 1900-2200", () => {
+    expect(userStoreSchema.safeParse({ ...baseValid, joined_year: 2024 }).success).toBe(true);
+    expect(userStoreSchema.safeParse({ ...baseValid, joined_year: 1900 }).success).toBe(true);
+    expect(userStoreSchema.safeParse({ ...baseValid, joined_year: 2200 }).success).toBe(true);
+  });
+
+  it("rejects joined_year below 1900", () => {
+    const result = userStoreSchema.safeParse({ ...baseValid, joined_year: 1899 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.user.joinedYearRange");
+    }
+  });
+
+  it("rejects joined_year above 2200", () => {
+    const result = userStoreSchema.safeParse({ ...baseValid, joined_year: 2201 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.user.joinedYearRange");
+    }
+  });
+
+  it("rejects non-integer joined_year", () => {
+    const result = userStoreSchema.safeParse({ ...baseValid, joined_year: 2024.5 });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("userStoreSchema - phone is removed (D2)", () => {
+  const baseValid = {
+    name: "Jane",
+    email: "jane@example.com",
+    role: Role.HOLDER,
+  };
+
+  it("strips phone_number from the parsed output", () => {
+    const result = userStoreSchema.safeParse({
+      ...baseValid,
+      phone_number: "+6281234567890",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect("phone_number" in result.data).toBe(false);
+  });
+
+  it("does not accept a phone_number key", () => {
+    const result = userStoreSchema.safeParse({
+      ...baseValid,
+      phone_number: "not-a-phone",
+    });
+    expect(result.success).toBe(true);
   });
 });
 
@@ -301,36 +334,6 @@ describe("userUpdateSchema gender field", () => {
 describe("userUpdateSchema - optional fields empty-string handling", () => {
   const baseValid = { id: "u1" };
 
-  describe("phone_number", () => {
-    it("accepts undefined (no change)", () => {
-      expect(userUpdateSchema.safeParse(baseValid).success).toBe(true);
-    });
-
-    it("accepts null (clear)", () => {
-      expect(userUpdateSchema.safeParse({ ...baseValid, phone_number: null }).success).toBe(true);
-    });
-
-    it("treats empty string as undefined (no validation error)", () => {
-      const result = userUpdateSchema.safeParse({ ...baseValid, phone_number: "" });
-      expect(result.success).toBe(true);
-      if (result.success) expect(result.data.phone_number).toBeUndefined();
-    });
-
-    it("accepts valid E.164 phone", () => {
-      expect(
-        userUpdateSchema.safeParse({ ...baseValid, phone_number: "+6281234567890" }).success,
-      ).toBe(true);
-    });
-
-    it("rejects invalid phone format (non-empty)", () => {
-      const result = userUpdateSchema.safeParse({ ...baseValid, phone_number: "08123" });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toBe("zod.user.phoneFormat");
-      }
-    });
-  });
-
   describe("birth_date", () => {
     it("accepts undefined", () => {
       expect(userUpdateSchema.safeParse(baseValid).success).toBe(true);
@@ -423,6 +426,58 @@ describe("userUpdateSchema - optional fields empty-string handling", () => {
   });
 });
 
+describe("userUpdateSchema - unit_id and joined_year (D2)", () => {
+  const baseValid = { id: "u1" };
+
+  it("accepts unit_id null (clear)", () => {
+    expect(userUpdateSchema.safeParse({ ...baseValid, unit_id: null }).success).toBe(true);
+  });
+
+  it("accepts unit_id up to 26 chars", () => {
+    expect(
+      userUpdateSchema.safeParse({ ...baseValid, unit_id: "unit_0123456789abcdef" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects unit_id longer than 26 chars", () => {
+    const result = userUpdateSchema.safeParse({ ...baseValid, unit_id: "x".repeat(27) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.user.unitIdTooLong");
+    }
+  });
+
+  it("treats empty unit_id as undefined", () => {
+    const result = userUpdateSchema.safeParse({ ...baseValid, unit_id: "" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.unit_id).toBeUndefined();
+  });
+
+  it("accepts joined_year null (clear) and valid values", () => {
+    expect(userUpdateSchema.safeParse({ ...baseValid, joined_year: null }).success).toBe(true);
+    expect(userUpdateSchema.safeParse({ ...baseValid, joined_year: 2024 }).success).toBe(true);
+  });
+
+  it("rejects joined_year out of range", () => {
+    const result = userUpdateSchema.safeParse({ ...baseValid, joined_year: 1899 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.user.joinedYearRange");
+    }
+  });
+});
+
+describe("userUpdateSchema - phone is removed (D2)", () => {
+  it("strips phone_number from parsed output", () => {
+    const result = userUpdateSchema.safeParse({
+      id: "u1",
+      phone_number: "+6281234567890",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect("phone_number" in result.data).toBe(false);
+  });
+});
+
 describe("userStoreSchema - error messages are i18n keys", () => {
   it("name required uses i18n key", () => {
     const result = userStoreSchema.safeParse({
@@ -446,19 +501,6 @@ describe("userStoreSchema - error messages are i18n keys", () => {
     if (!result.success) {
       const emailIssue = result.error.issues.find((i) => i.path.includes("email"));
       expect(emailIssue?.message).toBe("zod.user.emailInvalid");
-    }
-  });
-
-  it("phone format uses i18n key", () => {
-    const result = userStoreSchema.safeParse({
-      name: "Jane",
-      email: "a@b.com",
-      role: Role.HOLDER,
-      phone_number: "08123",
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toBe("zod.user.phoneFormat");
     }
   });
 
@@ -525,10 +567,10 @@ describe("userBatchUpdateSchema", () => {
   });
 });
 
-describe("userBatchUpdateRoleSchema", () => {
-  it("rejects empty inner id with i18n key", () => {
+describe("userBatchUpdateRoleSchema (D2 - user_roles body)", () => {
+  it("rejects empty user_id with i18n key", () => {
     const result = userBatchUpdateRoleSchema.safeParse({
-      users: [{ id: "", role: Role.HOLDER }],
+      user_roles: [{ user_id: "", role: Role.HOLDER }],
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -538,7 +580,7 @@ describe("userBatchUpdateRoleSchema", () => {
 
   it("rejects invalid role with i18n key", () => {
     const result = userBatchUpdateRoleSchema.safeParse({
-      users: [{ id: "u1", role: "bogus" }],
+      user_roles: [{ user_id: "u1", role: "bogus" }],
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -546,8 +588,16 @@ describe("userBatchUpdateRoleSchema", () => {
     }
   });
 
+  it("accepts all four roles including super_admin", () => {
+    for (const role of [Role.HOLDER, Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN]) {
+      expect(
+        userBatchUpdateRoleSchema.safeParse({ user_roles: [{ user_id: "u1", role }] }).success,
+      ).toBe(true);
+    }
+  });
+
   it("rejects empty array with i18n key", () => {
-    const result = userBatchUpdateRoleSchema.safeParse({ users: [] });
+    const result = userBatchUpdateRoleSchema.safeParse({ user_roles: [] });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].message).toBe("zod.batch.minOne");
@@ -555,15 +605,60 @@ describe("userBatchUpdateRoleSchema", () => {
   });
 
   it("rejects more than 100 entries with i18n key", () => {
-    const users = Array.from({ length: 101 }, (_, i) => ({
-      id: `u${i}`,
+    const user_roles = Array.from({ length: 101 }, (_, i) => ({
+      user_id: `u${i}`,
       role: Role.HOLDER,
     }));
-    const result = userBatchUpdateRoleSchema.safeParse({ users });
+    const result = userBatchUpdateRoleSchema.safeParse({ user_roles });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].message).toBe("zod.batch.maxHundred");
     }
+  });
+
+  it("accepts a valid user_roles payload", () => {
+    const result = userBatchUpdateRoleSchema.safeParse({
+      user_roles: [{ user_id: "u1", role: Role.ISSUER }],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("userDetailEditSchema (D2)", () => {
+  it("accepts an empty object (all fields optional)", () => {
+    expect(userDetailEditSchema.safeParse({}).success).toBe(true);
+  });
+
+  it("accepts valid values", () => {
+    const result = userDetailEditSchema.safeParse({
+      name: "Jane",
+      number: "EMP-001",
+      birth_date: "1990-01-01",
+      gender: "female",
+      unit_id: "unit_01",
+      joined_year: 2024,
+      meta_entries: [{ key: "department", value: "Engineering" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects joined_year out of range", () => {
+    const result = userDetailEditSchema.safeParse({ joined_year: 3000 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.user.joinedYearRange");
+    }
+  });
+
+  it("rejects unit_id longer than 26 chars", () => {
+    const result = userDetailEditSchema.safeParse({ unit_id: "x".repeat(27) });
+    expect(result.success).toBe(false);
+  });
+
+  it("treats empty joined_year string as undefined", () => {
+    const result = userDetailEditSchema.safeParse({ joined_year: "" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.joined_year).toBeUndefined();
   });
 });
 

@@ -17,6 +17,7 @@ describe("useUserListParams", () => {
       sort: "-updated_at",
       status: "all",
       role: "all",
+      unit: "",
     });
   });
 
@@ -45,5 +46,25 @@ describe("useUserListParams", () => {
     act(() => result.current.setMany({ sort: "name", status: "deleted_at_" }));
     expect(result.current.params.sort).toBe("name");
     expect(result.current.params.status).toBe("deleted_at_");
+  });
+
+  it("parses unit from URL", () => {
+    const { result } = renderHook(() => useUserListParams(), {
+      wrapper: wrap(["/users?unit=unit_01"]),
+    });
+    expect(result.current.params.unit).toBe("unit_01");
+  });
+
+  it("defaults unit to empty string when absent", () => {
+    const { result } = renderHook(() => useUserListParams(), { wrapper: wrap() });
+    expect(result.current.params.unit).toBe("");
+  });
+
+  it("setParam sets unit and removes it when cleared to default", () => {
+    const { result } = renderHook(() => useUserListParams(), { wrapper: wrap() });
+    act(() => result.current.setParam("unit", "unit_02"));
+    expect(result.current.params.unit).toBe("unit_02");
+    act(() => result.current.setParam("unit", ""));
+    expect(result.current.params.unit).toBe("");
   });
 });

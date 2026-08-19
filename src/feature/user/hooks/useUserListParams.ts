@@ -8,6 +8,7 @@ export interface UserListParams {
   sort: string;
   status: "all" | "deleted_at_" | "deleted_at!_";
   role: RoleFilter;
+  unit: string;
 }
 
 const DEFAULTS: UserListParams = {
@@ -15,6 +16,7 @@ const DEFAULTS: UserListParams = {
   sort: "-updated_at",
   status: "all",
   role: "all",
+  unit: "",
 };
 
 function parseStatus(raw: string | null): "all" | "deleted_at_" | "deleted_at!_" {
@@ -42,6 +44,7 @@ export function useUserListParams() {
     sort: searchParams.get("sort") ?? DEFAULTS.sort,
     status: parseStatus(searchParams.get("status")),
     role: parseRole(searchParams.get("role")),
+    unit: searchParams.get("unit") ?? DEFAULTS.unit,
   };
 
   function setParam<K extends keyof UserListParams>(key: K, value: UserListParams[K]) {

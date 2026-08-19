@@ -19,8 +19,20 @@ const mockCompetencies: ReferenceRow[] = [
 ];
 
 const mockUserUnits: HolderUnitDTO[] = [
-  { id: "unit_01", parent_id: null, name: "Faculty of Engineering", created_at: "2026-01-01T00:00:00Z", updated_at: null },
-  { id: "unit_02", parent_id: "unit_01", name: "Computer Science Department", created_at: "2026-01-01T00:00:00Z", updated_at: null },
+  {
+    id: "unit_01",
+    parent_id: null,
+    name: "Faculty of Engineering",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: null,
+  },
+  {
+    id: "unit_02",
+    parent_id: "unit_01",
+    name: "Computer Science Department",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: null,
+  },
 ];
 
 function paginated<T>(items: T[]): Record<string, unknown> {
@@ -161,6 +173,14 @@ export const handlers = [
     envelope(300700, "User(s) deleted successfully.", { deleted_count: 1 }),
   ),
 
+  http.put("*/api/users/batch", () =>
+    envelope(300800, "User(s) updated successfully.", { updated_count: 1 }),
+  ),
+
+  http.put("*/api/users/batch/role", () =>
+    envelope(300500, "User role(s) updated successfully.", { updated_count: 1 }),
+  ),
+
   http.put("*/api/users/batch/restore", () =>
     envelope(300900, "User(s) restored successfully.", { restored_count: 1 }),
   ),
@@ -191,7 +211,6 @@ export const handlers = [
               id: "usr_01",
               name: "John Doe",
               email: "john@example.com",
-              phone_number: "+6281234567890",
               role: "holder",
               wallet_address: "0x1234567890abcdef1234567890abcdef12345678",
               created_at: "2024-01-01T00:00:00Z",
@@ -202,7 +221,6 @@ export const handlers = [
               id: "usr_02",
               name: "University Admin",
               email: "admin@university.edu",
-              phone_number: "+6281987654321",
               role: "issuer",
               wallet_address: "0xabcdef1234567890abcdef1234567890abcdef12",
               created_at: "2024-01-01T00:00:00Z",
@@ -230,7 +248,6 @@ export const handlers = [
               id: "usr_03",
               name: "Jane Smith",
               email: "jane@company.com",
-              phone_number: "+6281111111111",
               role: "holder",
               wallet_address: "0x1111111111111111111111111111111111111111",
               created_at: "2024-01-01T00:00:00Z",
@@ -241,7 +258,6 @@ export const handlers = [
               id: "usr_02",
               name: "University Admin",
               email: "admin@university.edu",
-              phone_number: "+6281987654321",
               role: "issuer",
               wallet_address: "0xabcdef1234567890abcdef1234567890abcdef12",
               created_at: "2024-01-01T00:00:00Z",
@@ -252,7 +268,6 @@ export const handlers = [
               id: "usr_02",
               name: "University Admin",
               email: "admin@university.edu",
-              phone_number: "+6281987654321",
               role: "issuer",
               wallet_address: "0xabcdef1234567890abcdef1234567890abcdef12",
               created_at: "2024-01-01T00:00:00Z",
@@ -280,7 +295,6 @@ export const handlers = [
               id: "usr_04",
               name: "Bob Wilson",
               email: "bob@example.com",
-              phone_number: "+6282222222222",
               role: "holder",
               wallet_address: "0x2222222222222222222222222222222222222222",
               created_at: "2024-01-01T00:00:00Z",
@@ -291,7 +305,6 @@ export const handlers = [
               id: "usr_02",
               name: "University Admin",
               email: "admin@university.edu",
-              phone_number: "+6281987654321",
               role: "issuer",
               wallet_address: "0xabcdef1234567890abcdef1234567890abcdef12",
               created_at: "2024-01-01T00:00:00Z",
@@ -399,7 +412,6 @@ export const handlers = [
               id: "usr_01",
               name: "John Doe",
               email: "john@example.com",
-              phone_number: "+6281234567890",
               role: "holder",
               wallet_address: "0x1234567890abcdef1234567890abcdef12345678",
               created_at: "2024-01-01T00:00:00Z",
@@ -410,7 +422,6 @@ export const handlers = [
               id: "usr_02",
               name: "University Admin",
               email: "admin@university.edu",
-              phone_number: "+6281987654321",
               role: "issuer",
               wallet_address: "0xabcdef1234567890abcdef1234567890abcdef12",
               created_at: "2024-01-01T00:00:00Z",
@@ -483,7 +494,10 @@ export const handlers = [
   http.put("*/api/credential-types/:id", async ({ request, params }) => {
     const row = mockCredentialTypes.find((r) => r.id === params.id);
     if (!row) {
-      return HttpResponse.json({ code: 400840, message: "Credential type not found." }, { status: 404 });
+      return HttpResponse.json(
+        { code: 400840, message: "Credential type not found." },
+        { status: 404 },
+      );
     }
     const body = (await request.json()) as { name?: string; active?: boolean };
     if (body.name !== undefined) row.name = body.name;
@@ -513,7 +527,10 @@ export const handlers = [
   http.put("*/api/issuer-organizations/:id", async ({ request, params }) => {
     const row = mockIssuerOrganizations.find((r) => r.id === params.id);
     if (!row) {
-      return HttpResponse.json({ code: 400940, message: "Issuer organization not found." }, { status: 404 });
+      return HttpResponse.json(
+        { code: 400940, message: "Issuer organization not found." },
+        { status: 404 },
+      );
     }
     const body = (await request.json()) as { name?: string };
     if (body.name !== undefined) row.name = body.name;
@@ -555,7 +572,9 @@ export const handlers = [
     return envelope(400600, "Competency destroyed", null);
   }),
 
-  http.get("*/api/user-units", () => envelope(301000, "User units retrieved successfully.", mockUserUnits)),
+  http.get("*/api/user-units", () =>
+    envelope(301000, "User units retrieved successfully.", mockUserUnits),
+  ),
 
   http.post("*/api/user-units", async ({ request }) => {
     const body = (await request.json()) as { name?: string; parent_id?: string | null };

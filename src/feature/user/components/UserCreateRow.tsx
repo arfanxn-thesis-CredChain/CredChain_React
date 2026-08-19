@@ -1,7 +1,16 @@
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Briefcase, Calendar, ChevronDown, Hash, Mail, Phone, Trash2, User } from "lucide-react";
+import {
+  Briefcase,
+  Calendar,
+  CalendarClock,
+  ChevronDown,
+  Hash,
+  Mail,
+  Trash2,
+  User,
+} from "lucide-react";
 
 import { Button } from "@ui/button";
 import { Input } from "@ui/input";
@@ -12,6 +21,7 @@ import { useStore } from "@app/store";
 import { cn } from "@shared/lib/cn";
 
 import type { UserBatchStoreFormInput } from "../schemas/user";
+import { useUserUnits } from "../api/useUserUnits";
 import { MetaEditor } from "@shared/components/MetaEditor";
 
 interface UserCreateRowProps {
@@ -25,9 +35,11 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
   const errors = form.formState.errors.users?.[index];
   const role = form.watch(`users.${index}.role`);
   const gender = form.watch(`users.${index}.gender`);
+  const unitId = form.watch(`users.${index}.unit_id`);
   const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
   const currentUser = useStore((s) => s.user);
   const canPromoteToAdmin = canAccess(currentUser?.role, Role.SUPER_ADMIN);
+  const { data: units } = useUserUnits();
 
   const roleOptions = [
     { value: Role.HOLDER, label: t("user.edit.role.holder") },
@@ -72,19 +84,38 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
           />
         </FormField>
 
-        <FormField
-          label={t("user.edit.phone")}
-          hint={t("userCreate.field.phone.hint")}
-          error={errors?.phone_number?.message}
-          optional
-        >
+        <FormField label={t("user.field.unit")} error={errors?.unit_id?.message} optional>
+          <Select
+            value={unitId ?? "__none__"}
+            onValueChange={(value) => {
+              form.setValue(`users.${index}.unit_id`, value === "__none__" ? undefined : value, {
+                shouldValidate: true,
+              });
+            }}
+          >
+            <SelectTrigger aria-label={t("user.field.unit")}>
+              <SelectValue placeholder={t("userCreate.field.unit.placeholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">{t("common.notSet")}</SelectItem>
+              {(units ?? []).map((unit) => (
+                <SelectItem key={unit.id} value={unit.id}>
+                  {unit.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+
+        <FormField label={t("user.field.joinedYear")} error={errors?.joined_year?.message} optional>
           <Input
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            leadingIcon={Phone}
-            placeholder={t("userCreate.field.phone.placeholder")}
-            {...form.register(`users.${index}.phone_number`)}
+            type="number"
+            inputMode="numeric"
+            leadingIcon={CalendarClock}
+            placeholder={t("userCreate.field.joinedYear.placeholder")}
+            {...form.register(`users.${index}.joined_year`, {
+              valueAsNumber: true,
+            })}
           />
         </FormField>
 

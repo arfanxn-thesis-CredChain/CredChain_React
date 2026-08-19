@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   Calendar,
@@ -10,7 +13,6 @@ import {
   FileBadge,
   Hash,
   Mail,
-  Phone,
   Search,
   Trash2,
   Users,
@@ -20,7 +22,7 @@ import { useUser } from "./api/useUser";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { api } from "@shared/api/client";
-import type { CredentialDTO, UserDTO } from "@shared/types/api";
+import type { CredentialDTO } from "@shared/types/api";
 import { BackLink } from "@shared/components/BackLink";
 import { PageHeader } from "@shared/components/PageHeader";
 import { EmptyState } from "@shared/components/EmptyState";
@@ -36,13 +38,24 @@ import { EyebrowLabel } from "@shared/components/EyebrowLabel";
 import { Card } from "@ui/card";
 import { Input } from "@ui/input";
 import { Skeleton } from "@ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ui/select";
 import { CredentialCard } from "@shared/components/CredentialCard";
 import { CredentialStatusFilterMenu } from "@shared/components/CredentialStatusFilterMenu";
 import type { CredentialStatusFilter } from "@shared/components/CredentialStatusFilterMenu";
 import { CredentialSortMenu } from "@shared/components/CredentialSortMenu";
-import { Role, ROLE_LEVEL } from "@shared/auth/role";
+import { Role, ROLE_LEVEL, canAccessAny } from "@shared/auth/role";
 import { formatDate, formatDateTime } from "@shared/lib/format";
 import { cn } from "@shared/lib/cn";
+import { splitMeta, mergeMeta } from "@shared/lib/meta";
+import { MetaEditor } from "@shared/components/MetaEditor";
+import { DetailEditForm } from "@shared/components/DetailEditForm";
+import type { DetailField } from "@shared/components/DetailEditForm";
+import { useUpdateUsers } from "./api/useUpdateUsers";
+import { useUpdateUserRoles } from "./api/useUpdateUserRoles";
+import { useUserUnits } from "./api/useUserUnits";
+import { userDetailEditSchema, type UserDetailEditInput } from "./schemas/user";
+import { useStore } from "@app/store";
+import { userKeys } from "./api/keys";
 
 const CRED_SORT_OPTIONS = [
   {
@@ -57,10 +70,14 @@ const CRED_SORT_OPTIONS = [
   { key: "nameZA", getSort: () => "-name" },
 ];
 
+const ROLE_OPTIONS = [Role.HOLDER, Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN];
+
 export function UserDetail() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { data: user, isLoading, isError } = useUser(id ?? "");
+  const queryClient = useQueryClient();
+  const currentUser = useStore((s) => s.user);
 
   // Credential section state
   const [searchParams, setSearchParams] = useSearchParams();
@@ -168,6 +185,226 @@ export function UserDetail() {
     credentialReset();
   };
 
+  // ── Edit profile (DetailEditForm) ──────────────────────────────────────
+  const update = useUpdateUsers();
+  const { data: units } = useUserUnits();
+  const canEditProfile = user
+    ? canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN])
+    : false;
+
+  const editForm = useForm<UserDetailEditInput>({
+    resolver: zodResolver(userDetailEditSchema),
+    mode: "onBlur",
+    defaultValues: {
+      name: "",
+      number: undefined,
+      unit_id: undefined,
+      joined_year: undefined,
+      birth_date: undefined,
+      gender: null,
+      meta_entries: [],
+    },
+  });
+
+  const editUnitId = useWatch({ control: editForm.control, name: "unit_id" });
+  const editGender = useWatch({ control: editForm.control, name: "gender" });
+
+  useEffect(() => {
+    if (user) {
+      const { entries } = splitMeta(user.meta);
+      editForm.reset({
+        name: user.name ?? "",
+        number: user.number ?? undefined,
+        unit_id: user.unit_id ?? undefined,
+        joined_year: user.joined_year ?? undefined,
+        birth_date: user.birth_date ? user.birth_date.slice(0, 10) : undefined,
+        gender: user.gender ?? null,
+        meta_entries: entries,
+      });
+    }
+  }, [user, editForm]);
+
+  const handleSave = async (): Promise<boolean> => {
+    if (!user) return false;
+    const ok = await editForm.trigger();
+    if (!ok) return false;
+    const data = editForm.getValues();
+    const mergedMeta = mergeMeta(data.meta_entries ?? [], splitMeta(user.meta).preserved);
+    const metaChanged = JSON.stringify(mergedMeta) !== JSON.stringify(user.meta ?? null);
+
+    const payload: Record<string, unknown> = { id: user.id };
+    if (data.name !== user.name && data.name !== undefined && data.name !== "") {
+      payload.name = data.name;
+    }
+    if (
+      data.number !== (user.number ?? undefined) &&
+      data.number !== undefined &&
+      data.number !== ""
+    ) {
+      payload.number = data.number ?? null;
+    }
+    if (data.unit_id !== (user.unit_id ?? undefined)) {
+      payload.unit_id = data.unit_id ?? null;
+    }
+    if (data.joined_year !== (user.joined_year ?? undefined)) {
+      payload.joined_year = data.joined_year ?? null;
+    }
+    if (
+      data.birth_date !== (user.birth_date ? user.birth_date.slice(0, 10) : undefined) &&
+      data.birth_date !== undefined &&
+      data.birth_date !== ""
+    ) {
+      payload.birth_date = data.birth_date ?? null;
+    }
+    if (data.gender !== user.gender) {
+      payload.gender = data.gender ?? null;
+    }
+    if (metaChanged) payload.meta = mergedMeta;
+
+    if (Object.keys(payload).length <= 1) return true;
+
+    try {
+      await update.mutateAsync({ users: [payload as never] });
+      void queryClient.invalidateQueries({ queryKey: userKeys.all() });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (user) {
+      const { entries } = splitMeta(user.meta);
+      editForm.reset({
+        name: user.name ?? "",
+        number: user.number ?? undefined,
+        unit_id: user.unit_id ?? undefined,
+        joined_year: user.joined_year ?? undefined,
+        birth_date: user.birth_date ? user.birth_date.slice(0, 10) : undefined,
+        gender: user.gender ?? null,
+        meta_entries: entries,
+      });
+    }
+  };
+
+  const roleChange = useUpdateUserRoles();
+
+  const editFields: DetailField[] = user
+    ? [
+        {
+          key: "name",
+          label: t("user.edit.fullName"),
+          readValue: user.name ?? "—",
+          editControl: (
+            <Input aria-label={t("user.edit.fullName")} {...editForm.register("name")} />
+          ),
+          error: editForm.formState.errors.name?.message,
+        },
+        {
+          key: "number",
+          label: t("user.edit.numberId"),
+          readValue: user.number ?? "—",
+          editControl: (
+            <Input aria-label={t("user.edit.numberId")} {...editForm.register("number")} />
+          ),
+          error: editForm.formState.errors.number?.message,
+        },
+        {
+          key: "unit_id",
+          label: t("user.field.unit"),
+          readValue: units?.find((u) => u.id === user.unit_id)?.name ?? user.unit_id ?? "—",
+          editControl: (
+            <Select
+              value={editUnitId ?? "__none__"}
+              onValueChange={(value) =>
+                editForm.setValue("unit_id", value === "__none__" ? null : value, {
+                  shouldValidate: true,
+                })
+              }
+            >
+              <SelectTrigger aria-label={t("user.field.unit")}>
+                <SelectValue placeholder={t("common.notSet")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t("common.notSet")}</SelectItem>
+                {(units ?? []).map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    {unit.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ),
+          error: editForm.formState.errors.unit_id?.message,
+        },
+        {
+          key: "joined_year",
+          label: t("user.field.joinedYear"),
+          readValue: user.joined_year ?? "—",
+          editControl: (
+            <Input
+              type="number"
+              aria-label={t("user.field.joinedYear")}
+              {...editForm.register("joined_year", { valueAsNumber: true })}
+            />
+          ),
+          error: editForm.formState.errors.joined_year?.message,
+        },
+        {
+          key: "birth_date",
+          label: t("user.edit.birthDate"),
+          readValue: user.birth_date ? formatDate(user.birth_date) : "—",
+          editControl: (
+            <Input
+              type="date"
+              aria-label={t("user.edit.birthDate")}
+              {...editForm.register("birth_date")}
+            />
+          ),
+          error: editForm.formState.errors.birth_date?.message,
+        },
+        {
+          key: "gender",
+          label: t("user.field.gender"),
+          readValue: user.gender ? t(`user.field.gender.${user.gender}`) : "—",
+          editControl: (
+            <Select
+              value={editGender ?? "__none__"}
+              onValueChange={(value) =>
+                editForm.setValue(
+                  "gender",
+                  value === "__none__" ? null : (value as "male" | "female"),
+                  {
+                    shouldValidate: true,
+                  },
+                )
+              }
+            >
+              <SelectTrigger aria-label={t("user.field.gender")}>
+                <SelectValue placeholder={t("user.field.gender.placeholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t("common.notSet")}</SelectItem>
+                <SelectItem value="male">{t("user.field.gender.male")}</SelectItem>
+                <SelectItem value="female">{t("user.field.gender.female")}</SelectItem>
+              </SelectContent>
+            </Select>
+          ),
+          error: editForm.formState.errors.gender?.message,
+        },
+        {
+          key: "meta_entries",
+          label: t("meta.label"),
+          readValue:
+            user.meta && Object.keys(user.meta).length > 0 ? <MetaDisplay meta={user.meta} /> : "—",
+          editControl: <MetaEditor control={editForm.control} />,
+          error: editForm.formState.errors.meta_entries?.message,
+          fullWidth: true,
+          selfLabeled: true,
+        },
+      ]
+    : [];
+
   if (isError) {
     return (
       <div className="mx-auto max-w-5xl space-y-6">
@@ -220,10 +457,52 @@ export function UserDetail() {
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <UserRoleBadge role={user.role} />
+              <div className="flex items-center gap-2">
+                <UserRoleBadge role={user.role} />
+                {canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN]) && (
+                  <Select
+                    value={user.role}
+                    onValueChange={(value) => {
+                      if (
+                        value === Role.HOLDER ||
+                        value === Role.ISSUER ||
+                        value === Role.ADMIN ||
+                        value === Role.SUPER_ADMIN
+                      ) {
+                        roleChange.mutate({ user_roles: [{ user_id: user.id, role: value }] });
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      aria-label={t("user.edit.role")}
+                      className="h-7 w-auto px-2 py-1 text-xs"
+                    >
+                      <SelectValue placeholder={t("user.edit.role.placeholder")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {t(`user.edit.role.${role}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
               <UserStatusBadge deletedAt={user.deleted_at} />
             </div>
           </div>
+
+          <hr className="my-6 border-gray-50" />
+
+          <DetailEditForm
+            fields={editFields}
+            canEdit={canEditProfile}
+            onSave={handleSave}
+            onCancel={handleCancelEdit}
+            isSaving={update.isPending}
+            className="mt-2"
+          />
 
           <hr className="my-6 border-gray-50" />
 
@@ -232,9 +511,9 @@ export function UserDetail() {
             <DetailRow icon={Hash} label={t("user.detail.number")} value={user.number ?? "—"} />
             <DetailRow icon={Mail} label={t("user.detail.email")} value={user.email} />
             <DetailRow
-              icon={Phone}
-              label={t("user.detail.phone")}
-              value={(user as UserDTO & { phone_number?: string | null }).phone_number ?? "—"}
+              icon={CalendarClock}
+              label={t("user.field.joinedYear")}
+              value={user.joined_year ?? "—"}
             />
             <div>
               <dt className="mb-1 flex items-center gap-1.5 text-xs font-bold tracking-wider text-gray-400 uppercase">

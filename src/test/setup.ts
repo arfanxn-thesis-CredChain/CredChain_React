@@ -23,6 +23,10 @@ afterAll(() => server.close());
 
 window.scrollTo = () => {};
 
+// Polyfill: jsdom doesn't implement Element.scrollIntoView; Radix Select calls
+// it when auto-focusing a selected option and would crash without it.
+Element.prototype.scrollIntoView = () => {};
+
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({

@@ -10,10 +10,11 @@ import { Input } from "@ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ui/table";
 import { type UserStoreFormInput, userStoreFormSchema } from "../schemas/user";
 
-const FIXED_COLUMNS = [
+export const FIXED_COLUMNS = [
   "fullname",
   "email",
-  "phone",
+  "unit_id",
+  "joined_year",
   "number_id",
   "birth_date",
   "gender",
@@ -25,7 +26,8 @@ const REQUIRED_COLUMNS: readonly string[] = ["fullname", "email", "role"];
 export const COLUMN_TO_FIELD: Record<string, string> = {
   fullname: "name",
   email: "email",
-  phone: "phone_number",
+  unit_id: "unit_id",
+  joined_year: "joined_year",
   number_id: "number",
   birth_date: "birth_date",
   gender: "gender",
@@ -52,13 +54,14 @@ interface ValidationError {
 
 function downloadTemplate() {
   const headers = [...FIXED_COLUMNS];
-  const headerRow = headers.map((h) => ({ t: "s", v: h } satisfies XLSX.CellObject));
+  const headerRow = headers.map((h) => ({ t: "s", v: h }) satisfies XLSX.CellObject);
 
   const exampleRows: XLSX.CellObject[][] = [
     [
       { t: "s", v: "Alice Johnson" },
       { t: "s", v: "alice@example.com" },
-      { t: "s", v: "+6281234567890" },
+      { t: "s", v: "unit_01" },
+      { t: "s", v: "2024" },
       { t: "s", v: "EMP-001" },
       { t: "s", v: "1995-03-15" },
       { t: "s", v: "female" },
@@ -67,7 +70,8 @@ function downloadTemplate() {
     [
       { t: "s", v: "Bob Smith" },
       { t: "s", v: "bob@example.com" },
-      { t: "s", v: "+6289876543210" },
+      { t: "s", v: "unit_02" },
+      { t: "s", v: "2023" },
       { t: "s", v: "EMP-002" },
       { t: "s", v: "1990-07-22" },
       { t: "s", v: "male" },
@@ -107,88 +111,94 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
     [],
   );
 
-  const buildRowsFromParsed = useCallback(
-    (data: ParsedRow[], from: number, to: number) => {
-      const slice = data.slice(from - 1, to);
-      if (slice.length === 0)
-        return { rows: [] as UserStoreFormInput[], missing: [] as string[], metaCount: 0 };
+  const buildRowsFromParsed = useCallback((data: ParsedRow[], from: number, to: number) => {
+    const slice = data.slice(from - 1, to);
+    if (slice.length === 0)
+      return { rows: [] as UserStoreFormInput[], missing: [] as string[], metaCount: 0 };
 
-      const headers = Object.keys(slice[0]);
-      const normalizedHeaders = headers.map((h) => h.trim().toLowerCase());
+    const headers = Object.keys(slice[0]);
+    const normalizedHeaders = headers.map((h) => h.trim().toLowerCase());
 
-      const missing = REQUIRED_COLUMNS.filter((col) => !normalizedHeaders.includes(col));
+    const missing = REQUIRED_COLUMNS.filter((col) => !normalizedHeaders.includes(col));
 
-      const fixedSet = new Set(FIXED_COLUMNS);
-      const metaKeys = headers.filter(
-        (h) => !fixedSet.has(h.trim().toLowerCase() as (typeof FIXED_COLUMNS)[number]),
-      );
-      const metaCount = metaKeys.length;
+    const fixedSet = new Set(FIXED_COLUMNS);
+    const metaKeys = headers.filter(
+      (h) => !fixedSet.has(h.trim().toLowerCase() as (typeof FIXED_COLUMNS)[number]),
+    );
+    const metaCount = metaKeys.length;
 
-      const rows: UserStoreFormInput[] = slice.map((row) => {
-        const mapped: UserStoreFormInput = {
-          name: "",
-          number: undefined,
-          phone_number: undefined,
-          email: "",
-          birth_date: undefined,
-          gender: undefined,
-          meta_entries: [],
-          role: "holder",
-        };
+    const rows: UserStoreFormInput[] = slice.map((row) => {
+      const mapped: UserStoreFormInput = {
+        name: "",
+        number: undefined,
+        unit_id: undefined,
+        joined_year: undefined,
+        email: "",
+        birth_date: undefined,
+        gender: undefined,
+        meta_entries: [],
+        role: "holder",
+      };
 
-        for (const header of headers) {
-          const key = header.trim().toLowerCase();
-          const field = COLUMN_TO_FIELD[key];
-          if (!field) continue;
+      for (const header of headers) {
+        const key = header.trim().toLowerCase();
+        const field = COLUMN_TO_FIELD[key];
+        if (!field) continue;
 
-          const raw = row[header];
-          if (raw === null || raw === undefined) continue;
-          const val = String(raw).trim();
-          if (val === "") continue;
+        const raw = row[header];
+        if (raw === null || raw === undefined) continue;
+        const val = String(raw).trim();
+        if (val === "") continue;
 
-          if (field === "gender") {
-            const lower = val.toLowerCase();
-            if (lower === "male" || lower === "female") {
-              mapped.gender = lower;
-            }
-          } else if (field === "role") {
-            const lower = val.toLowerCase();
-            if (lower === "holder" || lower === "issuer" || lower === "admin") {
-              mapped.role = lower;
-            }
-          } else if (field === "name") {
-            mapped.name = val;
-          } else if (field === "email") {
-            mapped.email = val;
-          } else if (field === "phone_number") {
-            mapped.phone_number = val;
-          } else if (field === "number") {
-            mapped.number = val;
-          } else if (field === "birth_date") {
-            mapped.birth_date = val;
+        if (field === "gender") {
+          const lower = val.toLowerCase();
+          if (lower === "male" || lower === "female") {
+            mapped.gender = lower;
           }
+        } else if (field === "role") {
+          const lower = val.toLowerCase();
+          if (lower === "holder" || lower === "issuer" || lower === "admin") {
+            mapped.role = lower;
+          }
+        } else if (field === "unit_id") {
+          mapped.unit_id = val;
+        } else if (field === "joined_year") {
+          const year = Number(val);
+          if (Number.isInteger(year)) {
+            mapped.joined_year = year;
+          }
+        } else if (field === "name") {
+          mapped.name = val;
+        } else if (field === "email") {
+          mapped.email = val;
+        } else if (field === "number") {
+          mapped.number = val;
+        } else if (field === "birth_date") {
+          mapped.birth_date = val;
         }
+      }
 
-        mapped.meta_entries = metaKeys
-          .map((mk) => {
-            const raw = row[mk];
-            if (raw === null || raw === undefined) return null;
-            const v = String(raw).trim();
-            if (v === "") return null;
-            return { key: mk.trim(), value: v };
-          })
-          .filter((e): e is { key: string; value: string } => e !== null);
+      mapped.meta_entries = metaKeys
+        .map((mk) => {
+          const raw = row[mk];
+          if (raw === null || raw === undefined) return null;
+          const v = String(raw).trim();
+          if (v === "") return null;
+          return { key: mk.trim(), value: v };
+        })
+        .filter((e): e is { key: string; value: string } => e !== null);
 
-        return mapped;
-      });
+      return mapped;
+    });
 
-      return { rows, missing, metaCount };
-    },
-    [],
-  );
+    return { rows, missing, metaCount };
+  }, []);
 
   const validateRows = useCallback(
-    (rows: UserStoreFormInput[], from: number): { errors: ValidationError[]; valid: UserStoreFormInput[] } => {
+    (
+      rows: UserStoreFormInput[],
+      from: number,
+    ): { errors: ValidationError[]; valid: UserStoreFormInput[] } => {
       const errors: ValidationError[] = [];
       const valid: UserStoreFormInput[] = [];
 
@@ -317,7 +327,6 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
                     <Download className="h-4 w-4" />
                     {t("userImport.exampleTable.title")}
                   </button>
-
                 </div>
                 <div className="mt-3 text-xs text-gray-500 md:mt-0">
                   <p>{t("userImport.customColumns.description")}</p>
@@ -351,13 +360,9 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
               return [...FIXED_COLUMNS, ...extra] as readonly string[];
             })();
 
-            const showFrom =
-              fromRow >= 1 && fromRow <= rowCount && parsedData.length > 0;
+            const showFrom = fromRow >= 1 && fromRow <= rowCount && parsedData.length > 0;
             const showTo =
-              toRow >= 1 &&
-              toRow <= rowCount &&
-              toRow !== fromRow &&
-              parsedData.length > 0;
+              toRow >= 1 && toRow <= rowCount && toRow !== fromRow && parsedData.length > 0;
 
             return (
               <div className="space-y-4">
@@ -376,17 +381,12 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
                       max={rowCount}
                       value={fromRow}
                       onChange={(e) => {
-                        const val = Math.max(
-                          1,
-                          Math.min(Number(e.target.value) || 1, rowCount),
-                        );
+                        const val = Math.max(1, Math.min(Number(e.target.value) || 1, rowCount));
                         setFromRow(val);
                         setRangeError(validateRange(val, toRow, rowCount));
                       }}
                     />
-                    {rangeError && (
-                      <p className="mt-1 text-xs text-error">{t(rangeError)}</p>
-                    )}
+                    {rangeError && <p className="mt-1 text-xs text-error">{t(rangeError)}</p>}
                   </div>
 
                   <div className="max-w-[8rem]">
@@ -534,15 +534,9 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
                     <TableBody>
                       {validationErrors.map((err, idx) => (
                         <TableRow key={idx}>
-                          <TableCell className="text-xs font-medium">
-                            {err.row}
-                          </TableCell>
-                          <TableCell className="text-xs font-mono">
-                            {err.field}
-                          </TableCell>
-                          <TableCell className="text-xs text-error">
-                            {err.error}
-                          </TableCell>
+                          <TableCell className="text-xs font-medium">{err.row}</TableCell>
+                          <TableCell className="font-mono text-xs">{err.field}</TableCell>
+                          <TableCell className="text-xs text-error">{err.error}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -589,9 +583,7 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
         {step === 4 && (
           <div className="space-y-4">
             <Card className="space-y-3 p-4">
-              <h3 className="font-sans text-lg font-bold">
-                {t("userImport.confirm.title")}
-              </h3>
+              <h3 className="font-sans text-lg font-bold">{t("userImport.confirm.title")}</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">{t("userImport.confirm.file")}</span>
@@ -609,9 +601,7 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
                 </div>
                 {metaColumnCount > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-gray-500">
-                      {t("userImport.confirm.metaColumns")}
-                    </span>
+                    <span className="text-gray-500">{t("userImport.confirm.metaColumns")}</span>
                     <span className="font-medium text-navy">{metaColumnCount}</span>
                   </div>
                 )}
