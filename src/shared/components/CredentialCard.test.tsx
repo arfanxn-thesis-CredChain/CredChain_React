@@ -213,6 +213,32 @@ describe("CredentialCard", () => {
     expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
+  it("renders the legacy Active pill when statusBadge is omitted", () => {
+    render(<CredentialCard credential={makeCredential()} />, { wrapper: TestProviders });
+
+    expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("hides the legacy Active pill when statusBadge is provided", () => {
+    const credential = makeCredential({ lifecycle_status: "pending" });
+    render(<CredentialCard credential={credential} statusBadge={<span>Lifecycle badge</span>} />, {
+      wrapper: TestProviders,
+    });
+
+    expect(screen.getByText("Lifecycle badge")).toBeInTheDocument();
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
+  });
+
+  it("hides the legacy Revoked pill when statusBadge is provided", () => {
+    const credential = makeCredential({ revoked_at: "2026-06-01T00:00:00Z" });
+    render(<CredentialCard credential={credential} statusBadge={<span>Lifecycle badge</span>} />, {
+      wrapper: TestProviders,
+    });
+
+    expect(screen.getByText("Lifecycle badge")).toBeInTheDocument();
+    expect(screen.queryByText("Revoked")).not.toBeInTheDocument();
+  });
+
   it("shows deleted indicator for deleted holder", () => {
     const credential = makeCredential({
       holder: makeUser({

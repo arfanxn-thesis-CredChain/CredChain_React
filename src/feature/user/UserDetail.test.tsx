@@ -19,9 +19,9 @@ function setCurrentUser(role: Role) {
   });
 }
 
-function renderPage() {
+function renderPage(id = "usr_4") {
   return render(
-    <TestProviders initialEntries={["/users/usr_4"]} routePath="/users/:id">
+    <TestProviders initialEntries={[`/users/${id}`]} routePath="/users/:id">
       <UserDetail />
     </TestProviders>,
   );
@@ -86,6 +86,35 @@ describe("UserDetail (D2)", () => {
     await waitFor(() => {
       expect(requestBody).toEqual({ user_roles: [{ user_id: "usr_4", role: "issuer" }] });
     });
+  });
+
+  it("does not offer Super Admin in the role dropdown", async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
+
+    const combos = screen.getAllByRole("combobox");
+    fireEvent.click(combos[0]);
+
+    expect(await screen.findByRole("option", { name: /holder/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /issuer/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /admin/i })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /super admin/i })).not.toBeInTheDocument();
+  });
+
+  it("hides the role dropdown for the current user's own row", async () => {
+    useStore.setState({
+      user: makeUser({ id: "usr_4", email: "current@test.com", role: Role.ADMIN }),
+      isAuthenticated: true,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("hides the role dropdown for a trashed target", async () => {
+    renderPage("usr_5");
+    await waitFor(() => expect(screen.getAllByText("Trashed User").length).toBeGreaterThan(0));
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
   it("enters edit mode and saves the profile via PUT /users/batch", async () => {

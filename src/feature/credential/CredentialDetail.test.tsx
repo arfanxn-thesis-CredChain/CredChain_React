@@ -71,9 +71,57 @@ describe("CredentialDetail", () => {
     expect((await screen.findAllByText(/cred_01HX/)).length).toBeGreaterThan(0);
   });
 
-  it("renders the active status badge", async () => {
+  it("renders the lifecycle status badge instead of the legacy Active pill", async () => {
     renderPage();
-    expect((await screen.findAllByText("Active")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Approved")).toBeDefined();
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
+  });
+
+  it("shows the lifecycle badge for a pending credential and no legacy Active pill", async () => {
+    server.use(http.get("*/api/credentials/:id", () => pendingCredentialResponse()));
+    renderPage();
+
+    expect(await screen.findByText("Pending review")).toBeInTheDocument();
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
+  });
+
+  it("shows the lifecycle badge for a rejected credential and no legacy Active pill", async () => {
+    server.use(
+      http.get("*/api/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            lifecycle_status: "rejected",
+            approved_at: null,
+            rejected_at: "2026-01-02T00:00:00Z",
+          }),
+        }),
+      ),
+    );
+    renderPage();
+
+    expect(await screen.findByText("Rejected")).toBeInTheDocument();
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
+  });
+
+  it("does not leave stale edits when Cancel then re-enter edit mode", async () => {
+    server.use(http.get("*/api/credentials/:id", () => pendingCredentialResponse()));
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    const nameInput = screen.getByPlaceholderText("Credential name");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Updated Degree");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    expect(screen.getByDisplayValue("Bachelor's Degree")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Updated Degree")).not.toBeInTheDocument();
   });
 
   it("renders the file hash", async () => {
@@ -193,9 +241,7 @@ describe("CredentialDetail", () => {
 
     expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
-    expect(
-      await screen.findByText("Name must be 256 characters or fewer"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Name must be 256 characters or fewer")).toBeInTheDocument();
   });
 
   it("does not show Edit for a non-pending credential and shows the pending-only helper", async () => {

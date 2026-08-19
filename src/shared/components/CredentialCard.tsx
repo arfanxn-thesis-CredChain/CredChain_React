@@ -116,8 +116,7 @@ export function CredentialCard({
 
       <div className="pr-8">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          {statusBadge}
-          <CredentialStatusBadge revoked={revoked} />
+          {statusBadge ?? <CredentialStatusBadge revoked={revoked} />}
           {credential.extract_status !== "succeeded" && (
             <CredentialStatusBadge
               revoked={false}

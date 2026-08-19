@@ -35,6 +35,7 @@ import { CopyInlineButton } from "@shared/components/CopyInlineButton";
 import { UserContactBlock } from "@shared/components/UserContactBlock";
 import { SearchableCreateSelect } from "@shared/components/SearchableCreateSelect";
 import { CredentialStatusBadge } from "@shared/components/CredentialStatusBadge";
+import { CredentialLifecycleStatusBadge } from "./components/CredentialLifecycleStatusBadge";
 import { CredentialViewFilePreview } from "./components/CredentialViewFilePreview";
 import { Card } from "@ui/card";
 import { Button } from "@ui/button";
@@ -159,7 +160,10 @@ export function CredentialDetail() {
           label: t("cred.submit.field.name"),
           readValue: <span>{cred.name}</span>,
           editControl: (
-            <Input placeholder={t("cred.submit.field.namePlaceholder")} {...form.register("name")} />
+            <Input
+              placeholder={t("cred.submit.field.namePlaceholder")}
+              {...form.register("name")}
+            />
           ),
           error: form.formState.errors.name?.message,
         },
@@ -217,7 +221,9 @@ export function CredentialDetail() {
         {
           key: "expires_at",
           label: t("cred.submit.field.expiresAt"),
-          readValue: <span>{cred.expires_at ? formatDate(cred.expires_at) : t("common.notSet")}</span>,
+          readValue: (
+            <span>{cred.expires_at ? formatDate(cred.expires_at) : t("common.notSet")}</span>
+          ),
           editControl: <Input type="date" {...form.register("expires_at")} />,
           error: form.formState.errors.expires_at?.message,
         },
@@ -269,7 +275,7 @@ export function CredentialDetail() {
           <Card className="p-6 sm:p-8">
             {/* Status badges */}
             <div className="mb-4 flex flex-wrap items-center gap-2">
-              <CredentialStatusBadge revoked={revoked} />
+              <CredentialLifecycleStatusBadge status={cred.lifecycle_status} />
               {!extractSucceeded && (
                 <CredentialStatusBadge
                   revoked={false}
@@ -427,6 +433,7 @@ export function CredentialDetail() {
                 canEdit={isPendingReview}
                 editDisabledReason={t("cred.detail.editOnlyPending")}
                 onSave={handleSave}
+                onCancel={() => form.reset(buildCredentialEditDefaults(cred))}
                 isSaving={update.isPending}
               />
             </Card>

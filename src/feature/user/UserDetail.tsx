@@ -74,7 +74,7 @@ const CRED_SORT_OPTIONS = [
   { key: "nameZA", getSort: () => "-name" },
 ];
 
-const ROLE_OPTIONS = [Role.HOLDER, Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN];
+const ROLE_OPTIONS: Role[] = [Role.HOLDER, Role.ISSUER, Role.ADMIN];
 
 export function UserDetail() {
   const { t } = useTranslation();
@@ -463,35 +463,34 @@ export function UserDetail() {
             <div className="flex flex-col items-end gap-2">
               <div className="flex items-center gap-2">
                 <UserRoleBadge role={user.role} />
-                {canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN]) && (
-                  <Select
-                    value={user.role}
-                    onValueChange={(value) => {
-                      if (
-                        value === Role.HOLDER ||
-                        value === Role.ISSUER ||
-                        value === Role.ADMIN ||
-                        value === Role.SUPER_ADMIN
-                      ) {
-                        roleChange.mutate({ user_roles: [{ user_id: user.id, role: value }] });
-                      }
-                    }}
-                  >
-                    <SelectTrigger
-                      aria-label={t("user.edit.role")}
-                      className="h-7 w-auto px-2 py-1 text-xs"
+                {canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN]) &&
+                  user.id !== currentUser?.id &&
+                  !user.deleted_at && (
+                    <Select
+                      value={user.role}
+                      onValueChange={(value) => {
+                        if (ROLE_OPTIONS.includes(value as Role)) {
+                          roleChange.mutate({
+                            user_roles: [{ user_id: user.id, role: value as Role }],
+                          });
+                        }
+                      }}
                     >
-                      <SelectValue placeholder={t("user.edit.role.placeholder")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {t(`user.edit.role.${role}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                      <SelectTrigger
+                        aria-label={t("user.edit.role")}
+                        className="h-7 w-auto px-2 py-1 text-xs"
+                      >
+                        <SelectValue placeholder={t("user.edit.role.placeholder")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLE_OPTIONS.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {t(`user.edit.role.${role}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
               </div>
               <UserStatusBadge deletedAt={user.deleted_at} />
             </div>
