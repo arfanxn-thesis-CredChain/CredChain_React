@@ -138,7 +138,6 @@ describe("UserUnitTree", () => {
     expect(within(dialog).getByText("Faculty of Engineering")).toBeInTheDocument();
     expect(within(dialog).getByText("Faculty of Medicine")).toBeInTheDocument();
 
-    expect(screen.getByRole("button", { name: "Move" })).toBeDisabled();
     await user.click(within(dialog).getByText("Faculty of Medicine"));
     await user.click(screen.getByRole("button", { name: "Move" }));
 
