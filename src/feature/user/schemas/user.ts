@@ -17,7 +17,10 @@ const joinedYearSchema = z.coerce
   .max(2200, "zod.user.joinedYearRange");
 
 const optionalJoinedYear = z.preprocess(
-  (val) => (val === "" || val === undefined ? undefined : val),
+  (val) =>
+    val === "" || val === undefined || (typeof val === "number" && Number.isNaN(val))
+      ? undefined
+      : val,
   joinedYearSchema.nullable().optional(),
 );
 

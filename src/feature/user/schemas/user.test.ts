@@ -429,8 +429,10 @@ describe("userUpdateSchema - optional fields empty-string handling", () => {
 describe("userUpdateSchema - unit_id and joined_year (D2)", () => {
   const baseValid = { id: "u1" };
 
-  it("accepts unit_id null (clear)", () => {
-    expect(userUpdateSchema.safeParse({ ...baseValid, unit_id: null }).success).toBe(true);
+  it("accepts null unit_id (backend treats as no-change, emits no branch)", () => {
+    const result = userUpdateSchema.safeParse({ ...baseValid, unit_id: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.unit_id).toBeNull();
   });
 
   it("accepts unit_id up to 26 chars", () => {
@@ -453,9 +455,28 @@ describe("userUpdateSchema - unit_id and joined_year (D2)", () => {
     if (result.success) expect(result.data.unit_id).toBeUndefined();
   });
 
-  it("accepts joined_year null (clear) and valid values", () => {
-    expect(userUpdateSchema.safeParse({ ...baseValid, joined_year: null }).success).toBe(true);
+  it("accepts null joined_year (backend treats as no-change, emits no branch)", () => {
+    const result = userUpdateSchema.safeParse({ ...baseValid, joined_year: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.joined_year).toBeNull();
+  });
+
+  it("treats empty string joined_year as undefined (clear omitted from payload)", () => {
+    const result = userUpdateSchema.safeParse({ ...baseValid, joined_year: "" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.joined_year).toBeUndefined();
+  });
+
+  it("treats NaN joined_year as undefined (cleared number input)", () => {
+    const result = userUpdateSchema.safeParse({ ...baseValid, joined_year: NaN });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.joined_year).toBeUndefined();
+  });
+
+  it("accepts valid joined_year values", () => {
     expect(userUpdateSchema.safeParse({ ...baseValid, joined_year: 2024 }).success).toBe(true);
+    expect(userUpdateSchema.safeParse({ ...baseValid, joined_year: 1900 }).success).toBe(true);
+    expect(userUpdateSchema.safeParse({ ...baseValid, joined_year: 2200 }).success).toBe(true);
   });
 
   it("rejects joined_year out of range", () => {
@@ -659,6 +680,24 @@ describe("userDetailEditSchema (D2)", () => {
     const result = userDetailEditSchema.safeParse({ joined_year: "" });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.joined_year).toBeUndefined();
+  });
+
+  it("treats NaN joined_year as undefined (cleared number input)", () => {
+    const result = userDetailEditSchema.safeParse({ joined_year: NaN });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.joined_year).toBeUndefined();
+  });
+
+  it("preserves null unit_id so callers can omit it (clear → undefined in payload)", () => {
+    const result = userDetailEditSchema.safeParse({ unit_id: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.unit_id).toBeNull();
+  });
+
+  it("preserves null joined_year so callers can omit it (clear → undefined in payload)", () => {
+    const result = userDetailEditSchema.safeParse({ joined_year: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.joined_year).toBeNull();
   });
 });
 

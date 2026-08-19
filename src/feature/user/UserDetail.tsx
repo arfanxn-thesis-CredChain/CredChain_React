@@ -53,7 +53,11 @@ import type { DetailField } from "@shared/components/DetailEditForm";
 import { useUpdateUsers } from "./api/useUpdateUsers";
 import { useUpdateUserRoles } from "./api/useUpdateUserRoles";
 import { useUserUnits } from "./api/useUserUnits";
-import { userDetailEditSchema, type UserDetailEditInput } from "./schemas/user";
+import {
+  userDetailEditSchema,
+  type UserDetailEditInput,
+  type UserUpdateInput,
+} from "./schemas/user";
 import { useStore } from "@app/store";
 import { userKeys } from "./api/keys";
 
@@ -232,7 +236,7 @@ export function UserDetail() {
     const mergedMeta = mergeMeta(data.meta_entries ?? [], splitMeta(user.meta).preserved);
     const metaChanged = JSON.stringify(mergedMeta) !== JSON.stringify(user.meta ?? null);
 
-    const payload: Record<string, unknown> = { id: user.id };
+    const payload: UserUpdateInput = { id: user.id };
     if (data.name !== user.name && data.name !== undefined && data.name !== "") {
       payload.name = data.name;
     }
@@ -244,10 +248,10 @@ export function UserDetail() {
       payload.number = data.number ?? null;
     }
     if (data.unit_id !== (user.unit_id ?? undefined)) {
-      payload.unit_id = data.unit_id ?? null;
+      payload.unit_id = data.unit_id ?? undefined;
     }
     if (data.joined_year !== (user.joined_year ?? undefined)) {
-      payload.joined_year = data.joined_year ?? null;
+      payload.joined_year = Number.isNaN(data.joined_year) ? undefined : data.joined_year;
     }
     if (
       data.birth_date !== (user.birth_date ? user.birth_date.slice(0, 10) : undefined) &&
@@ -264,7 +268,7 @@ export function UserDetail() {
     if (Object.keys(payload).length <= 1) return true;
 
     try {
-      await update.mutateAsync({ users: [payload as never] });
+      await update.mutateAsync({ users: [payload] });
       void queryClient.invalidateQueries({ queryKey: userKeys.all() });
       return true;
     } catch {
