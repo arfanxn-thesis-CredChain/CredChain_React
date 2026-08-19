@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { ReferenceRow, UserDTO } from "@shared/types/api";
+import type { HolderUnitDTO, ReferenceRow, UserDTO } from "@shared/types/api";
 import { mockUsers } from "../fixtures";
 
 const envelope = <T>(code: number, message: string, data?: T) =>
@@ -16,6 +16,11 @@ const mockIssuerOrganizations: ReferenceRow[] = [
 const mockCompetencies: ReferenceRow[] = [
   { id: "comp_01", name: "Machine Learning" },
   { id: "comp_02", name: "Data Analysis" },
+];
+
+const mockUserUnits: HolderUnitDTO[] = [
+  { id: "unit_01", parent_id: null, name: "Faculty of Engineering", created_at: "2026-01-01T00:00:00Z", updated_at: null },
+  { id: "unit_02", parent_id: "unit_01", name: "Computer Science Department", created_at: "2026-01-01T00:00:00Z", updated_at: null },
 ];
 
 function paginated<T>(items: T[]): Record<string, unknown> {
@@ -475,6 +480,23 @@ export const handlers = [
     );
   }),
 
+  http.put("*/api/credential-types/:id", async ({ request, params }) => {
+    const row = mockCredentialTypes.find((r) => r.id === params.id);
+    if (!row) {
+      return HttpResponse.json({ code: 400840, message: "Credential type not found." }, { status: 404 });
+    }
+    const body = (await request.json()) as { name?: string; active?: boolean };
+    if (body.name !== undefined) row.name = body.name;
+    if (body.active !== undefined) row.active = body.active;
+    return envelope(400600, "Credential type updated", row);
+  }),
+
+  http.delete("*/api/credential-types/:id", ({ params }) => {
+    const index = mockCredentialTypes.findIndex((r) => r.id === params.id);
+    if (index >= 0) mockCredentialTypes.splice(index, 1);
+    return envelope(400600, "Credential type destroyed", null);
+  }),
+
   http.get("*/api/issuer-organizations", () =>
     envelope(400600, "Issuer organizations retrieved", paginated(mockIssuerOrganizations)),
   ),
@@ -486,6 +508,22 @@ export const handlers = [
       "Issuer organization stored",
       upsertRow(mockIssuerOrganizations, "iorg", body.name ?? ""),
     );
+  }),
+
+  http.put("*/api/issuer-organizations/:id", async ({ request, params }) => {
+    const row = mockIssuerOrganizations.find((r) => r.id === params.id);
+    if (!row) {
+      return HttpResponse.json({ code: 400940, message: "Issuer organization not found." }, { status: 404 });
+    }
+    const body = (await request.json()) as { name?: string };
+    if (body.name !== undefined) row.name = body.name;
+    return envelope(400600, "Issuer organization updated", row);
+  }),
+
+  http.delete("*/api/issuer-organizations/:id", ({ params }) => {
+    const index = mockIssuerOrganizations.findIndex((r) => r.id === params.id);
+    if (index >= 0) mockIssuerOrganizations.splice(index, 1);
+    return envelope(400600, "Issuer organization destroyed", null);
   }),
 
   http.get("*/api/competencies", () =>
@@ -501,24 +539,53 @@ export const handlers = [
     );
   }),
 
-  http.get("*/api/user-units", () =>
-    envelope(301000, "User units retrieved successfully.", [
-      {
-        id: "unit_01",
-        parent_id: null,
-        name: "Faculty of Engineering",
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: null,
-      },
-      {
-        id: "unit_02",
-        parent_id: "unit_01",
-        name: "Computer Science Department",
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: null,
-      },
-    ]),
-  ),
+  http.put("*/api/competencies/:id", async ({ request, params }) => {
+    const row = mockCompetencies.find((r) => r.id === params.id);
+    if (!row) {
+      return HttpResponse.json({ code: 401040, message: "Competency not found." }, { status: 404 });
+    }
+    const body = (await request.json()) as { name?: string };
+    if (body.name !== undefined) row.name = body.name;
+    return envelope(400600, "Competency updated", row);
+  }),
+
+  http.delete("*/api/competencies/:id", ({ params }) => {
+    const index = mockCompetencies.findIndex((r) => r.id === params.id);
+    if (index >= 0) mockCompetencies.splice(index, 1);
+    return envelope(400600, "Competency destroyed", null);
+  }),
+
+  http.get("*/api/user-units", () => envelope(301000, "User units retrieved successfully.", mockUserUnits)),
+
+  http.post("*/api/user-units", async ({ request }) => {
+    const body = (await request.json()) as { name?: string; parent_id?: string | null };
+    const created: HolderUnitDTO = {
+      id: `unit_${mockUserUnits.length + 1}`,
+      parent_id: body.parent_id ?? null,
+      name: body.name ?? "",
+      created_at: new Date().toISOString(),
+      updated_at: null,
+    };
+    mockUserUnits.push(created);
+    return envelope(301001, "User unit stored successfully.", created);
+  }),
+
+  http.put("*/api/user-units/:id", async ({ request, params }) => {
+    const row = mockUserUnits.find((u) => u.id === params.id);
+    if (!row) {
+      return HttpResponse.json({ code: 301040, message: "User unit not found." }, { status: 404 });
+    }
+    const body = (await request.json()) as { name?: string; parent_id?: string | null };
+    if (body.name !== undefined) row.name = body.name;
+    if (body.parent_id !== undefined) row.parent_id = body.parent_id;
+    return envelope(301002, "User unit updated successfully.", row);
+  }),
+
+  http.delete("*/api/user-units/:id", ({ params }) => {
+    const index = mockUserUnits.findIndex((u) => u.id === params.id);
+    if (index >= 0) mockUserUnits.splice(index, 1);
+    return envelope(301003, "User unit destroyed successfully.", null);
+  }),
 
   http.post("*/api/credentials/batch/revoke", () => {
     return HttpResponse.json({

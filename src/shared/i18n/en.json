@@ -1001,6 +1001,123 @@
       "loadError": "Failed to load options."
     }
   },
+  "credType": {
+    "title": "Credential Types",
+    "description": "Manage credential types used when issuing credentials.",
+    "column": { "name": "Name", "active": "Active" },
+    "createAction": "Add type",
+    "editTitle": "Edit credential type",
+    "activeToggle": "Toggle active state for {{name}}",
+    "actionsMenu": "Credential type actions",
+    "destroy": {
+      "title": "Delete {{name}}?",
+      "description": "This permanently deletes the credential type. Credentials are never deleted, so a type still referenced by credentials cannot be removed.",
+      "menu": "Delete",
+      "confirm": "Delete"
+    },
+    "empty": {
+      "title": "No credential types yet",
+      "description": "Credential types define the kind of credential being issued."
+    }
+  },
+  "issuerOrg": {
+    "title": "Issuer Organizations",
+    "description": "Manage organizations that can issue credentials.",
+    "column": { "name": "Name" },
+    "createAction": "Add organization",
+    "editTitle": "Edit issuer organization",
+    "actionsMenu": "Issuer organization actions",
+    "destroy": {
+      "title": "Delete {{name}}?",
+      "description": "This permanently deletes the issuer organization. Credentials are never deleted, so an organization still referenced by credentials cannot be removed.",
+      "menu": "Delete",
+      "confirm": "Delete"
+    },
+    "empty": {
+      "title": "No issuer organizations yet",
+      "description": "Issuer organizations are the authorities that issue credentials."
+    }
+  },
+  "competency": {
+    "title": "Competencies",
+    "description": "Manage competencies that can be linked to credentials.",
+    "column": { "name": "Name" },
+    "createAction": "Add competency",
+    "editTitle": "Edit competency",
+    "actionsMenu": "Competency actions",
+    "destroy": {
+      "title": "Delete {{name}}?",
+      "description": "This permanently deletes the competency. Credentials are never deleted, so a competency still linked to credentials cannot be removed.",
+      "menu": "Delete",
+      "confirm": "Delete"
+    },
+    "empty": {
+      "title": "No competencies yet",
+      "description": "Competencies describe the skills or knowledge attached to a credential."
+    }
+  },
+  "userUnit": {
+    "title": "User Units",
+    "description": "Organize users into an interactive hierarchy of units.",
+    "path": "Breadcrumb path",
+    "addRoot": "Add root unit",
+    "createPlaceholder": "New unit name",
+    "createSubmit": "Add",
+    "addSubunit": "Add sub-unit to {{name}}",
+    "rename": "Rename {{name}}",
+    "renamePlaceholder": "Unit name",
+    "renameSubmit": "Save",
+    "move": "Move {{name}}",
+    "moveTitle": "Move unit",
+    "moveDescription": "Choose a new parent for {{name}}.",
+    "movePlaceholder": "Type to search...",
+    "moveRootLabel": "Top level (no parent)",
+    "moveNoMatch": "No matching units.",
+    "moveSubmit": "Move",
+    "expand": "Expand {{name}}",
+    "collapse": "Collapse {{name}}",
+    "destroy": {
+      "title": "Delete {{name}}?",
+      "description": "This permanently deletes the unit. A unit still referenced by users or child units cannot be deleted.",
+      "menu": "Delete",
+      "confirm": "Delete"
+    },
+    "empty": {
+      "title": "No units yet",
+      "description": "User units organize users into departments or faculties."
+    }
+  },
+  "admin": {
+    "loadError": "Failed to load. Please try again.",
+    "createAction": "Add",
+    "activeLabel": "Active",
+    "credType": {
+      "createLabel": "New credential type",
+      "createPlaceholder": "Type name",
+      "created": "Credential type created.",
+      "alreadyExists": "Already exists — using existing row",
+      "actionError": "Failed to update credential type. Please try again."
+    },
+    "issuerOrg": {
+      "createLabel": "New issuer organization",
+      "createPlaceholder": "Organization name",
+      "created": "Issuer organization created.",
+      "alreadyExists": "Already exists — using existing row",
+      "actionError": "Failed to update issuer organization. Please try again."
+    },
+    "competency": {
+      "createLabel": "New competency",
+      "createPlaceholder": "Competency name",
+      "created": "Competency created.",
+      "alreadyExists": "Already exists — using existing row",
+      "actionError": "Failed to update competency. Please try again."
+    },
+    "userUnit": {
+      "actionError": "Failed to update the unit. Please try again."
+    }
+  },
+  "zod.name.required": "Name is required",
+  "zod.name.tooLong": "Name must be 256 characters or fewer",
   "success_overview": "Overview loaded.",
   "error_overview_internal": "Failed to load overview data.",
   "system.meta.success": "Meta information retrieved successfully.",

@@ -1,10 +1,20 @@
+import { useTranslation } from "react-i18next";
+import { PageHeader } from "@shared/components/PageHeader";
+import { Card } from "@ui/card";
+import { useUserUnits } from "./api/useUserUnits";
+import { UserUnitTree } from "./components/UserUnitTree";
+
 export function UserUnitsPage() {
+  const { t } = useTranslation();
+  const list = useUserUnits();
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <h1 className="font-display text-2xl font-semibold tracking-tight text-navy">
-        User Units
-      </h1>
-      <p className="text-sm text-gray-500">Placeholder — replaced in a later phase.</p>
+      <PageHeader title={t("userUnit.title")} description={t("userUnit.description")} />
+
+      <Card className="p-0">
+        <UserUnitTree units={list.data ?? []} isLoading={list.isLoading} />
+      </Card>
     </div>
   );
 }

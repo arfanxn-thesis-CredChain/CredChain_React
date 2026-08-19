@@ -1002,6 +1002,123 @@
       "loadError": "Gagal memuat opsi."
     }
   },
+  "credType": {
+    "title": "Tipe Kredensial",
+    "description": "Kelola tipe kredensial yang digunakan saat menerbitkan kredensial.",
+    "column": { "name": "Nama", "active": "Aktif" },
+    "createAction": "Tambah tipe",
+    "editTitle": "Ubah tipe kredensial",
+    "activeToggle": "Alihkan status aktif untuk {{name}}",
+    "actionsMenu": "Aksi tipe kredensial",
+    "destroy": {
+      "title": "Hapus {{name}}?",
+      "description": "Tipe kredensial akan dihapus permanen. Kredensial tidak pernah dihapus, sehingga tipe yang masih dirujuk kredensial tidak dapat dihapus.",
+      "menu": "Hapus",
+      "confirm": "Hapus"
+    },
+    "empty": {
+      "title": "Belum ada tipe kredensial",
+      "description": "Tipe kredensial menentukan jenis kredensial yang diterbitkan."
+    }
+  },
+  "issuerOrg": {
+    "title": "Organisasi Penerbit",
+    "description": "Kelola organisasi yang dapat menerbitkan kredensial.",
+    "column": { "name": "Nama" },
+    "createAction": "Tambah organisasi",
+    "editTitle": "Ubah organisasi penerbit",
+    "actionsMenu": "Aksi organisasi penerbit",
+    "destroy": {
+      "title": "Hapus {{name}}?",
+      "description": "Organisasi penerbit akan dihapus permanen. Kredensial tidak pernah dihapus, sehingga organisasi yang masih dirujuk kredensial tidak dapat dihapus.",
+      "menu": "Hapus",
+      "confirm": "Hapus"
+    },
+    "empty": {
+      "title": "Belum ada organisasi penerbit",
+      "description": "Organisasi penerbit adalah otoritas yang menerbitkan kredensial."
+    }
+  },
+  "competency": {
+    "title": "Kompetensi",
+    "description": "Kelola kompetensi yang dapat dihubungkan ke kredensial.",
+    "column": { "name": "Nama" },
+    "createAction": "Tambah kompetensi",
+    "editTitle": "Ubah kompetensi",
+    "actionsMenu": "Aksi kompetensi",
+    "destroy": {
+      "title": "Hapus {{name}}?",
+      "description": "Kompetensi akan dihapus permanen. Kredensial tidak pernah dihapus, sehingga kompetensi yang masih terhubung dengan kredensial tidak dapat dihapus.",
+      "menu": "Hapus",
+      "confirm": "Hapus"
+    },
+    "empty": {
+      "title": "Belum ada kompetensi",
+      "description": "Kompetensi menggambarkan keterampilan atau pengetahuan yang melekat pada kredensial."
+    }
+  },
+  "userUnit": {
+    "title": "Unit Pengguna",
+    "description": "Atur pengguna ke dalam hierarki unit yang interaktif.",
+    "path": "Jalur breadcrumb",
+    "addRoot": "Tambah unit akar",
+    "createPlaceholder": "Nama unit baru",
+    "createSubmit": "Tambah",
+    "addSubunit": "Tambah sub-unit di bawah {{name}}",
+    "rename": "Ganti nama {{name}}",
+    "renamePlaceholder": "Nama unit",
+    "renameSubmit": "Simpan",
+    "move": "Pindahkan {{name}}",
+    "moveTitle": "Pindahkan unit",
+    "moveDescription": "Pilih induk baru untuk {{name}}.",
+    "movePlaceholder": "Ketik untuk mencari...",
+    "moveRootLabel": "Tingkat teratas (tanpa induk)",
+    "moveNoMatch": "Tidak ada unit yang cocok.",
+    "moveSubmit": "Pindahkan",
+    "expand": "Bentangkan {{name}}",
+    "collapse": "Ciutkan {{name}}",
+    "destroy": {
+      "title": "Hapus {{name}}?",
+      "description": "Unit akan dihapus permanen. Unit yang masih dirujuk oleh pengguna atau unit anak tidak dapat dihapus.",
+      "menu": "Hapus",
+      "confirm": "Hapus"
+    },
+    "empty": {
+      "title": "Belum ada unit",
+      "description": "Unit pengguna mengelompokkan pengguna ke dalam departemen atau fakultas."
+    }
+  },
+  "admin": {
+    "loadError": "Gagal memuat. Silakan coba lagi.",
+    "createAction": "Tambah",
+    "activeLabel": "Aktif",
+    "credType": {
+      "createLabel": "Tipe kredensial baru",
+      "createPlaceholder": "Nama tipe",
+      "created": "Tipe kredensial berhasil dibuat.",
+      "alreadyExists": "Sudah ada — memakai baris yang ada",
+      "actionError": "Gagal memperbarui tipe kredensial. Silakan coba lagi."
+    },
+    "issuerOrg": {
+      "createLabel": "Organisasi penerbit baru",
+      "createPlaceholder": "Nama organisasi",
+      "created": "Organisasi penerbit berhasil dibuat.",
+      "alreadyExists": "Sudah ada — memakai baris yang ada",
+      "actionError": "Gagal memperbarui organisasi penerbit. Silakan coba lagi."
+    },
+    "competency": {
+      "createLabel": "Kompetensi baru",
+      "createPlaceholder": "Nama kompetensi",
+      "created": "Kompetensi berhasil dibuat.",
+      "alreadyExists": "Sudah ada — memakai baris yang ada",
+      "actionError": "Gagal memperbarui kompetensi. Silakan coba lagi."
+    },
+    "userUnit": {
+      "actionError": "Gagal memperbarui unit. Silakan coba lagi."
+    }
+  },
+  "zod.name.required": "Nama wajib diisi",
+  "zod.name.tooLong": "Nama maksimal 256 karakter",
   "success_overview": "Ringkasan berhasil dimuat.",
   "error_overview_internal": "Gagal memuat data ringkasan.",
   "system.meta.success": "Informasi meta berhasil diambil.",
