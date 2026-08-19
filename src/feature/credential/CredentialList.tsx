@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Ban, FileBadge, RefreshCw, Search, ShieldCheck, Upload } from "lucide-react";
 import { useRevokeCredentials } from "./api/useRevokeCredentials";
 import { useReExtractCredentials } from "./api/useReExtractCredentials";
@@ -10,7 +11,7 @@ import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { api } from "@shared/api/client";
 import { notify } from "@shared/lib/notify";
-import type { CredentialDTO } from "@shared/types/api";
+import type { CredentialDTO, PaginatedResponse } from "@shared/types/api";
 
 import { PageHeader } from "@shared/components/PageHeader";
 import { EmptyState } from "@shared/components/EmptyState";
@@ -23,21 +24,44 @@ import { useConfirm } from "@ui/confirm-dialog";
 import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 
 import { CredentialCard } from "@shared/components/CredentialCard";
-import { CredentialStatusFilterMenu } from "@shared/components/CredentialStatusFilterMenu";
-import type { CredentialStatusFilter } from "@shared/components/CredentialStatusFilterMenu";
 import { CredentialSortMenu } from "@shared/components/CredentialSortMenu";
 import { CredentialLifecycleStatusBadge } from "./components/CredentialLifecycleStatusBadge";
+import { CredentialStatusMenu } from "./components/CredentialStatusMenu";
+import type {
+  CredentialExtractFilter,
+  CredentialReviewStatus,
+} from "./components/CredentialStatusMenu";
+import { CredentialTypeFilterMenu } from "./components/CredentialTypeFilterMenu";
+import { CredentialOrganizationFilterMenu } from "./components/CredentialOrganizationFilterMenu";
+import { CredentialCompetencyFilterMenu } from "./components/CredentialCompetencyFilterMenu";
+import { HolderUnitFilterMenu } from "./components/HolderUnitFilterMenu";
 
 const MAX_SELECTION = 100;
+
+const REVIEW_FILTERS: Record<CredentialReviewStatus, string[]> = {
+  all: [],
+  pending: ["approved_at_", "rejected_at_"],
+  approved: ["approved_at!_"],
+  rejected: ["rejected_at!_"],
+  revoked: ["revoked_at!_"],
+};
+
+const EXTRACT_FILTERS: Record<CredentialExtractFilter, string[]> = {
+  any: [],
+  unextracted: ["extract_status=unextracted"],
+  pending: ["extract_status=pending"],
+  succeeded: ["extract_status=succeeded"],
+  failed: ["extract_status=failed"],
+};
 
 const SORT_OPTIONS = [
   {
     key: "newest",
-    getSort: (s: CredentialStatusFilter) => (s === "revoked" ? "-revoked_at" : "-issued_at"),
+    getSort: (r: CredentialReviewStatus) => (r === "revoked" ? "-revoked_at" : "-issued_at"),
   },
   {
     key: "oldest",
-    getSort: (s: CredentialStatusFilter) => (s === "revoked" ? "revoked_at" : "issued_at"),
+    getSort: (r: CredentialReviewStatus) => (r === "revoked" ? "revoked_at" : "issued_at"),
   },
   { key: "nameAZ", getSort: () => "name" },
   { key: "nameZA", getSort: () => "-name" },
@@ -47,15 +71,38 @@ type BulkMode = "revoke" | "reextract" | null;
 
 function adjustSortForStatus(
   sortString: string,
-  oldStatus: CredentialStatusFilter,
-  newStatus: CredentialStatusFilter,
+  oldReview: CredentialReviewStatus,
+  newReview: CredentialReviewStatus,
 ): string {
   for (const opt of SORT_OPTIONS) {
-    if (opt.getSort(oldStatus) === sortString) {
-      return opt.getSort(newStatus);
+    if (opt.getSort(oldReview) === sortString) {
+      return opt.getSort(newReview);
     }
   }
   return sortString;
+}
+
+const REVIEW_VALUES: CredentialReviewStatus[] = [
+  "all",
+  "pending",
+  "approved",
+  "rejected",
+  "revoked",
+];
+const EXTRACT_VALUES: CredentialExtractFilter[] = [
+  "any",
+  "unextracted",
+  "pending",
+  "succeeded",
+  "failed",
+];
+
+function isReviewStatus(value: string | null): value is CredentialReviewStatus {
+  return value !== null && (REVIEW_VALUES as string[]).includes(value);
+}
+
+function isExtractFilter(value: string | null): value is CredentialExtractFilter {
+  return value !== null && (EXTRACT_VALUES as string[]).includes(value);
 }
 
 export function CredentialList() {
@@ -64,9 +111,16 @@ export function CredentialList() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState<BulkMode>(null);
 
-  const credStatus: CredentialStatusFilter =
-    (searchParams.get("status") as CredentialStatusFilter) ?? "active";
-  const credSort = searchParams.get("sort") ?? SORT_OPTIONS[0].getSort(credStatus);
+  const reviewParam = searchParams.get("review");
+  const extractParam = searchParams.get("extract");
+  const review: CredentialReviewStatus = isReviewStatus(reviewParam) ? reviewParam : "all";
+  const extract: CredentialExtractFilter = isExtractFilter(extractParam) ? extractParam : "any";
+  const credSort = searchParams.get("sort") ?? SORT_OPTIONS[0].getSort(review);
+
+  const typeId = searchParams.get("type_id");
+  const orgId = searchParams.get("org_id");
+  const competencyId = searchParams.get("competency_id");
+  const unitId = searchParams.get("unit_id");
 
   const searchParam = searchParams.get("search") ?? "";
   const [search, setSearch] = useState(searchParam);
@@ -84,20 +138,26 @@ export function CredentialList() {
   const canManage = canAccessAny(currentUser?.role, [Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN]);
   const isHolder = currentUser?.role === Role.HOLDER;
 
-  const filterArray: string[] = (() => {
-    switch (credStatus) {
-      case "all":
-        return [];
-      case "active":
-        return ["revoked_at_", "extract_status!=failed"];
-      case "revoked":
-        return ["revoked_at!_", "extract_status!=failed"];
-      case "pending":
-        return ["extract_status=pending"];
-      case "failed":
-        return ["extract_status=failed"];
-    }
-  })();
+  const filterArray: string[] = [
+    ...REVIEW_FILTERS[review],
+    ...EXTRACT_FILTERS[extract],
+    ...(typeId ? [`type_id=${typeId}`] : []),
+    ...(orgId ? [`issuer_organization_id=${orgId}`] : []),
+    ...(competencyId ? [`competency_id=${competencyId}`] : []),
+    ...(unitId ? [`holder_unit_id=${unitId}`] : []),
+  ];
+
+  const pendingCountQuery = useQuery({
+    queryKey: [isHolder ? "my-credentials" : "credentials", "pending-count"],
+    queryFn: async () => {
+      const endpoint = isHolder ? "/users/self/credentials" : "/credentials";
+      const response = await api.get<PaginatedResponse<CredentialDTO>>(endpoint, {
+        params: { limit: 1, filters: ["approved_at_", "rejected_at_"] },
+      });
+      return response.data.total;
+    },
+    enabled: review === "all",
+  });
 
   const {
     items: credentials,
@@ -275,15 +335,36 @@ export function CredentialList() {
     );
   };
 
-  const handleStatusChange = (status: CredentialStatusFilter) => {
-    if (status === credStatus) return;
-    const newSort = adjustSortForStatus(credSort, credStatus, status);
+  const handleReviewChange = (value: CredentialReviewStatus) => {
+    if (value === review) return;
+    const newSort = adjustSortForStatus(credSort, review, value);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      if (status === "active") next.delete("status");
-      else next.set("status", status);
-      if (newSort === SORT_OPTIONS[0].getSort(status)) next.delete("sort");
+      if (value === "all") next.delete("review");
+      else next.set("review", value);
+      if (newSort === SORT_OPTIONS[0].getSort(value)) next.delete("sort");
       else next.set("sort", newSort);
+      return next;
+    });
+    reset();
+  };
+
+  const handleExtractChange = (value: CredentialExtractFilter) => {
+    if (value === extract) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "any") next.delete("extract");
+      else next.set("extract", value);
+      return next;
+    });
+    reset();
+  };
+
+  const handleFilterChange = (param: string) => (value: string | null) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) next.set(param, value);
+      else next.delete(param);
       return next;
     });
     reset();
@@ -293,7 +374,7 @@ export function CredentialList() {
     if (sortString === credSort) return;
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      const defaultSort = SORT_OPTIONS[0].getSort(credStatus);
+      const defaultSort = SORT_OPTIONS[0].getSort(review);
       if (sortString === defaultSort) next.delete("sort");
       else next.set("sort", sortString);
       return next;
@@ -337,11 +418,27 @@ export function CredentialList() {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 md:ml-auto md:shrink-0">
-              <CredentialStatusFilterMenu value={credStatus} onChange={handleStatusChange} />
+              <CredentialStatusMenu
+                review={review}
+                extract={extract}
+                onReviewChange={handleReviewChange}
+                onExtractChange={handleExtractChange}
+                pendingCount={pendingCountQuery.data}
+              />
+              <CredentialTypeFilterMenu value={typeId} onChange={handleFilterChange("type_id")} />
+              <CredentialOrganizationFilterMenu
+                value={orgId}
+                onChange={handleFilterChange("org_id")}
+              />
+              <CredentialCompetencyFilterMenu
+                value={competencyId}
+                onChange={handleFilterChange("competency_id")}
+              />
+              <HolderUnitFilterMenu value={unitId} onChange={handleFilterChange("unit_id")} />
               <CredentialSortMenu
                 value={credSort}
                 onChange={handleSortChange}
-                statusFilter={credStatus}
+                statusFilter={review === "revoked" ? "revoked" : "all"}
               />
             </div>
           </div>

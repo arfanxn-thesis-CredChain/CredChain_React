@@ -1,5 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Clock, ShieldAlert, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  FileQuestion,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 import { StatusPill } from "@shared/components/StatusPill";
 import type { ExtractStatus } from "@shared/types/api";
 
@@ -24,20 +31,32 @@ export function CredentialStatusBadge({
     );
   }
 
-  if (showExtractStatus) {
-    if (extractStatus === "pending") {
-      return (
-        <StatusPill tone="gray" icon={Clock}>
-          {t("cred.status.pending_extraction")}
-        </StatusPill>
-      );
-    }
-    if (extractStatus === "failed") {
-      return (
-        <StatusPill tone="error" icon={AlertTriangle}>
-          {t("cred.status.extraction_failed")}
-        </StatusPill>
-      );
+  if (showExtractStatus && extractStatus) {
+    switch (extractStatus) {
+      case "unextracted":
+        return (
+          <StatusPill tone="gray" icon={FileQuestion}>
+            {t("cred.extract.unextracted")}
+          </StatusPill>
+        );
+      case "pending":
+        return (
+          <StatusPill tone="gold" icon={Clock}>
+            {t("cred.extract.pendingExtraction")}
+          </StatusPill>
+        );
+      case "succeeded":
+        return (
+          <StatusPill tone="green" icon={CheckCircle2}>
+            {t("cred.extract.succeeded")}
+          </StatusPill>
+        );
+      case "failed":
+        return (
+          <StatusPill tone="error" icon={AlertTriangle}>
+            {t("cred.extract.failed")}
+          </StatusPill>
+        );
     }
   }
 

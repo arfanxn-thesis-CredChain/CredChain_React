@@ -779,7 +779,15 @@
       "active": "Active",
       "revoked": "Revoked",
       "pending": "Pending",
-      "failed": "Failed"
+      "failed": "Failed",
+      "type": "Type",
+      "typeAll": "All types",
+      "organization": "Organization",
+      "organizationAll": "All organizations",
+      "competency": "Competency",
+      "competencyAll": "All competencies",
+      "unit": "Unit",
+      "unitAll": "All units"
     },
     "sort": {
       "label": "Sort",
@@ -870,7 +878,7 @@
       "alreadyRevoked": "This credential is already revoked.",
       "alreadySucceeded": "Extraction has already succeeded."
     },
-    "status": { "active": "Active", "revoked": "Revoked" },
+    "status": { "active": "Active", "revoked": "Revoked", "menuLabel": "Status" },
     "field": {
       "recipient": "Recipient (holder)",
       "type": "Credential type",
@@ -905,6 +913,22 @@
       "approved": "Approved",
       "rejected": "Rejected",
       "revoked": "Revoked"
+    },
+    "review": {
+      "menuLabel": "Review status",
+      "all": "All",
+      "pendingReview": "Pending review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "revoked": "Revoked"
+    },
+    "extract": {
+      "menuLabel": "Extraction",
+      "any": "Any",
+      "unextracted": "Unextracted",
+      "pendingExtraction": "Pending extraction",
+      "succeeded": "Succeeded",
+      "failed": "Failed"
     },
     "submit": {
       "title": "Submit Credential",

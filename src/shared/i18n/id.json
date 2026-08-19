@@ -783,7 +783,15 @@
       "active": "Aktif",
       "revoked": "Dicabut",
       "pending": "Tertunda",
-      "failed": "Gagal"
+      "failed": "Gagal",
+      "type": "Jenis",
+      "typeAll": "Semua jenis",
+      "organization": "Organisasi",
+      "organizationAll": "Semua organisasi",
+      "competency": "Kompetensi",
+      "competencyAll": "Semua kompetensi",
+      "unit": "Unit",
+      "unitAll": "Semua unit"
     },
     "sort": {
       "label": "Urutkan",
@@ -871,7 +879,7 @@
       "alreadyRevoked": "Kredensial ini sudah dicabut.",
       "alreadySucceeded": "Ekstraksi sudah berhasil."
     },
-    "status": { "active": "Aktif", "revoked": "Dicabut" },
+    "status": { "active": "Aktif", "revoked": "Dicabut", "menuLabel": "Status" },
     "field": {
       "recipient": "Penerima (pemegang)",
       "type": "Tipe kredensial",
@@ -906,6 +914,22 @@
       "approved": "Disetujui",
       "rejected": "Ditolak",
       "revoked": "Dicabut"
+    },
+    "review": {
+      "menuLabel": "Status Tinjauan",
+      "all": "Semua",
+      "pendingReview": "Menunggu tinjauan",
+      "approved": "Disetujui",
+      "rejected": "Ditolak",
+      "revoked": "Dicabut"
+    },
+    "extract": {
+      "menuLabel": "Ekstraksi",
+      "any": "Apa pun",
+      "unextracted": "Belum diekstrak",
+      "pendingExtraction": "Ekstraksi tertunda",
+      "succeeded": "Berhasil",
+      "failed": "Gagal"
     },
     "submit": {
       "title": "Ajukan Kredensial",

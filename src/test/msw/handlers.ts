@@ -497,6 +497,25 @@ export const handlers = [
     );
   }),
 
+  http.get("*/api/user-units", () =>
+    envelope(301000, "User units retrieved successfully.", [
+      {
+        id: "unit_01",
+        parent_id: null,
+        name: "Faculty of Engineering",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: null,
+      },
+      {
+        id: "unit_02",
+        parent_id: "unit_01",
+        name: "Computer Science Department",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: null,
+      },
+    ]),
+  ),
+
   http.post("*/api/credentials/batch/revoke", () => {
     return HttpResponse.json({
       code: 400300,

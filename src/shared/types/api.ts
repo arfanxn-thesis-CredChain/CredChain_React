@@ -98,6 +98,17 @@ export type ReferenceResource =
   | "competencies";
 
 /**
+ * Mirrors backend response.UserUnit from infrastructure/http/response/user_unit.go
+ */
+export interface HolderUnitDTO {
+  id: string;
+  parent_id: string | null;
+  name: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
+/**
  * Paginated response shape from list endpoints.
  * Mirrors backend response.Pagination from infrastructure/http/response/pagination.go.
  * Backend exposes more URL helpers; we only declare the fields we consume.

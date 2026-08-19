@@ -154,7 +154,7 @@ describe("CredentialCard", () => {
 
     render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
 
-    expect(screen.getByText("Extraction Failed")).toBeInTheDocument();
+    expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
   it("shows deleted indicator for deleted holder", () => {
