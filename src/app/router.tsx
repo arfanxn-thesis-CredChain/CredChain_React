@@ -94,12 +94,40 @@ export const router = createBrowserRouter([
             ...lazyRoute(() => import("@feature/credential/CredentialDetail"), "CredentialDetail"),
           },
           {
+            path: "/credentials/submit",
+            ...lazyRoute(() => import("@feature/credential/CredentialSubmit"), "CredentialSubmit"),
+          },
+          {
             path: "/account/profile",
             ...lazyRoute(() => import("@feature/user/UserSelfProfile"), "UserSelfProfile"),
           },
           {
             path: "/account/email",
             ...lazyRoute(() => import("@feature/user/UserSelfEmail"), "UserSelfEmail"),
+          },
+
+          // Lookup tables (any authenticated; mutations gated in-page)
+          {
+            path: "/credential-types",
+            ...lazyRoute(
+              () => import("@feature/credential-type/CredentialTypesPage"),
+              "CredentialTypesPage",
+            ),
+          },
+          {
+            path: "/credential-issuer-organizations",
+            ...lazyRoute(
+              () => import("@feature/issuer-organization/IssuerOrganizationsPage"),
+              "IssuerOrganizationsPage",
+            ),
+          },
+          {
+            path: "/competencies",
+            ...lazyRoute(() => import("@feature/competency/CompetenciesPage"), "CompetenciesPage"),
+          },
+          {
+            path: "/user-units",
+            ...lazyRoute(() => import("@feature/user-unit/UserUnitsPage"), "UserUnitsPage"),
           },
 
           // Issuer+
