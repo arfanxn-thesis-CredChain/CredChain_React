@@ -1,9 +1,46 @@
 import { http, HttpResponse } from "msw";
-import type { UserDTO } from "@shared/types/api";
+import type { ReferenceRow, UserDTO } from "@shared/types/api";
 import { mockUsers } from "../fixtures";
 
 const envelope = <T>(code: number, message: string, data?: T) =>
   HttpResponse.json({ code, message, ...(data !== undefined ? { data } : {}) });
+
+const mockCredentialTypes: ReferenceRow[] = [
+  { id: "ctype_01", name: "Bachelor's Degree", active: true },
+  { id: "ctype_02", name: "Professional Certificate", active: true },
+];
+const mockIssuerOrganizations: ReferenceRow[] = [
+  { id: "iorg_01", name: "University of Indonesia" },
+  { id: "iorg_02", name: "Tech Academy" },
+];
+const mockCompetencies: ReferenceRow[] = [
+  { id: "comp_01", name: "Machine Learning" },
+  { id: "comp_02", name: "Data Analysis" },
+];
+
+function paginated<T>(items: T[]): Record<string, unknown> {
+  return {
+    items,
+    total: items.length,
+    page: 1,
+    limit: 100,
+    last_page: 1,
+    from: 1,
+    to: items.length,
+    first_page_url: null,
+    last_page_url: null,
+    next_page_url: null,
+    prev_page_url: null,
+  };
+}
+
+function upsertRow(store: ReferenceRow[], prefix: string, name: string): ReferenceRow {
+  const existing = store.find((r) => r.name.toLowerCase() === name.toLowerCase());
+  if (existing) return existing;
+  const created: ReferenceRow = { id: `${prefix}_${store.length + 1}`, name };
+  store.push(created);
+  return created;
+}
 
 // Mirrors backend filter syntax: column<operator><value>.
 // Supports operators used by the frontend: `_` (IS NULL), `!_` (IS NOT NULL), `=`.
@@ -140,6 +177,7 @@ export const handlers = [
             file_hash: "0xabcd1234",
             file_uri: "local:///uploads/test.pdf",
             extract_status: "succeeded",
+            lifecycle_status: "approved",
             extract_error: null,
             extracted_at: "2024-01-15T10:00:00Z",
             issued_at: "2024-01-15T10:00:00Z",
@@ -178,6 +216,7 @@ export const handlers = [
             file_hash: "0xefgh5678",
             file_uri: null,
             extract_status: "succeeded",
+            lifecycle_status: "revoked",
             extract_error: null,
             extracted_at: "2024-03-20T14:00:00Z",
             issued_at: "2024-03-20T14:00:00Z",
@@ -227,6 +266,7 @@ export const handlers = [
             file_hash: "0xdeadbeef",
             file_uri: null,
             extract_status: "failed",
+            lifecycle_status: "pending",
             extract_error: "OCR failed",
             extracted_at: null,
             issued_at: "2024-04-01T10:00:00Z",
@@ -284,6 +324,7 @@ export const handlers = [
         file_hash: "0xabcd1234",
         file_uri: "local:///uploads/test.pdf",
         extract_status: "succeeded",
+        lifecycle_status: "approved",
         extract_error: null,
         extracted_at: "2024-01-15T10:00:00Z",
         issued_at: "2024-01-15T10:00:00Z",
@@ -340,6 +381,7 @@ export const handlers = [
             file_hash: "0xabcd1234",
             file_uri: "local:///uploads/test.pdf",
             extract_status: "succeeded",
+            lifecycle_status: "approved",
             extract_error: null,
             extracted_at: "2024-01-15T10:00:00Z",
             issued_at: "2024-01-15T10:00:00Z",
@@ -398,6 +440,7 @@ export const handlers = [
           file_hash: "0xnewhash1",
           file_uri: "local:///uploads/new.pdf",
           extract_status: "pending",
+          lifecycle_status: "pending",
           extract_error: null,
           extracted_at: null,
           issued_at: new Date().toISOString(),
@@ -405,6 +448,53 @@ export const handlers = [
         },
       ],
     });
+  }),
+
+  http.post("*/api/credentials/batch/submit", () => {
+    return HttpResponse.json({
+      code: 401100,
+      message: "Credential(s) submitted successfully",
+      data: [],
+    });
+  }),
+
+  http.get("*/api/credential-types", () =>
+    envelope(400600, "Credential types retrieved", paginated(mockCredentialTypes)),
+  ),
+
+  http.post("*/api/credential-types", async ({ request }) => {
+    const body = (await request.json()) as { name?: string };
+    return envelope(
+      400600,
+      "Credential type stored",
+      upsertRow(mockCredentialTypes, "ctype", body.name ?? ""),
+    );
+  }),
+
+  http.get("*/api/issuer-organizations", () =>
+    envelope(400600, "Issuer organizations retrieved", paginated(mockIssuerOrganizations)),
+  ),
+
+  http.post("*/api/issuer-organizations", async ({ request }) => {
+    const body = (await request.json()) as { name?: string };
+    return envelope(
+      400600,
+      "Issuer organization stored",
+      upsertRow(mockIssuerOrganizations, "iorg", body.name ?? ""),
+    );
+  }),
+
+  http.get("*/api/competencies", () =>
+    envelope(400600, "Competencies retrieved", paginated(mockCompetencies)),
+  ),
+
+  http.post("*/api/competencies", async ({ request }) => {
+    const body = (await request.json()) as { name?: string };
+    return envelope(
+      400600,
+      "Competency stored",
+      upsertRow(mockCompetencies, "comp", body.name ?? ""),
+    );
   }),
 
   http.post("*/api/credentials/batch/revoke", () => {

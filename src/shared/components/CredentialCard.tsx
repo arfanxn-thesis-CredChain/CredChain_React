@@ -18,6 +18,7 @@ interface CredentialCardProps {
   onSelect?: () => void;
   selectDisabled?: boolean;
   blockLinks?: boolean;
+  statusBadge?: React.ReactNode;
 }
 
 const INTERACTIVE_SELECTORS = "a,button,[role='button'],input,textarea,select";
@@ -29,6 +30,7 @@ export function CredentialCard({
   onSelect,
   selectDisabled,
   blockLinks,
+  statusBadge,
 }: CredentialCardProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -110,6 +112,7 @@ export function CredentialCard({
 
       <div className="pr-8">
         <div className="mb-3 flex flex-wrap items-center gap-2">
+          {statusBadge}
           <CredentialStatusBadge revoked={revoked} />
           {credential.extract_status !== "succeeded" && (
             <CredentialStatusBadge

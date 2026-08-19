@@ -257,6 +257,11 @@
   "validation_file_max_size": "File maksimal 10 MB",
   "zod.credential.batchMinOne": "Minimal satu kredensial wajib diisi",
   "zod.credential.batchMaxHundred": "Maksimal 100 kredensial per batch",
+  "zod.credential.typeRequired": "Tipe kredensial wajib diisi",
+  "zod.credential.issuerOrganizationRequired": "Organisasi penerbit wajib diisi",
+  "zod.credential.issuedAtRequired": "Tanggal terbit wajib diisi",
+  "zod.credential.numberTooLong": "Nomor maksimal 256 karakter",
+  "zod.credential.dateFormat": "Gunakan format YYYY-MM-DD",
   "zod.credential.idRequired": "ID kredensial wajib diisi",
   "zod.credential.revokeMinOne": "Pilih minimal satu kredensial untuk dicabut",
   "zod.credential.revokeMaxHundred": "Maksimal 100 kredensial per batch",
@@ -769,7 +774,8 @@
       },
       "issueCta": "Terbitkan",
       "revokeSelected": "Cabut Terpilih",
-      "revokeSelectedCount": "Cabut Terpilih ({{count}})"
+      "revokeSelectedCount": "Cabut Terpilih ({{count}})",
+      "submitCta": "Ajukan"
     },
     "filter": {
       "status": "Status",
@@ -894,6 +900,46 @@
       "confirmTitle_plural": "Ekstrak ulang {{count}} kredensial?",
       "confirmBody": "Ini akan menjalankan ulang ekstraksi AI pada kredensial yang dipilih.",
       "confirmAction": "Ekstrak Ulang"
+    },
+    "lifecycle": {
+      "pending": "Menunggu tinjauan",
+      "approved": "Disetujui",
+      "rejected": "Ditolak",
+      "revoked": "Dicabut"
+    },
+    "submit": {
+      "title": "Ajukan Kredensial",
+      "description": "Ajukan kredensial kamu untuk ditinjau.",
+      "submit": "Ajukan Kredensial",
+      "submitting": "Mengajukan...",
+      "addAnother": "Tambah kredensial lain",
+      "removeAriaLabel": "Hapus kredensial {{n}}",
+      "duplicateAriaLabel": "Duplikat baris",
+      "success": "Kredensial berhasil diajukan.",
+      "submitError": "Gagal mengajukan kredensial. Silakan coba lagi.",
+      "field": {
+        "name": "Nama",
+        "namePlaceholder": "Nama kredensial",
+        "type": "Tipe kredensial",
+        "typePlaceholder": "Cari atau buat tipe...",
+        "issuerOrganization": "Organisasi penerbit",
+        "orgPlaceholder": "Cari atau buat organisasi...",
+        "competencies": "Kompetensi",
+        "competencyPlaceholder": "Cari atau buat kompetensi...",
+        "number": "Nomor",
+        "numberPlaceholder": "Nomor sertifikat / ijazah",
+        "issuedAt": "Tanggal terbit",
+        "expiresAt": "Tanggal kedaluwarsa"
+      },
+      "searchTitle": "Cari",
+      "searchPlaceholder": "Ketik untuk mencari...",
+      "create": "Buat \"{{name}}\"",
+      "existing": "Sudah ada — menggunakan data yang ada",
+      "createError": "Gagal membuat entri. Silakan coba lagi.",
+      "loading": "Memuat...",
+      "emptyList": "Belum ada entri. Ketik untuk membuat.",
+      "noMatch": "Tidak ada entri yang cocok. Buat yang baru.",
+      "loadError": "Gagal memuat opsi."
     }
   },
   "success_overview": "Ringkasan berhasil dimuat.",

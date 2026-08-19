@@ -257,6 +257,11 @@
   "validation_file_max_size": "File must be 10 MB or less",
   "zod.credential.batchMinOne": "At least one credential is required",
   "zod.credential.batchMaxHundred": "Maximum 100 credentials per batch",
+  "zod.credential.typeRequired": "Credential type is required",
+  "zod.credential.issuerOrganizationRequired": "Issuer organization is required",
+  "zod.credential.issuedAtRequired": "Issued date is required",
+  "zod.credential.numberTooLong": "Number must be 256 characters or fewer",
+  "zod.credential.dateFormat": "Use YYYY-MM-DD format",
   "zod.credential.idRequired": "Credential ID is required",
   "zod.credential.revokeMinOne": "Select at least one credential to revoke",
   "zod.credential.revokeMaxHundred": "Maximum 100 credentials per batch",
@@ -765,7 +770,8 @@
       },
       "issueCta": "Issue",
       "revokeSelected": "Revoke Selected",
-      "revokeSelectedCount": "Revoke Selected ({{count}})"
+      "revokeSelectedCount": "Revoke Selected ({{count}})",
+      "submitCta": "Submit"
     },
     "filter": {
       "status": "Status",
@@ -893,6 +899,46 @@
       "confirmTitle_plural": "Re-extract {{count}} credentials?",
       "confirmBody": "This will re-run AI extraction on the selected credential(s).",
       "confirmAction": "Re-extract"
+    },
+    "lifecycle": {
+      "pending": "Pending review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "revoked": "Revoked"
+    },
+    "submit": {
+      "title": "Submit Credential",
+      "description": "Submit your credentials for review.",
+      "submit": "Submit Credentials",
+      "submitting": "Submitting...",
+      "addAnother": "Add another credential",
+      "removeAriaLabel": "Remove credential {{n}}",
+      "duplicateAriaLabel": "Duplicate row",
+      "success": "Credential(s) submitted successfully.",
+      "submitError": "Failed to submit credentials. Please try again.",
+      "field": {
+        "name": "Name",
+        "namePlaceholder": "Credential name",
+        "type": "Credential type",
+        "typePlaceholder": "Search or create a type...",
+        "issuerOrganization": "Issuer organization",
+        "orgPlaceholder": "Search or create an organization...",
+        "competencies": "Competencies",
+        "competencyPlaceholder": "Search or create competencies...",
+        "number": "Number",
+        "numberPlaceholder": "Certificate / diploma number",
+        "issuedAt": "Issued date",
+        "expiresAt": "Expiry date"
+      },
+      "searchTitle": "Search",
+      "searchPlaceholder": "Type to search...",
+      "create": "Create \"{{name}}\"",
+      "existing": "Already exists — using existing row",
+      "createError": "Failed to create the entry. Please try again.",
+      "loading": "Loading...",
+      "emptyList": "No entries yet. Type to create one.",
+      "noMatch": "No matching entries. Create a new one.",
+      "loadError": "Failed to load options."
     }
   },
   "success_overview": "Overview loaded.",

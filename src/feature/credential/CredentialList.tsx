@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
-import { Ban, FileBadge, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { Ban, FileBadge, RefreshCw, Search, ShieldCheck, Upload } from "lucide-react";
 import { useRevokeCredentials } from "./api/useRevokeCredentials";
 import { useReExtractCredentials } from "./api/useReExtractCredentials";
 import { useStore } from "@app/store";
@@ -26,6 +26,7 @@ import { CredentialCard } from "@shared/components/CredentialCard";
 import { CredentialStatusFilterMenu } from "@shared/components/CredentialStatusFilterMenu";
 import type { CredentialStatusFilter } from "@shared/components/CredentialStatusFilterMenu";
 import { CredentialSortMenu } from "@shared/components/CredentialSortMenu";
+import { CredentialLifecycleStatusBadge } from "./components/CredentialLifecycleStatusBadge";
 
 const MAX_SELECTION = 100;
 
@@ -194,6 +195,14 @@ export function CredentialList() {
     if (!canManage) {
       return (
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          {isHolder && (
+            <Button asChild variant="gold">
+              <Link to="/credentials/submit">
+                <Upload className="h-4 w-4" />
+                {t("cred.list.submitCta")}
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline">
             <Link to="/credentials/verify">
               <ShieldCheck className="h-4 w-4" />
@@ -373,6 +382,7 @@ export function CredentialList() {
                   <CredentialCard
                     key={cred.id}
                     credential={cred}
+                    statusBadge={<CredentialLifecycleStatusBadge status={cred.lifecycle_status} />}
                     selectionMode={canManage ? bulkMode : undefined}
                     isSelected={canManage ? selectedIds.has(cred.id) : undefined}
                     onSelect={canManage ? () => toggleSelection(cred.id) : undefined}

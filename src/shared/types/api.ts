@@ -37,7 +37,7 @@ export interface AuthResponseDTO extends UserDTO {
 /**
  * Mirrors backend response.Credential
  */
-export type ExtractStatus = "pending" | "succeeded" | "failed";
+export type ExtractStatus = "pending" | "succeeded" | "failed" | "unextracted";
 
 export type CredentialLifecycleStatus = "pending" | "approved" | "rejected" | "revoked";
 
@@ -81,6 +81,21 @@ export interface CredentialVerifyDTO {
   description: string;
   credential: CredentialDTO | null;
 }
+
+/**
+ * Reference-data row (credential types, issuer organizations, competencies).
+ * Mirrors response.CredentialType / response.IssuerOrganization / response.Competency.
+ */
+export interface ReferenceRow {
+  id: string;
+  name: string;
+  active?: boolean;
+}
+
+export type ReferenceResource =
+  | "credential-types"
+  | "credential-issuer-organizations"
+  | "competencies";
 
 /**
  * Paginated response shape from list endpoints.
