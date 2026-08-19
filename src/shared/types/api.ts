@@ -9,12 +9,13 @@ export interface UserDTO {
   id: string;
   name: string | null;
   number: string | null;
-  phone_number: string | null;
+  unit_id: string | null;
+  joined_year: number | null;
   email: string;
   birth_date: string | null;
   gender: Gender | null;
-  role: Role;
   meta: Record<string, unknown> | null;
+  role: Role;
   wallet_address: string;
   created_at: string;
   updated_at: string;
@@ -38,10 +39,16 @@ export interface AuthResponseDTO extends UserDTO {
  */
 export type ExtractStatus = "pending" | "succeeded" | "failed";
 
+export type CredentialLifecycleStatus = "pending" | "approved" | "rejected" | "revoked";
+
 export interface CredentialDTO {
   id: string;
   holder_user_id: string;
+  submitter_user_id: string;
   issuer_user_id: string;
+  issuer_organization_id: string;
+  type_id: string;
+  number: string | null;
   revoker_user_id: string | null;
   name: string;
   meta: Record<string, unknown> | null;
@@ -53,6 +60,15 @@ export interface CredentialDTO {
   extracted_at: string | null;
   issued_at: string;
   revoked_at: string | null;
+  expires_at: string | null;
+  lifecycle_status: CredentialLifecycleStatus;
+  approver_user_id: string | null;
+  approved_at: string | null;
+  rejecter_user_id: string | null;
+  rejected_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string | null;
   holder?: UserDTO;
   issuer?: UserDTO;
   revoker?: UserDTO;

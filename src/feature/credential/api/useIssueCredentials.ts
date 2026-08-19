@@ -11,6 +11,13 @@ import { credentialKeys } from "./keys";
 const BACKEND_TO_FRONTEND_PATH: Record<string, string> = {
   Credentials: "credentials",
   HolderUserID: "holder_user_id",
+  TypeID: "type_id",
+  IssuerOrganizationID: "issuer_organization_id",
+  Number: "number",
+  IssuedAt: "issued_at",
+  ExpiresAt: "expires_at",
+  CompetencyIDs: "competency_ids",
+  SubmitterUserID: "submitter_user_id",
   Name: "name",
   File: "file",
   Meta: "meta_entries",

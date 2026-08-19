@@ -36,6 +36,8 @@ export function UserContactBlock({
   const name = user?.name ?? user?.email ?? fallbackId;
   const userId = user?.id ?? fallbackId;
   const isDeleted = user?.deleted_at !== null;
+  const phoneNumber = (user as (UserDTO & { phone_number?: string | null }) | undefined)
+    ?.phone_number;
 
   const textColor = tone === "error" ? "text-error" : "text-navy";
   const nameWeight = labelType === "full" ? "font-bold" : "font-semibold";
@@ -107,12 +109,12 @@ export function UserContactBlock({
               </div>
             )}
 
-            {user?.phone_number && (
+            {phoneNumber && (
               <div className="flex items-center gap-1 text-xs text-gray-500">
                 <Phone className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
-                <span className="truncate">{user.phone_number}</span>
+                <span className="truncate">{phoneNumber}</span>
                 <CopyInlineButton
-                  value={user.phone_number}
+                  value={phoneNumber}
                   ariaLabel={t(`cred.copy.${copyPrefix}Phone`)}
                   className="shrink-0"
                 />

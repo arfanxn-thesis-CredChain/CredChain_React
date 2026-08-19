@@ -7,7 +7,8 @@ export function makeUser(overrides: Partial<UserDTO> = {}): UserDTO {
     id: overrides.id ?? "usr_test_1",
     name: "Test User",
     number: null,
-    phone_number: "+6281234567890",
+    unit_id: null,
+    joined_year: null,
     email: "test@credchain.demo",
     birth_date: null,
     gender: null,
@@ -25,7 +26,11 @@ export function makeCredential(overrides: Partial<CredentialDTO> = {}): Credenti
   return {
     id: "cred_test_1",
     holder_user_id: "usr_test_1",
+    submitter_user_id: "usr_test_1",
     issuer_user_id: "usr_test_2",
+    issuer_organization_id: "org_test_1",
+    type_id: "type_test_1",
+    number: null,
     revoker_user_id: null,
     name: "Test Credential",
     meta: null,
@@ -37,6 +42,15 @@ export function makeCredential(overrides: Partial<CredentialDTO> = {}): Credenti
     extracted_at: "2026-01-01T00:00:00Z",
     issued_at: "2026-01-01T00:00:00Z",
     revoked_at: null,
+    expires_at: null,
+    lifecycle_status: "approved",
+    approver_user_id: null,
+    approved_at: "2026-01-01T00:00:00Z",
+    rejecter_user_id: null,
+    rejected_at: null,
+    rejection_reason: null,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: null,
     holder: makeUser({ id: "usr_test_1", role: Role.HOLDER, name: "Test Holder" }),
     issuer: makeUser({ id: "usr_test_2", role: Role.ISSUER, name: "Test Issuer" }),
     ...overrides,
@@ -99,7 +113,6 @@ export function mockDeletedUser(overrides: Partial<UserDTO> = {}): UserDTO {
 export function mockUserNoPhone(overrides: Partial<UserDTO> = {}): UserDTO {
   return mockUserWithMeta({
     id: "usr_nophone_1",
-    phone_number: null,
     ...overrides,
   });
 }

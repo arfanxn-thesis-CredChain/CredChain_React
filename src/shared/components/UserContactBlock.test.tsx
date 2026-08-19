@@ -4,6 +4,7 @@ import { TestProviders } from "@/test/TestProviders";
 import { i18n } from "@shared/i18n/config";
 import { makeUser } from "@/test/fixtures";
 import { Role } from "@shared/auth/role";
+import type { UserDTO } from "@shared/types/api";
 import { UserContactBlock } from "./UserContactBlock";
 
 describe("UserContactBlock", () => {
@@ -12,7 +13,10 @@ describe("UserContactBlock", () => {
   });
 
   it("renders name, role badge, and contact details for full labelType", () => {
-    const user = makeUser({ id: "usr_1", name: "Alice", number: "EMP-001", role: Role.HOLDER });
+    const user = {
+      ...makeUser({ id: "usr_1", name: "Alice", number: "EMP-001", role: Role.HOLDER }),
+      phone_number: "+6281234567890",
+    } as UserDTO & { phone_number?: string | null };
     render(
       <UserContactBlock user={user} fallbackId="usr_1" copyPrefix="holder" labelType="full" />,
       { wrapper: TestProviders },
@@ -113,7 +117,10 @@ describe("UserContactBlock", () => {
   });
 
   it("renders copy buttons with correct holder aria labels", () => {
-    const user = makeUser({ number: "NUM-1" });
+    const user = {
+      ...makeUser({ number: "NUM-1" }),
+      phone_number: "+6281234567890",
+    } as UserDTO & { phone_number?: string | null };
     render(
       <UserContactBlock user={user} fallbackId="usr_1" copyPrefix="holder" labelType="full" />,
       { wrapper: TestProviders },
@@ -192,7 +199,7 @@ describe("UserContactBlock", () => {
   });
 
   it("does not render phone number row when phone_number is null", () => {
-    const user = makeUser({ phone_number: null });
+    const user = makeUser({});
     render(
       <UserContactBlock user={user} fallbackId="usr_1" copyPrefix="holder" labelType="full" />,
       { wrapper: TestProviders },

@@ -37,7 +37,8 @@ beforeEach(async () => {
       id: "usr_admin_test",
       name: "Test Admin",
       number: null,
-      phone_number: null,
+      unit_id: null,
+      joined_year: null,
       email: "admin@test.com",
       birth_date: null,
       gender: null,
@@ -236,10 +237,11 @@ describe("UserList", () => {
     expect(screen.getByText("holder@credchain.demo")).toBeInTheDocument();
   });
 
-  it("renders phone when phone exists", async () => {
+  it("renders phone placeholder when phone data is absent", async () => {
     renderUserList();
     await waitFor(() => expect(screen.getByText("Jane Doe")).toBeInTheDocument());
-    expect(screen.getAllByText("+6281234567890").length).toBeGreaterThan(0);
+    const row = screen.getByText("Jane Doe").closest("tr");
+    expect(row?.textContent).toContain("—");
   });
 
   it("renders wallet address in each row", async () => {

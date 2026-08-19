@@ -20,7 +20,7 @@ import { useUser } from "./api/useUser";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { api } from "@shared/api/client";
-import type { CredentialDTO } from "@shared/types/api";
+import type { CredentialDTO, UserDTO } from "@shared/types/api";
 import { BackLink } from "@shared/components/BackLink";
 import { PageHeader } from "@shared/components/PageHeader";
 import { EmptyState } from "@shared/components/EmptyState";
@@ -234,7 +234,7 @@ export function UserDetail() {
             <DetailRow
               icon={Phone}
               label={t("user.detail.phone")}
-              value={user.phone_number ?? "—"}
+              value={(user as UserDTO & { phone_number?: string | null }).phone_number ?? "—"}
             />
             <div>
               <dt className="mb-1 flex items-center gap-1.5 text-xs font-bold tracking-wider text-gray-400 uppercase">
@@ -308,7 +308,11 @@ export function UserDetail() {
         <div className="border-b border-gray-50 p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <EyebrowLabel>
-              {t(isIssuerOrAbove ? "user.detail.credentialSectionIssued" : "user.detail.credentialSectionHeld")}
+              {t(
+                isIssuerOrAbove
+                  ? "user.detail.credentialSectionIssued"
+                  : "user.detail.credentialSectionHeld",
+              )}
               {credTotal > 0 && <span className="ml-2 text-xs text-gray-400">({credTotal})</span>}
             </EyebrowLabel>
           </div>
@@ -339,7 +343,11 @@ export function UserDetail() {
         <div className="bg-gray-50/30 p-4 sm:p-6">
           {credIsError ? (
             <div className="p-12 text-center text-sm text-error">
-              {t(isIssuerOrAbove ? "user.detail.credentials.errorIssued" : "user.detail.credentials.errorHeld")}
+              {t(
+                isIssuerOrAbove
+                  ? "user.detail.credentials.errorIssued"
+                  : "user.detail.credentials.errorHeld",
+              )}
             </div>
           ) : credLoading ? (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -350,8 +358,16 @@ export function UserDetail() {
           ) : credentials.length === 0 ? (
             <EmptyState
               icon={FileBadge}
-              title={t(isIssuerOrAbove ? "user.detail.credentials.emptyIssued.title" : "user.detail.credentials.emptyHeld.title")}
-              description={t(isIssuerOrAbove ? "user.detail.credentials.emptyIssued.body" : "user.detail.credentials.emptyHeld.body")}
+              title={t(
+                isIssuerOrAbove
+                  ? "user.detail.credentials.emptyIssued.title"
+                  : "user.detail.credentials.emptyHeld.title",
+              )}
+              description={t(
+                isIssuerOrAbove
+                  ? "user.detail.credentials.emptyIssued.body"
+                  : "user.detail.credentials.emptyHeld.body",
+              )}
               className="rounded-none border-0 bg-transparent shadow-none"
             />
           ) : (

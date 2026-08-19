@@ -57,7 +57,7 @@ describe("UserSelfProfile", () => {
 
   it("phone number is the only editable input", async () => {
     useStore.setState({
-      user: mockUserWithMeta({ phone_number: "+6281234567890" }),
+      user: mockUserWithMeta({}),
       isAuthenticated: true,
     });
     render(<UserSelfProfile />, { wrapper: TestProviders });
@@ -72,7 +72,7 @@ describe("UserSelfProfile", () => {
 
   it("save button is disabled when phone is unchanged", async () => {
     useStore.setState({
-      user: mockUserWithMeta({ phone_number: "+6281234567890" }),
+      user: mockUserWithMeta({}),
       isAuthenticated: true,
     });
     render(<UserSelfProfile />, { wrapper: TestProviders });
@@ -123,7 +123,7 @@ describe("UserSelfProfile", () => {
 
   it("shows translated phone error (not raw key) on invalid phone", async () => {
     useStore.setState({
-      user: mockUserWithMeta({ phone_number: null }),
+      user: mockUserWithMeta({}),
       isAuthenticated: true,
     });
     render(<UserSelfProfile />, { wrapper: TestProviders });

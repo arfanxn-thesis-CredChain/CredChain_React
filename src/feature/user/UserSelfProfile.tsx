@@ -34,7 +34,10 @@ export function UserSelfProfile() {
   const update = useUpdateSelfProfile(form);
 
   useEffect(() => {
-    if (user) form.reset({ phone_number: user.phone_number ?? undefined });
+    if (user) {
+      const phoneNumber = (user as { phone_number?: string | null }).phone_number;
+      form.reset({ phone_number: phoneNumber ?? undefined });
+    }
   }, [user, form]);
 
   const onSubmit = form.handleSubmit((data) => update.mutate(data));

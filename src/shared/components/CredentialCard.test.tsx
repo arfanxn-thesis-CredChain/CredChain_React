@@ -6,6 +6,7 @@ import { i18n } from "@shared/i18n/config";
 import { CredentialCard } from "./CredentialCard";
 import { makeCredential, makeUser } from "@/test/fixtures";
 import { Role } from "@shared/auth/role";
+import type { UserDTO } from "@shared/types/api";
 
 const navigateMock = vi.fn();
 
@@ -24,7 +25,12 @@ describe("CredentialCard", () => {
   });
 
   it("renders credential identity and holder/issuer info", () => {
-    const credential = makeCredential();
+    const credential = makeCredential({
+      holder: {
+        ...makeUser({ id: "usr_test_1", role: Role.HOLDER, name: "Test Holder" }),
+        phone_number: "+6281234567890",
+      } as UserDTO & { phone_number?: string | null },
+    });
     render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
 
     expect(screen.getByText("Test Credential")).toBeInTheDocument();

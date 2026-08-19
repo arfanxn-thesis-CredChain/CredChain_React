@@ -64,7 +64,8 @@ export function UserEditDrawer({ user, onClose }: UserEditDrawerProps) {
         id: user.id,
         name: user.name ?? "",
         number: user.number ?? undefined,
-        phone_number: user.phone_number ?? undefined,
+        phone_number:
+          (user as UserDTO & { phone_number?: string | null }).phone_number ?? undefined,
         birth_date: user.birth_date ? user.birth_date.slice(0, 10) : undefined,
         gender: user.gender ?? undefined,
         email: user.email,
@@ -250,11 +251,9 @@ export function UserEditDrawer({ user, onClose }: UserEditDrawerProps) {
                 <Select
                   value={form.watch("gender") ?? "__none__"}
                   onValueChange={(v) =>
-                    form.setValue(
-                      "gender",
-                      v === "__none__" ? null : (v as "male" | "female"),
-                      { shouldDirty: true },
-                    )
+                    form.setValue("gender", v === "__none__" ? null : (v as "male" | "female"), {
+                      shouldDirty: true,
+                    })
                   }
                 >
                   <SelectTrigger>
