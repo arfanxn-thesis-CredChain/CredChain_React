@@ -41,7 +41,21 @@ export function useIssueCredentials<T extends FieldValues>(form?: UseFormReturn<
       const formData = new FormData();
       rows.forEach((row, i) => {
         formData.append(`credentials[${i}][holder_user_id]`, row.holder_user_id);
+        formData.append(`credentials[${i}][type_id]`, row.type_id);
+        formData.append(`credentials[${i}][issuer_organization_id]`, row.issuer_organization_id);
+        if (row.number) {
+          formData.append(`credentials[${i}][number]`, row.number);
+        }
+        if (row.issued_at) {
+          formData.append(`credentials[${i}][issued_at]`, row.issued_at);
+        }
+        if (row.expires_at) {
+          formData.append(`credentials[${i}][expires_at]`, row.expires_at);
+        }
         formData.append(`credentials[${i}][name]`, row.name);
+        if (row.competency_ids && row.competency_ids.length > 0) {
+          formData.append(`credentials[${i}][competency_ids]`, row.competency_ids.join(","));
+        }
         if (row.meta_entries && row.meta_entries.length > 0) {
           const metaObj = mergeMeta(row.meta_entries, {});
           if (metaObj) {

@@ -40,6 +40,12 @@ export const credentialIssueRowSchema = z.object({
     .string()
     .min(1, "zod.credential.holderRequired")
     .refine((v) => v !== "new_holder", { message: "zod.credential.holderRequired" }),
+  type_id: z.string().min(1, "zod.credential.typeRequired"),
+  issuer_organization_id: z.string().min(1, "zod.credential.issuerOrganizationRequired"),
+  number: z.string().max(256, "zod.credential.numberTooLong").optional(),
+  issued_at: z.string().regex(ISO_DATE, "zod.credential.dateFormat").optional().or(z.literal("")),
+  expires_at: z.string().regex(ISO_DATE, "zod.credential.dateFormat").optional().or(z.literal("")),
+  competency_ids: z.array(z.string().min(1)).optional(),
   name: z.string().min(1, "zod.credential.nameRequired").max(256, "zod.credential.nameTooLong"),
   meta_entries: metaEntriesSchema.optional(),
   file: credentialFileSchema,
@@ -108,6 +114,12 @@ export type CredentialBatchRevokeInput = z.infer<typeof credentialBatchRevokeSch
 export function defaultCredentialIssueRow(): CredentialIssueRowInput {
   return {
     holder_user_id: "",
+    type_id: "",
+    issuer_organization_id: "",
+    number: "",
+    issued_at: "",
+    expires_at: "",
+    competency_ids: [],
     name: "",
     meta_entries: [],
     file: null,

@@ -60,6 +60,12 @@ export function CredentialIssue() {
                         const values = form.getValues(`credentials.${index}`);
                         append({
                           holder_user_id: values.holder_user_id,
+                          type_id: values.type_id,
+                          issuer_organization_id: values.issuer_organization_id,
+                          number: values.number,
+                          issued_at: values.issued_at,
+                          expires_at: values.expires_at,
+                          competency_ids: values.competency_ids ? [...values.competency_ids] : [],
                           name: values.name,
                           meta_entries: values.meta_entries
                             ? values.meta_entries.map((e) => ({ ...e }))

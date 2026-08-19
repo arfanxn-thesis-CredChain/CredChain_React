@@ -1,10 +1,115 @@
 import { describe, it, expect } from "vitest";
-import { verifyFileSchema } from "./credential";
+import { credentialIssueRowSchema, verifyFileSchema } from "./credential";
 
 function makeFile(name: string, type: string, size = 1024): File {
   const buffer = new ArrayBuffer(size);
   return new File([buffer], name, { type });
 }
+
+function makeIssueRow() {
+  return {
+    holder_user_id: "usr_1",
+    type_id: "ctype_01",
+    issuer_organization_id: "iorg_01",
+    number: "",
+    issued_at: "",
+    expires_at: "",
+    competency_ids: [],
+    name: "Bachelor's Degree",
+    meta_entries: [],
+    file: makeFile("doc.pdf", "application/pdf"),
+  };
+}
+
+describe("credentialIssueRowSchema", () => {
+  it("accepts a fully valid row with only required fields", () => {
+    const result = credentialIssueRowSchema.safeParse(makeIssueRow());
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts all optional fields when present", () => {
+    const result = credentialIssueRowSchema.safeParse({
+      ...makeIssueRow(),
+      number: "S-123",
+      issued_at: "2024-01-15",
+      expires_at: "2026-01-15",
+      competency_ids: ["comp_01", "comp_02"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a missing type_id", () => {
+    const result = credentialIssueRowSchema.safeParse({ ...makeIssueRow(), type_id: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.credential.typeRequired");
+    }
+  });
+
+  it("rejects a missing issuer_organization_id", () => {
+    const result = credentialIssueRowSchema.safeParse({
+      ...makeIssueRow(),
+      issuer_organization_id: "",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.credential.issuerOrganizationRequired");
+    }
+  });
+
+  it("accepts a number of exactly 256 characters", () => {
+    const result = credentialIssueRowSchema.safeParse({ ...makeIssueRow(), number: "x".repeat(256) });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a number longer than 256 characters", () => {
+    const result = credentialIssueRowSchema.safeParse({ ...makeIssueRow(), number: "x".repeat(257) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.credential.numberTooLong");
+    }
+  });
+
+  it("rejects a malformed issued_at date", () => {
+    const result = credentialIssueRowSchema.safeParse({
+      ...makeIssueRow(),
+      issued_at: "2024/01/15",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.credential.dateFormat");
+    }
+  });
+
+  it("rejects a malformed expires_at date", () => {
+    const result = credentialIssueRowSchema.safeParse({
+      ...makeIssueRow(),
+      expires_at: "15-01-2024",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.credential.dateFormat");
+    }
+  });
+
+  it("rejects competency_ids containing an empty string", () => {
+    const result = credentialIssueRowSchema.safeParse({ ...makeIssueRow(), competency_ids: [""] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects the new_holder sentinel value", () => {
+    const result = credentialIssueRowSchema.safeParse({
+      ...makeIssueRow(),
+      holder_user_id: "new_holder",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("still requires name and file", () => {
+    expect(credentialIssueRowSchema.safeParse({ ...makeIssueRow(), name: "" }).success).toBe(false);
+    expect(credentialIssueRowSchema.safeParse({ ...makeIssueRow(), file: null }).success).toBe(false);
+  });
+});
 
 describe("verifyFileSchema", () => {
   it("accepts a valid PDF file", () => {

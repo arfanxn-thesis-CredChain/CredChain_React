@@ -7,6 +7,7 @@ import { Button } from "@ui/button";
 import { Input } from "@ui/input";
 import { FormField } from "@ui/form-field";
 import { HolderSearchDropdown } from "@shared/components/HolderSearchDropdown";
+import { SearchableCreateSelect } from "@shared/components/SearchableCreateSelect";
 import { MetaEditor } from "@shared/components/MetaEditor";
 import { api } from "@shared/api/client";
 import { cn } from "@shared/lib/cn";
@@ -19,6 +20,15 @@ interface CredentialIssueRowProps {
   form: UseFormReturn<CredentialBatchIssueInput>;
   onRemove?: () => void;
   onDuplicate?: () => void;
+}
+
+type FieldError = { message?: string };
+
+function errorMessage(fieldError: FieldError | unknown | undefined): string | undefined {
+  if (fieldError && typeof fieldError === "object" && "message" in fieldError) {
+    return (fieldError as { message?: string }).message;
+  }
+  return undefined;
 }
 
 export function CredentialIssueRow({
@@ -66,7 +76,7 @@ export function CredentialIssueRow({
       </div>
 
       <div className="grid w-full grid-cols-1 gap-4 pr-12 sm:gap-6 md:grid-cols-2">
-        <FormField label={t("cred.field.holder")} error={errors?.holder_user_id?.message}>
+        <FormField label={t("cred.field.holder")} error={errorMessage(errors?.holder_user_id)}>
           <HolderSearchDropdown
             value={holderId}
             onChange={(id) =>
@@ -78,7 +88,7 @@ export function CredentialIssueRow({
               const response = await api.get(`/users/${userId}`);
               return (response.data as UserDTO) ?? null;
             }}
-            error={errors?.holder_user_id?.message}
+            error={errorMessage(errors?.holder_user_id)}
             searchPlaceholder={t("cred.field.holderSearch")}
             noResultsText={t("cred.field.noSearchResults")}
             onSearch={async (query) => {
@@ -94,7 +104,7 @@ export function CredentialIssueRow({
           />
         </FormField>
 
-        <FormField label={t("cred.field.name")} error={errors?.name?.message}>
+        <FormField label={t("cred.field.name")} error={errorMessage(errors?.name)}>
           <Input
             placeholder={t("cred.field.namePlaceholder")}
             onChange={(e) => {
@@ -105,8 +115,75 @@ export function CredentialIssueRow({
           />
         </FormField>
 
+        <SearchableCreateSelect
+          resource="credential-types"
+          label={t("cred.submit.field.type")}
+          placeholder={t("cred.submit.field.typePlaceholder")}
+          value={form.watch(`credentials.${index}.type_id`) ?? ""}
+          onChange={(id) =>
+            form.setValue(`credentials.${index}.type_id`, id, { shouldValidate: true })
+          }
+          error={errorMessage(errors?.type_id)}
+        />
+
+        <SearchableCreateSelect
+          resource="credential-issuer-organizations"
+          label={t("cred.submit.field.issuerOrganization")}
+          placeholder={t("cred.submit.field.orgPlaceholder")}
+          value={form.watch(`credentials.${index}.issuer_organization_id`) ?? ""}
+          onChange={(id) =>
+            form.setValue(`credentials.${index}.issuer_organization_id`, id, {
+              shouldValidate: true,
+            })
+          }
+          error={errorMessage(errors?.issuer_organization_id)}
+        />
+
+        <FormField
+          label={t("cred.submit.field.issuedAt")}
+          error={errorMessage(errors?.issued_at)}
+          optional
+        >
+          <Input type="date" {...form.register(`credentials.${index}.issued_at`)} />
+        </FormField>
+
+        <FormField
+          label={t("cred.submit.field.expiresAt")}
+          error={errorMessage(errors?.expires_at)}
+          optional
+        >
+          <Input type="date" {...form.register(`credentials.${index}.expires_at`)} />
+        </FormField>
+
         <div className="md:col-span-2">
-          <FormField label={t("cred.field.file")} error={errors?.file?.message}>
+          <FormField
+            label={t("cred.submit.field.number")}
+            error={errorMessage(errors?.number)}
+            optional
+          >
+            <Input
+              placeholder={t("cred.submit.field.numberPlaceholder")}
+              {...form.register(`credentials.${index}.number`)}
+            />
+          </FormField>
+        </div>
+
+        <div className="md:col-span-2">
+          <SearchableCreateSelect
+            multiple
+            resource="competencies"
+            label={t("cred.submit.field.competencies")}
+            placeholder={t("cred.submit.field.competencyPlaceholder")}
+            value={form.watch(`credentials.${index}.competency_ids`) ?? []}
+            onChange={(ids) =>
+              form.setValue(`credentials.${index}.competency_ids`, ids, { shouldValidate: true })
+            }
+            error={errorMessage(errors?.competency_ids)}
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <FormField label={t("cred.field.file")} error={errorMessage(errors?.file)}>
             <CredentialFileInput
               file={file ?? null}
               onChange={(f) => {
