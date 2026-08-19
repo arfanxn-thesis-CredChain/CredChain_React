@@ -347,25 +347,25 @@ function CredentialCountsCard({
             value={counts.total}
             label={t("overview.counts.total")}
             compact={compact}
-            to="/credentials?status=all"
+            to="/credentials"
           />
           <StatItem
             value={counts.revoked}
             label={t("overview.counts.revoked")}
             compact={compact}
-            to="/credentials?status=revoked"
+            to="/credentials?review=revoked"
           />
           <StatItem
             value={counts.pending}
             label={t("overview.counts.pending")}
             compact={compact}
-            to="/credentials?status=pending"
+            to="/credentials?extract=pending"
           />
           <StatItem
             value={counts.failed}
             label={t("overview.counts.failed")}
             compact={compact}
-            to="/credentials?status=failed"
+            to="/credentials?extract=failed"
           />
         </div>
       </div>
@@ -422,7 +422,7 @@ function UserCountsCard({ counts, compact }: { counts: OverviewUserCounts; compa
         value={counts.trashed}
         label={t("overview.counts.trashed")}
         compact={compact}
-      to="/users?status=deleted_at!_"
+        to="/users?status=deleted_at!_"
       />
     </>
   );
@@ -506,7 +506,7 @@ function RecentActivityCard({
                 <CredentialRow key={cred.id} cred={cred} variant="revoked" t={t} />
               ))}
               <RecentSectionFooter
-                to="/credentials?status=revoked"
+                to="/credentials?review=revoked"
                 label={t("overview.recents.viewAllCredentials")}
               />
             </RecentSection>
@@ -608,8 +608,7 @@ function ChainInfoCard({ details }: { details: OverviewChainDetails }) {
               {t("overview.chainDetails.relayerBalance")}
             </EyebrowLabel>
             <dd className="font-display text-2xl font-bold tracking-tight text-navy">
-              {details.relayer_balance}{" "}
-              <span className="font-sans text-sm text-gray-500">ETH</span>
+              {details.relayer_balance} <span className="font-sans text-sm text-gray-500">ETH</span>
             </dd>
           </div>
         </dl>

@@ -157,6 +157,69 @@ describe("CredentialList", () => {
     });
   });
 
+  it("emits the issuer_organization_id filter when an organization is selected", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /organization:/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /university of indonesia/i }));
+
+    await waitFor(() => {
+      const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
+      expect(filters).toContain("issuer_organization_id=iorg_01");
+    });
+  });
+
+  it("emits the competency_id filter when a competency is selected", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /competency:/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /machine learning/i }));
+
+    await waitFor(() => {
+      const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
+      expect(filters).toContain("competency_id=comp_01");
+    });
+  });
+
+  it("emits the holder_unit_id filter when a holder unit is selected", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /unit:/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /faculty of engineering/i }));
+
+    await waitFor(() => {
+      const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
+      expect(filters).toContain("holder_unit_id=unit_01");
+    });
+  });
+
   it("adjusts the sort to revoked_at when the revoked review filter is active", async () => {
     const recorded: string[] = [];
     server.use(

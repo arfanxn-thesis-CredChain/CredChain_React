@@ -196,7 +196,7 @@ describe("Overview", () => {
       expect(screen.getByText("Recently Revoked")).toBeDefined();
     });
     const link = screen.getByRole("link", { name: /view all credentials/i });
-    expect(link).toHaveAttribute("href", "/credentials?status=revoked");
+    expect(link).toHaveAttribute("href", "/credentials?review=revoked");
   });
 
   it("parses single date URL param into API filter", async () => {
