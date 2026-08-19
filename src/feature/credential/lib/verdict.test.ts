@@ -50,6 +50,10 @@ describe("getVerdictTier", () => {
     expect(getVerdictTier(400412)).toBe("red");
   });
 
+  it("returns expired for expired (400413)", () => {
+    expect(getVerdictTier(400413)).toBe("expired");
+  });
+
   it("returns light-gray for unknown verdict code", () => {
     expect(getVerdictTier(999999)).toBe("light-gray");
   });
@@ -62,6 +66,10 @@ describe("getMethodLabel", () => {
 
   it("returns 'hash' when verdict_code is exact-hash (400402)", () => {
     expect(getMethodLabel(null, 400402)).toBe("hash");
+  });
+
+  it("returns 'hash' when verdict_code is exact-hash (400413)", () => {
+    expect(getMethodLabel(0.5, 400413)).toBe("hash");
   });
 
   it("returns 'fuzzy' when verdict_code is tampered (400404)", () => {
@@ -100,6 +108,10 @@ describe("isExactHashMatch", () => {
 
   it("returns true for integrity_warning (400403)", () => {
     expect(isExactHashMatch(400403)).toBe(true);
+  });
+
+  it("returns true for expired (400413)", () => {
+    expect(isExactHashMatch(400413)).toBe(true);
   });
 
   it("returns false for tampered (400404)", () => {

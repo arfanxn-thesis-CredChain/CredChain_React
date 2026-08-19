@@ -5,8 +5,10 @@ import {
   AlertTriangle,
   Building2,
   Calendar,
+  Clock,
   Hash,
   HelpCircle,
+  Info,
   Loader2,
   Minus,
   Search,
@@ -40,6 +42,7 @@ const VERDICT_GRADIENT: Record<string, string> = {
   amber: "from-amber-500 to-amber-600",
   gray: "from-gray-400 to-gray-500",
   "light-gray": "from-gray-300 to-gray-400",
+  expired: "from-navy to-slate-700",
 };
 
 const VERDICT_ICON: Record<string, typeof ShieldCheck> = {
@@ -49,6 +52,7 @@ const VERDICT_ICON: Record<string, typeof ShieldCheck> = {
   amber: HelpCircle,
   gray: Minus,
   "light-gray": Minus,
+  expired: Clock,
 };
 
 const VERDICT_ICON_BG: Record<string, string> = {
@@ -58,6 +62,7 @@ const VERDICT_ICON_BG: Record<string, string> = {
   amber: "bg-white/20",
   gray: "bg-white/15",
   "light-gray": "bg-white/15",
+  expired: "bg-white/20",
 };
 
 const SIMILARITY_BAR_COLOR: Record<string, string> = {
@@ -65,6 +70,7 @@ const SIMILARITY_BAR_COLOR: Record<string, string> = {
   amber: "from-amber-400 to-amber-500",
   gray: "from-gray-400 to-gray-500",
   "light-gray": "from-gray-300 to-gray-400",
+  expired: "from-navy to-slate-600",
 };
 
 type VerifyState = "idle" | "verifying" | "done";
@@ -212,6 +218,12 @@ export function VerifyCredential() {
               <h3 className="font-display text-2xl font-extrabold tracking-tight">
                 {result.description ?? t("cred.verify.failed")}
               </h3>
+              {tier === "expired" && result.credential?.expires_at && (
+                <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-white/90">
+                  <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {t("cred.verify.expiredOn", { date: formatDate(result.credential.expires_at) })}
+                </p>
+              )}
             </div>
 
             <div>
@@ -335,6 +347,36 @@ export function VerifyCredential() {
                     </div>
                   )}
 
+                  {/* Organization ID — building icon */}
+                  {result.credential!.issuer_organization_id && (
+                    <div className="mt-1.5 flex items-center gap-2 text-xs">
+                      <Building2 className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+                      <span className="shrink-0 truncate font-mono text-gray-500">
+                        {truncateId(result.credential!.issuer_organization_id)}
+                      </span>
+                      <CopyInlineButton
+                        value={result.credential!.issuer_organization_id}
+                        ariaLabel={t("cred.verify.orgId")}
+                        className="shrink-0"
+                      />
+                    </div>
+                  )}
+
+                  {/* Number — hash icon (only when present) */}
+                  {result.credential!.number != null && (
+                    <div className="mt-1.5 flex items-center gap-2 text-xs">
+                      <Hash className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+                      <span className="shrink-0 truncate font-mono text-gray-500">
+                        {truncateId(result.credential!.number)}
+                      </span>
+                      <CopyInlineButton
+                        value={result.credential!.number}
+                        ariaLabel={t("cred.verify.number")}
+                        className="shrink-0"
+                      />
+                    </div>
+                  )}
+
                   {/* Holder (auth-aware) */}
                   {canViewCredential && (
                     <div className="mt-3 border-t border-gray-100 pt-3">
@@ -378,6 +420,12 @@ export function VerifyCredential() {
                   <div className="flex items-center gap-1.5 border-t border-gray-100 pt-3 text-xs text-gray-500">
                     <Calendar className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
                     {t("cred.card.issued")} {formatDate(result.credential!.issued_at)}
+                  </div>
+
+                  {/* Unchecked-number disclaimer */}
+                  <div className="mt-3 flex items-start gap-1.5 text-xs text-gray-500">
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
+                    <span>{t("verify.numberNotChecked")}</span>
                   </div>
                 </div>
               )}

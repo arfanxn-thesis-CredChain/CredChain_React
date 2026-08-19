@@ -137,6 +137,45 @@ describe("VerifyCredential", () => {
     expect(screen.getByText("This document may have been altered.")).toBeInTheDocument();
   });
 
+  it("renders expired verdict with date line, org id, number, and disclaimer", async () => {
+    const user = userEvent.setup();
+    mockMutateAsync.mockResolvedValueOnce({
+      verdict_code: 400413,
+      similarity_score: 1,
+      similarity_percent: "100%",
+      description: "This credential has expired.",
+      credential: {
+        id: "cred-exp-1",
+        name: "Expired Certificate",
+        holder_user_id: "user-1",
+        issuer_user_id: "user-2",
+        issuer_organization_id: "org-123",
+        number: "NIP-2026-001",
+        revoked_at: null,
+        token_id: 1,
+        file_hash: "0xabc123",
+        issued_at: "2024-01-01T12:00:00Z",
+        expires_at: "2025-12-31T12:00:00Z",
+        holder: null,
+        issuer: null,
+      },
+    });
+
+    renderVerify();
+    await user.click(screen.getByText("Select file"));
+    await user.click(screen.getByRole("button", { name: /Verify Document/i }));
+
+    expect(screen.getByText("This credential has expired.")).toBeInTheDocument();
+    expect(screen.getByText(/Expired on Dec 31, 2025/)).toBeInTheDocument();
+    expect(screen.getByText(/org-123/)).toBeInTheDocument();
+    expect(screen.getByText(/NIP-2026-001/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The credential number has NOT been verified against the issuing organization.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows error on verification failure", async () => {
     const user = userEvent.setup();
     mockMutateAsync.mockRejectedValueOnce(new Error("Network error"));

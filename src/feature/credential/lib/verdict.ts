@@ -1,4 +1,4 @@
-export type VerdictTier = "green" | "orange" | "red" | "amber" | "gray" | "light-gray";
+export type VerdictTier = "green" | "orange" | "red" | "amber" | "gray" | "light-gray" | "expired";
 
 const VERDICT_CODE = {
   AUTHENTIC: 400401,
@@ -13,6 +13,7 @@ const VERDICT_CODE = {
   HOLDER_DISABLED: 400410,
   ISSUER_DISABLED: 400411,
   PARTY_DISABLED: 400412,
+  EXPIRED: 400413,
 } as const;
 
 const VERDICT_TIER_MAP: Record<number, VerdictTier> = {
@@ -28,12 +29,14 @@ const VERDICT_TIER_MAP: Record<number, VerdictTier> = {
   [VERDICT_CODE.HOLDER_DISABLED]: "red",
   [VERDICT_CODE.ISSUER_DISABLED]: "red",
   [VERDICT_CODE.PARTY_DISABLED]: "red",
+  [VERDICT_CODE.EXPIRED]: "expired",
 };
 
 const EXACT_HASH_CODES = new Set<number>([
   VERDICT_CODE.AUTHENTIC,
   VERDICT_CODE.REVOKED,
   VERDICT_CODE.INTEGRITY_WARNING,
+  VERDICT_CODE.EXPIRED,
 ]);
 
 export function getVerdictTier(verdictCode: number): VerdictTier {
