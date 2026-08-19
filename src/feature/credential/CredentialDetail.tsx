@@ -92,10 +92,10 @@ export function CredentialDetail() {
   const hasFileUri = cred?.file_uri != null;
   const hasMeta = cred?.meta != null && Object.keys(cred.meta).length > 0;
 
-  const handleSave = async () => {
-    if (!cred) return;
+  const handleSave = async (): Promise<boolean> => {
+    if (!cred) return false;
     const valid = await form.trigger();
-    if (!valid) return;
+    if (!valid) return false;
     const values = form.getValues();
     const item: CredentialUpdateItem = { id: cred.id };
 
@@ -123,6 +123,7 @@ export function CredentialDetail() {
     if (!metaEqual(mergedMeta, cred.meta)) item.meta = mergedMeta ?? {};
 
     await update.mutateAsync([item]);
+    return true;
   };
 
   const handleRevoke = async () => {

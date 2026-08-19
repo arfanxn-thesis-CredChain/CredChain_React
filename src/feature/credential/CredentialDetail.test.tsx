@@ -177,6 +177,27 @@ describe("CredentialDetail", () => {
     );
   });
 
+  it("stays in edit mode and shows the validation error on invalid input", async () => {
+    server.use(http.get("*/api/credentials/:id", () => pendingCredentialResponse()));
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+
+    const nameInput = screen.getByPlaceholderText("Credential name");
+    await user.clear(nameInput);
+    await user.type(nameInput, "x".repeat(257));
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(
+      await screen.findByText("Name must be 256 characters or fewer"),
+    ).toBeInTheDocument();
+  });
+
   it("does not show Edit for a non-pending credential and shows the pending-only helper", async () => {
     renderPage();
 

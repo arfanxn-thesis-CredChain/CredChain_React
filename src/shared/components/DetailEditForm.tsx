@@ -22,7 +22,7 @@ interface DetailEditFormProps {
   fields: DetailField[];
   canEdit?: boolean;
   editDisabledReason?: string;
-  onSave: () => void | Promise<void>;
+  onSave: () => Promise<boolean>;
   onCancel?: () => void;
   isSaving: boolean;
   className?: string;
@@ -44,8 +44,8 @@ export function DetailEditForm({
 
   const handleSave = async () => {
     try {
-      await onSave();
-      setEditing(false);
+      const ok = await onSave();
+      if (ok) setEditing(false);
     } catch {
       // Stay in edit mode so the caller's form values survive a failed save.
     }
