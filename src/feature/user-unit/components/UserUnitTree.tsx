@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
   ChevronRight,
-  CornerDownRight,
   FolderTree,
   Loader2,
   Pencil,
@@ -56,7 +55,7 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
   const [renameName, setRenameName] = useState("");
   const [moving, setMoving] = useState<HolderUnitDTO | null>(null);
   const [moveQuery, setMoveQuery] = useState("");
-  const [moveParentId, setMoveParentId] = useState<string | null | undefined>(undefined);
+  const [moveParentId, setMoveParentId] = useState<string | undefined>(undefined);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   const childrenMap = useMemo(() => {
@@ -190,9 +189,9 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
   };
 
   const submitMove = () => {
-    if (!moving) return;
+    if (!moving || moveParentId === undefined) return;
     update.mutate(
-      { id: moving.id, parent_id: moveParentId ?? null },
+      { id: moving.id, parent_id: moveParentId },
       {
         onSuccess: () => {
           setMoving(null);
@@ -422,7 +421,7 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
                         onClick={() => {
                           setMoving(node.unit);
                           setMoveQuery("");
-                          setMoveParentId(node.unit.parent_id ?? null);
+                          setMoveParentId(node.unit.parent_id ?? undefined);
                         }}
                       >
                         <FolderTree className="h-4 w-4" />
@@ -488,17 +487,6 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
           </div>
 
           <div className="scrollbar-hidden max-h-72 overflow-y-auto rounded-xl border border-gray-100">
-            <button
-              type="button"
-              onClick={() => setMoveParentId(null)}
-              className={cn(
-                "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-navy transition-colors hover:bg-navy/5",
-                moveParentId === null && "bg-navy/5 font-semibold",
-              )}
-            >
-              <CornerDownRight className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
-              {t("userUnit.moveRootLabel")}
-            </button>
             {moveOptions.map((option) => {
               const label = pathOf.get(option.id)?.join(" › ") ?? option.name;
               const isSelected = moveParentId === option.id;
@@ -532,7 +520,11 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
             >
               {t("common.cancel")}
             </Button>
-            <Button type="button" onClick={submitMove} disabled={update.isPending}>
+            <Button
+              type="button"
+              onClick={submitMove}
+              disabled={update.isPending || moveParentId === undefined}
+            >
               {update.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : null}

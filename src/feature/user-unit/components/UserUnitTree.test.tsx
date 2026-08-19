@@ -134,9 +134,11 @@ describe("UserUnitTree", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).queryByText("Computer Science Department")).not.toBeInTheDocument();
     expect(within(dialog).queryByText("Software Engineering Lab")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Top level (no parent)")).not.toBeInTheDocument();
     expect(within(dialog).getByText("Faculty of Engineering")).toBeInTheDocument();
     expect(within(dialog).getByText("Faculty of Medicine")).toBeInTheDocument();
 
+    expect(screen.getByRole("button", { name: "Move" })).toBeDisabled();
     await user.click(within(dialog).getByText("Faculty of Medicine"));
     await user.click(screen.getByRole("button", { name: "Move" }));
 

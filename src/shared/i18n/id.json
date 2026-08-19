@@ -1072,7 +1072,6 @@
     "moveTitle": "Pindahkan unit",
     "moveDescription": "Pilih induk baru untuk {{name}}.",
     "movePlaceholder": "Ketik untuk mencari...",
-    "moveRootLabel": "Tingkat teratas (tanpa induk)",
     "moveNoMatch": "Tidak ada unit yang cocok.",
     "moveSubmit": "Pindahkan",
     "expand": "Bentangkan {{name}}",

@@ -1071,7 +1071,6 @@
     "moveTitle": "Move unit",
     "moveDescription": "Choose a new parent for {{name}}.",
     "movePlaceholder": "Type to search...",
-    "moveRootLabel": "Top level (no parent)",
     "moveNoMatch": "No matching units.",
     "moveSubmit": "Move",
     "expand": "Expand {{name}}",
