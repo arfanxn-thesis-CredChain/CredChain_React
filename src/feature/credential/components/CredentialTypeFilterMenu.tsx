@@ -14,7 +14,7 @@ export function CredentialTypeFilterMenu({ value, onChange }: CredentialTypeFilt
       allLabelKey="cred.filter.typeAll"
       value={value}
       onChange={onChange}
-      options={data?.items ?? []}
+      options={data ?? []}
     />
   );
 }

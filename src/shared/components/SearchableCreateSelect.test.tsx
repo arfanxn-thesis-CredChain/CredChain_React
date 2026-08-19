@@ -42,10 +42,7 @@ describe("SearchableCreateSelect", () => {
         HttpResponse.json({
           code: 400600,
           message: "OK",
-          data: {
-            items: [{ id: "ctype_01", name: "Bachelor's Degree" }],
-            total: 1,
-          },
+          data: [{ id: "ctype_01", name: "Bachelor's Degree" }],
         }),
       ),
       http.post("*/api/credential-types", async ({ request }) => {
@@ -92,10 +89,7 @@ describe("SearchableCreateSelect", () => {
         HttpResponse.json({
           code: 400600,
           message: "OK",
-          data: {
-            items: [{ id: "ctype_01", name: "Bachelor's Degree" }],
-            total: 1,
-          },
+          data: [{ id: "ctype_01", name: "Bachelor's Degree" }],
         }),
       ),
       http.post("*/api/credential-types", () =>

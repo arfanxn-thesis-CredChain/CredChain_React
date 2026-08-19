@@ -37,7 +37,7 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   const list = useReferenceList(props.resource);
   const upsert = useUpsertReference(props.resource);
 
-  const rows = useMemo(() => list.data?.items ?? [], [list.data?.items]);
+  const rows = useMemo(() => list.data ?? [], [list.data]);
   const selectedIds = multiple ? props.value : props.value ? [props.value] : [];
   const selectedNames = rows.filter((r) => selectedIds.includes(r.id)).map((r) => r.name);
 

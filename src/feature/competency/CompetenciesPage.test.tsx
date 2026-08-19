@@ -28,19 +28,7 @@ function paginated<T>(items: T[]) {
   return HttpResponse.json({
     code: 400600,
     message: "ok",
-    data: {
-      items,
-      total: items.length,
-      page: 1,
-      limit: 100,
-      last_page: 1,
-      from: 1,
-      to: items.length,
-      first_page_url: null,
-      last_page_url: null,
-      next_page_url: null,
-      prev_page_url: null,
-    },
+    data: items,
   });
 }
 

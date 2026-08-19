@@ -29,7 +29,7 @@ export function CredentialTypesPage() {
   const { confirm, dialog } = useConfirm();
   const [editing, setEditing] = useState<ReferenceRow | null>(null);
 
-  const rows = list.data?.items ?? [];
+  const rows = list.data ?? [];
 
   const handleToggleActive = (row: ReferenceRow) => {
     update.mutate({ id: row.id, name: row.name, active: row.active === false ? true : false });

@@ -59,9 +59,9 @@ async function refreshSession(): Promise<void> {
 api.interceptors.response.use(
   (response: AxiosResponse<ApiResponse<unknown>>) => {
     const envelope = response.data;
-    if (envelope && typeof envelope === "object" && "data" in envelope) {
+    if (envelope && typeof envelope === "object" && "code" in envelope) {
       (response as EnvelopeResponse).__envelope = envelope;
-      response.data = envelope.data as never;
+      response.data = ((envelope as { data?: unknown }).data ?? null) as never;
     }
     return response;
   },

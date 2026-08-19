@@ -9,7 +9,7 @@ export function useUserUnits() {
     queryKey: USER_UNIT_KEYS.list(),
     queryFn: async () => {
       const response = await api.get<HolderUnitDTO[]>("/user-units", { params: { limit: 100 } });
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
   });
 }

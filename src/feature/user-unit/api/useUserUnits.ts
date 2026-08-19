@@ -8,7 +8,7 @@ export function useUserUnits() {
     queryKey: userUnitKeys.list(),
     queryFn: async () => {
       const response = await api.get<HolderUnitDTO[]>("/user-units");
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
   });
 }

@@ -15,7 +15,7 @@ describe("useReferenceData", () => {
     const { result } = renderHook(() => useCredentialTypes(), { wrapper: TestProviders });
 
     await waitFor(() => {
-      expect(result.current.data?.items.map((i) => i.name)).toEqual([
+      expect(result.current.data?.map((i) => i.name)).toEqual([
         "Bachelor's Degree",
         "Professional Certificate",
       ]);
@@ -26,7 +26,7 @@ describe("useReferenceData", () => {
     const { result } = renderHook(() => useIssuerOrganizations(), { wrapper: TestProviders });
 
     await waitFor(() => {
-      expect(result.current.data?.items.map((i) => i.name)).toEqual([
+      expect(result.current.data?.map((i) => i.name)).toEqual([
         "University of Indonesia",
         "Tech Academy",
       ]);
@@ -37,7 +37,7 @@ describe("useReferenceData", () => {
     const { result } = renderHook(() => useCompetencies(), { wrapper: TestProviders });
 
     await waitFor(() => {
-      expect(result.current.data?.items.map((i) => i.name)).toEqual([
+      expect(result.current.data?.map((i) => i.name)).toEqual([
         "Machine Learning",
         "Data Analysis",
       ]);
@@ -51,10 +51,7 @@ describe("useReferenceData", () => {
         HttpResponse.json({
           code: 400600,
           message: "Credential types retrieved",
-          data: {
-            items: [{ id: "ctype_01", name: "Bachelor's Degree" }],
-            total: 1,
-          },
+          data: [{ id: "ctype_01", name: "Bachelor's Degree" }],
         }),
       ),
     );
@@ -76,7 +73,7 @@ describe("useReferenceData", () => {
         return HttpResponse.json({
           code: 400600,
           message: "Credential types retrieved",
-          data: { items: [{ id: "ctype_01", name: "Bachelor's Degree" }], total: 1 },
+          data: [{ id: "ctype_01", name: "Bachelor's Degree" }],
         });
       }),
     );

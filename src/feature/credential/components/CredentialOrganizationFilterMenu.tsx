@@ -17,7 +17,7 @@ export function CredentialOrganizationFilterMenu({
       allLabelKey="cred.filter.organizationAll"
       value={value}
       onChange={onChange}
-      options={data?.items ?? []}
+      options={data ?? []}
     />
   );
 }

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/api/client";
 import { notify } from "@shared/lib/notify";
 import { isApiError } from "@shared/api/envelope";
-import type { PaginatedResponse, ReferenceResource, ReferenceRow } from "@shared/types/api";
+import type { ReferenceResource, ReferenceRow } from "@shared/types/api";
 
 /**
  * Reference-data lookups (credential types, issuer organizations, competencies)
@@ -28,10 +28,10 @@ export function useReferenceList(resource: ReferenceResource) {
   return useQuery({
     queryKey: referenceKeys.list(resource),
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<ReferenceRow>>(RESOURCE_PATH[resource], {
+      const response = await api.get<ReferenceRow[]>(RESOURCE_PATH[resource], {
         params: { limit: 100 },
       });
-      return response.data;
+      return Array.isArray(response.data) ? response.data : [];
     },
   });
 }

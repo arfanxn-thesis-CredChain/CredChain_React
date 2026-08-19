@@ -17,7 +17,7 @@ export function CredentialCompetencyFilterMenu({
       allLabelKey="cred.filter.competencyAll"
       value={value}
       onChange={onChange}
-      options={data?.items ?? []}
+      options={data ?? []}
     />
   );
 }

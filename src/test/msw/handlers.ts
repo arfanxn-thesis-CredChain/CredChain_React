@@ -35,22 +35,6 @@ const mockUserUnits: HolderUnitDTO[] = [
   },
 ];
 
-function paginated<T>(items: T[]): Record<string, unknown> {
-  return {
-    items,
-    total: items.length,
-    page: 1,
-    limit: 100,
-    last_page: 1,
-    from: 1,
-    to: items.length,
-    first_page_url: null,
-    last_page_url: null,
-    next_page_url: null,
-    prev_page_url: null,
-  };
-}
-
 function upsertRow(store: ReferenceRow[], prefix: string, name: string): ReferenceRow {
   const existing = store.find((r) => r.name.toLowerCase() === name.toLowerCase());
   if (existing) return existing;
@@ -479,7 +463,7 @@ export const handlers = [
   }),
 
   http.get("*/api/credential-types", () =>
-    envelope(400600, "Credential types retrieved", paginated(mockCredentialTypes)),
+    envelope(400600, "Credential types retrieved", mockCredentialTypes),
   ),
 
   http.post("*/api/credential-types", async ({ request }) => {
@@ -512,7 +496,7 @@ export const handlers = [
   }),
 
   http.get("*/api/issuer-organizations", () =>
-    envelope(400600, "Issuer organizations retrieved", paginated(mockIssuerOrganizations)),
+    envelope(400600, "Issuer organizations retrieved", mockIssuerOrganizations),
   ),
 
   http.post("*/api/issuer-organizations", async ({ request }) => {
@@ -544,7 +528,7 @@ export const handlers = [
   }),
 
   http.get("*/api/competencies", () =>
-    envelope(400600, "Competencies retrieved", paginated(mockCompetencies)),
+    envelope(400600, "Competencies retrieved", mockCompetencies),
   ),
 
   http.post("*/api/competencies", async ({ request }) => {

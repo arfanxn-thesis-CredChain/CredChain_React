@@ -24,7 +24,7 @@ export function CredentialCompetencyEditor({
   const list = useReferenceList("competencies");
   const link = useLinkCompetencies();
 
-  const namesById = new Map((list.data?.items ?? []).map((row) => [row.id, row.name]));
+  const namesById = new Map((list.data ?? []).map((row) => [row.id, row.name]));
 
   const handleSave = () => {
     link.mutate(

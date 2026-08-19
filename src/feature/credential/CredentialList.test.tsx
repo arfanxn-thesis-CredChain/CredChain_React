@@ -360,4 +360,26 @@ describe("CredentialList", () => {
     );
     expect(dialog).toBeDefined();
   });
+
+  it("renders without crashing when lookup reference endpoints omit the data key (empty tables)", async () => {
+    server.use(
+      http.get("*/api/credential-types", () =>
+        HttpResponse.json({ code: 400600, message: "Credential types retrieved" }),
+      ),
+      http.get("*/api/issuer-organizations", () =>
+        HttpResponse.json({ code: 400600, message: "Issuer organizations retrieved" }),
+      ),
+      http.get("*/api/competencies", () =>
+        HttpResponse.json({ code: 400600, message: "Competencies retrieved" }),
+      ),
+      http.get("*/api/user-units", () =>
+        HttpResponse.json({ code: 301000, message: "User units retrieved successfully." }),
+      ),
+      http.get("*/api/credentials", () => pageResponse(0)),
+    );
+
+    renderList();
+    expect(await screen.findByText("All Credentials")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /status/i })).toBeInTheDocument();
+  });
 });

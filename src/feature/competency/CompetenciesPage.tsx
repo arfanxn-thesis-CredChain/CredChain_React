@@ -29,7 +29,7 @@ export function CompetenciesPage() {
   const { confirm, dialog } = useConfirm();
   const [editing, setEditing] = useState<ReferenceRow | null>(null);
 
-  const rows = list.data?.items ?? [];
+  const rows = list.data ?? [];
 
   const handleDestroy = async (row: ReferenceRow) => {
     const ok = await confirm({

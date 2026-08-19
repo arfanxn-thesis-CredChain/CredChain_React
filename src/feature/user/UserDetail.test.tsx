@@ -177,4 +177,15 @@ describe("UserDetail (D2)", () => {
       expect(sent?.id).toBe("usr_4");
     });
   });
+
+  it("renders without crashing when the user-units endpoint omits the data key (empty table)", async () => {
+    server.use(
+      http.get("*/api/user-units", () =>
+        HttpResponse.json({ code: 301000, message: "User units retrieved successfully." }),
+      ),
+    );
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
+    expect(screen.queryByText("Unit")).not.toBeNull();
+  });
 });
