@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, ChevronDown, RotateCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, Loader2, RotateCw, XCircle } from "lucide-react";
 import { useCredential } from "./api/useCredential";
 import { useReExtractCredentials } from "./api/useReExtractCredentials";
+import { useApproveCredentials } from "./api/useApproveCredentials";
+import { useRejectCredentials } from "./api/useRejectCredentials";
+import { CredentialRejectReasonModal } from "./components/CredentialRejectReasonModal";
 import { useStore } from "@app/store";
 import { Role, canAccessAny } from "@shared/auth/role";
 import { PageHeader } from "@shared/components/PageHeader";
@@ -33,11 +36,15 @@ export function CredentialDetail() {
     isError,
   } = useCredential(id ?? "", ["holder", "issuer", "revoker"]);
   const reExtract = useReExtractCredentials();
+  const approve = useApproveCredentials();
+  const reject = useRejectCredentials();
   const [metaOpen, setMetaOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
   const revoked = cred?.revoked_at !== null;
   const extractFailed = cred?.extract_status === "failed";
   const extractSucceeded = cred?.extract_status === "succeeded";
+  const isPendingReview = cred?.lifecycle_status === "pending";
   const hasFileUri = cred?.file_uri != null;
   const hasMeta = cred?.meta != null && Object.keys(cred.meta).length > 0;
 
@@ -186,17 +193,43 @@ export function CredentialDetail() {
               </div>
             )}
 
-            {/* Re-Extract */}
-            {canManage && extractFailed && (
+            {/* Actions: Re-Extract + Review */}
+            {canManage && (extractFailed || isPendingReview) && (
               <div className="mt-6 flex justify-end border-t border-gray-100 pt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => cred.id && reExtract.mutate([cred.id])}
-                  disabled={reExtract.isPending}
-                >
-                  <RotateCw className="h-4 w-4" />
-                  {reExtract.isPending ? t("cred.issue.submitting") : t("cred.detail.reExtract")}
-                </Button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {extractFailed && (
+                    <Button
+                      variant="outline"
+                      onClick={() => cred.id && reExtract.mutate([cred.id])}
+                      disabled={reExtract.isPending}
+                    >
+                      <RotateCw className="h-4 w-4" />
+                      {reExtract.isPending
+                        ? t("cred.issue.submitting")
+                        : t("cred.detail.reExtract")}
+                    </Button>
+                  )}
+                  {isPendingReview && (
+                    <>
+                      <Button
+                        variant="gold"
+                        onClick={() => cred.id && approve.mutate([cred.id])}
+                        disabled={approve.isPending}
+                      >
+                        {approve.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4" />
+                        )}
+                        {t("cred.detail.approve")}
+                      </Button>
+                      <Button variant="outline" onClick={() => setRejectModalOpen(true)}>
+                        <XCircle className="h-4 w-4" />
+                        {t("cred.detail.reject")}
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </Card>
@@ -238,6 +271,18 @@ export function CredentialDetail() {
             )}
           </Card>
         </>
+      )}
+
+      {cred && (
+        <CredentialRejectReasonModal
+          open={rejectModalOpen}
+          onOpenChange={setRejectModalOpen}
+          items={[{ id: cred.id, name: cred.name }]}
+          onSubmit={(rejections) =>
+            reject.mutate(rejections, { onSuccess: () => setRejectModalOpen(false) })
+          }
+          isSubmitting={reject.isPending}
+        />
       )}
     </div>
   );

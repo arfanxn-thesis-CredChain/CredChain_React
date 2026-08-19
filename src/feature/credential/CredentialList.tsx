@@ -2,9 +2,22 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Ban, FileBadge, RefreshCw, Search, ShieldCheck, Upload } from "lucide-react";
+import {
+  Ban,
+  CheckCircle2,
+  FileBadge,
+  Loader2,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Upload,
+  XCircle,
+} from "lucide-react";
 import { useRevokeCredentials } from "./api/useRevokeCredentials";
 import { useReExtractCredentials } from "./api/useReExtractCredentials";
+import { useApproveCredentials } from "./api/useApproveCredentials";
+import { useRejectCredentials } from "./api/useRejectCredentials";
+import { CredentialRejectReasonModal } from "./components/CredentialRejectReasonModal";
 import { useStore } from "@app/store";
 import { Role, canAccessAny } from "@shared/auth/role";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
@@ -67,7 +80,7 @@ const SORT_OPTIONS = [
   { key: "nameZA", getSort: () => "-name" },
 ];
 
-type BulkMode = "revoke" | "reextract" | null;
+type BulkMode = "revoke" | "reextract" | "approve" | "reject" | null;
 
 function adjustSortForStatus(
   sortString: string,
@@ -192,10 +205,14 @@ export function CredentialList() {
 
   const revoke = useRevokeCredentials();
   const reExtract = useReExtractCredentials();
+  const approve = useApproveCredentials();
+  const reject = useRejectCredentials();
   const { confirm, dialog: confirmDialog } = useConfirm();
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
   const isRevokable = (cred: CredentialDTO) => cred.revoked_at === null;
   const isReExtractable = (cred: CredentialDTO) => cred.extract_status === "failed";
+  const isPendingReview = (cred: CredentialDTO) => cred.lifecycle_status === "pending";
 
   const eligibleRevokeIds = Array.from(selectedIds).filter((id) =>
     credentials.some((c) => c.id === id && isRevokable(c)),
@@ -203,6 +220,16 @@ export function CredentialList() {
   const eligibleReExtractIds = Array.from(selectedIds).filter((id) =>
     credentials.some((c) => c.id === id && isReExtractable(c)),
   );
+  const eligibleApproveIds = Array.from(selectedIds).filter((id) =>
+    credentials.some((c) => c.id === id && isPendingReview(c)),
+  );
+  const eligibleRejectIds = Array.from(selectedIds).filter((id) =>
+    credentials.some((c) => c.id === id && isPendingReview(c)),
+  );
+
+  const rejectItems = credentials
+    .filter((c) => eligibleRejectIds.includes(c.id))
+    .map((c) => ({ id: c.id, name: c.name }));
 
   const enterMode = (mode: BulkMode) => {
     setBulkMode(mode);
@@ -249,6 +276,20 @@ export function CredentialList() {
     });
     if (!ok) return;
     reExtract.mutate(eligibleReExtractIds, { onSuccess: () => exitMode() });
+  };
+
+  const handleBulkApprove = () => {
+    if (eligibleApproveIds.length === 0) return;
+    approve.mutate(eligibleApproveIds, { onSuccess: () => exitMode() });
+  };
+
+  const handleRejectSubmit = (rejections: { id: string; reason: string }[]) => {
+    reject.mutate(rejections, {
+      onSuccess: () => {
+        setRejectModalOpen(false);
+        exitMode();
+      },
+    });
   };
 
   const renderActions = () => {
@@ -309,8 +350,56 @@ export function CredentialList() {
       );
     }
 
+    if (bulkMode === "approve") {
+      return (
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Button variant="outline" onClick={exitMode} disabled={approve.isPending}>
+            {t("cred.card.cancel")}
+          </Button>
+          <Button
+            variant="gold"
+            onClick={handleBulkApprove}
+            disabled={eligibleApproveIds.length === 0 || approve.isPending}
+          >
+            {approve.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            {t("cred.card.approveSelectedCount", { count: eligibleApproveIds.length })}
+          </Button>
+        </div>
+      );
+    }
+
+    if (bulkMode === "reject") {
+      return (
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Button variant="outline" onClick={exitMode} disabled={reject.isPending}>
+            {t("cred.card.cancel")}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setRejectModalOpen(true)}
+            disabled={eligibleRejectIds.length === 0 || reject.isPending}
+          >
+            <XCircle className="h-4 w-4 text-error" />
+            {t("cred.card.rejectSelectedCount", { count: eligibleRejectIds.length })}
+          </Button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <Button variant="gold" onClick={() => enterMode("approve")}>
+          <CheckCircle2 className="h-4 w-4" />
+          {t("cred.card.approveMode")}
+        </Button>
+        <Button variant="outline" onClick={() => enterMode("reject")}>
+          <XCircle className="h-4 w-4" />
+          {t("cred.card.rejectMode")}
+        </Button>
         <Button variant="outline" onClick={() => enterMode("revoke")}>
           <Ban className="h-4 w-4" />
           {t("cred.card.revokeMode")}
@@ -474,7 +563,9 @@ export function CredentialList() {
                     ? isRevokable(cred)
                     : bulkMode === "reextract"
                       ? isReExtractable(cred)
-                      : false;
+                      : bulkMode === "approve" || bulkMode === "reject"
+                        ? isPendingReview(cred)
+                        : false;
                 return (
                   <CredentialCard
                     key={cred.id}
@@ -508,6 +599,14 @@ export function CredentialList() {
       </Card>
 
       {confirmDialog}
+
+      <CredentialRejectReasonModal
+        open={rejectModalOpen}
+        onOpenChange={setRejectModalOpen}
+        items={rejectItems}
+        onSubmit={handleRejectSubmit}
+        isSubmitting={reject.isPending}
+      />
     </div>
   );
 }

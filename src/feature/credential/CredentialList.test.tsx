@@ -1,12 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useStore } from "@app/store";
 import { Role } from "@shared/auth/role";
 import { i18n } from "@shared/i18n/config";
+import { makeCredential } from "@/test/fixtures";
 import { TestProviders } from "@/test/TestProviders";
 import { server } from "@/test/msw/server";
+import type { CredentialDTO } from "@shared/types/api";
 import { CredentialList } from "./CredentialList";
 
 function pageResponse(total: number) {
@@ -33,6 +35,35 @@ function listRequestsOf(recorded: string[]): URL[] {
   return recorded
     .map((url) => new URL(url))
     .filter((url) => url.searchParams.get("limit") === "50");
+}
+
+function credentialsResponse(items: CredentialDTO[]) {
+  return HttpResponse.json({
+    code: 400100,
+    message: "Credentials retrieved",
+    data: {
+      items,
+      total: items.length,
+      page: 1,
+      limit: 50,
+      last_page: 1,
+      from: 0,
+      to: items.length,
+      first_page_url: null,
+      last_page_url: null,
+      next_page_url: null,
+      prev_page_url: null,
+    },
+  });
+}
+
+function pendingCredential(overrides: Partial<CredentialDTO> = {}): CredentialDTO {
+  return makeCredential({
+    lifecycle_status: "pending",
+    approved_at: null,
+    rejected_at: null,
+    ...overrides,
+  });
 }
 
 beforeEach(async () => {
@@ -245,5 +276,88 @@ describe("CredentialList", () => {
         ),
       ).toBe(true);
     });
+  });
+
+  it("shows Approve for a selected pending credential and posts its id", async () => {
+    const pending = pendingCredential({ id: "cred_pending_1", name: "Pending Diploma" });
+    const approved = makeCredential({ id: "cred_approved_1", name: "Approved Diploma" });
+    let recordedBody: unknown;
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("limit") === "1") return pageResponse(0);
+        return credentialsResponse([pending, approved]);
+      }),
+      http.post("*/api/credentials/batch/approve", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({ code: 401200, message: "ok", data: [] });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(await screen.findByRole("button", { name: /^approve$/i }));
+    await user.click(await screen.findByText("Pending Diploma"));
+
+    const selectButtons = screen.getAllByRole("button", { name: /select credential/i });
+    expect(selectButtons.filter((b) => !(b as HTMLButtonElement).disabled)).toHaveLength(1);
+
+    const approveSelected = await screen.findByRole("button", { name: /approve \(1\)/i });
+    await user.click(approveSelected);
+
+    await waitFor(() => expect(recordedBody).toEqual({ ids: ["cred_pending_1"] }));
+  });
+
+  it("leaves the approve action disabled until a pending credential is selected", async () => {
+    const pending = pendingCredential({ id: "cred_pending_1", name: "Pending Diploma" });
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("limit") === "1") return pageResponse(0);
+        return credentialsResponse([pending]);
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(await screen.findByRole("button", { name: /^approve$/i }));
+    expect(await screen.findByRole("button", { name: /approve \(0\)/i })).toBeDisabled();
+  });
+
+  it("opens the reject reason modal from the bulk toolbar and posts the rejections", async () => {
+    const pending = pendingCredential({ id: "cred_pending_1", name: "Pending Diploma" });
+    let recordedBody: unknown;
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("limit") === "1") return pageResponse(0);
+        return credentialsResponse([pending]);
+      }),
+      http.post("*/api/credentials/batch/reject", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({ code: 401200, message: "ok", data: [] });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(await screen.findByRole("button", { name: /^reject$/i }));
+    await user.click(await screen.findByText("Pending Diploma"));
+    await user.click(await screen.findByRole("button", { name: /reject \(1\)/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(screen.getByText("Reject Credentials")).toBeInTheDocument();
+    await user.type(within(dialog).getByRole("textbox"), "Missing document");
+    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
+
+    await waitFor(() =>
+      expect(recordedBody).toEqual({
+        rejections: [{ id: "cred_pending_1", reason: "Missing document" }],
+      }),
+    );
+    expect(dialog).toBeDefined();
   });
 });

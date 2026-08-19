@@ -14,7 +14,7 @@ import { CredentialStatusBadge } from "./CredentialStatusBadge";
 interface CredentialCardProps {
   credential: CredentialDTO;
   isSelected?: boolean;
-  selectionMode?: "revoke" | "reextract" | null;
+  selectionMode?: "revoke" | "reextract" | "approve" | "reject" | null;
   onSelect?: () => void;
   selectDisabled?: boolean;
   blockLinks?: boolean;
@@ -42,7 +42,9 @@ export function CredentialCard({
       ? !revoked
       : selectionMode === "reextract"
         ? credential.extract_status === "failed"
-        : false;
+        : selectionMode === "approve" || selectionMode === "reject"
+          ? credential.lifecycle_status === "pending"
+          : false;
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest(INTERACTIVE_SELECTORS)) return;
@@ -52,6 +54,8 @@ export function CredentialCard({
       } else if (!isSelectable) {
         if (selectionMode === "revoke") {
           notify.info("cred.card.alreadyRevoked");
+        } else if (selectionMode === "approve" || selectionMode === "reject") {
+          notify.info("cred.card.notPendingReview");
         } else {
           notify.info(
             credential.extract_status === "succeeded"

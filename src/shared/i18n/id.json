@@ -355,6 +355,8 @@
   "cred.detail.notFound.body": "Kredensial yang Anda cari tidak ada atau telah dihapus.",
   "cred.detail.notFound.title": "Kredensial Tidak Ditemukan",
   "cred.detail.reExtract": "Ekstrak Ulang",
+  "cred.detail.approve": "Setujui",
+  "cred.detail.reject": "Tolak",
   "cred.detail.revokedDate": "Tanggal Pencabutan",
   "cred.detail.revoker": "Pencabut",
   "cred.detail.status": "Status",
@@ -870,14 +872,19 @@
       "revoked": "Dicabut",
       "revokeMode": "Cabut",
       "reExtractMode": "Ekstrak Ulang",
+      "approveMode": "Setujui",
+      "rejectMode": "Tolak",
       "cancel": "Batal",
       "revokeSelectedCount": "Cabut ({{count}})",
       "reExtractSelectedCount": "Ekstrak Ulang ({{count}})",
+      "approveSelectedCount": "Setujui ({{count}})",
+      "rejectSelectedCount": "Tolak ({{count}})",
       "select": "Pilih kredensial",
       "deselect": "Batal pilih kredensial",
       "selectionCapReached": "Maksimal 100 kredensial dipilih. Batalkan pilihan untuk menambah.",
       "alreadyRevoked": "Kredensial ini sudah dicabut.",
-      "alreadySucceeded": "Ekstraksi sudah berhasil."
+      "alreadySucceeded": "Ekstraksi sudah berhasil.",
+      "notPendingReview": "Hanya kredensial yang menunggu tinjauan yang dapat disetujui atau ditolak."
     },
     "status": { "active": "Aktif", "revoked": "Dicabut", "menuLabel": "Status" },
     "field": {
@@ -922,6 +929,25 @@
       "approved": "Disetujui",
       "rejected": "Ditolak",
       "revoked": "Dicabut"
+    },
+    "approve": {
+      "success": "Kredensial berhasil disetujui.",
+      "failed": "Persetujuan kredensial gagal. Silakan coba lagi."
+    },
+    "reject": {
+      "success": "Kredensial berhasil ditolak.",
+      "failed": "Penolakan kredensial gagal. Silakan coba lagi.",
+      "modal": {
+        "title": "Tolak Kredensial",
+        "description": "Berikan alasan penolakan untuk setiap kredensial yang dipilih.",
+        "reasonLabel": "Alasan penolakan",
+        "reasonPlaceholder": "Jelaskan mengapa kredensial ini ditolak (maks 1000 karakter)",
+        "reasonRequired": "Alasan penolakan wajib diisi.",
+        "reasonTooLong": "Alasan maksimal 1000 karakter.",
+        "applyToAll": "Terapkan alasan yang sama ke semua",
+        "submit": "Tolak",
+        "submitting": "Menolak..."
+      }
     },
     "extract": {
       "menuLabel": "Ekstraksi",

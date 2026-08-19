@@ -120,6 +120,62 @@ describe("CredentialCard", () => {
     expect(screen.getByRole("button", { name: /select credential/i })).toBeDisabled();
   });
 
+  it("shows checkbox only for pending credentials in approve mode", () => {
+    const pendingCredential = makeCredential({
+      id: "cred_pending",
+      lifecycle_status: "pending",
+      approved_at: null,
+      rejected_at: null,
+    });
+    const approvedCredential = makeCredential({ id: "cred_approved" });
+
+    const { rerender } = render(
+      <CredentialCard credential={pendingCredential} selectionMode="approve" />,
+      { wrapper: TestProviders },
+    );
+    expect(screen.getByRole("button", { name: /select credential/i })).toBeEnabled();
+
+    rerender(<CredentialCard credential={approvedCredential} selectionMode="approve" />);
+    expect(screen.getByRole("button", { name: /select credential/i })).toBeDisabled();
+  });
+
+  it("shows checkbox only for pending credentials in reject mode", () => {
+    const pendingCredential = makeCredential({
+      id: "cred_pending",
+      lifecycle_status: "pending",
+      approved_at: null,
+      rejected_at: null,
+    });
+    const approvedCredential = makeCredential({ id: "cred_approved" });
+
+    const { rerender } = render(
+      <CredentialCard credential={pendingCredential} selectionMode="reject" />,
+      { wrapper: TestProviders },
+    );
+    expect(screen.getByRole("button", { name: /select credential/i })).toBeEnabled();
+
+    rerender(<CredentialCard credential={approvedCredential} selectionMode="reject" />);
+    expect(screen.getByRole("button", { name: /select credential/i })).toBeDisabled();
+  });
+
+  it("selects pending credentials on card click in approve mode", async () => {
+    const user = userEvent.setup();
+    const credential = makeCredential({
+      lifecycle_status: "pending",
+      approved_at: null,
+      rejected_at: null,
+    });
+    const onSelect = vi.fn();
+
+    render(<CredentialCard credential={credential} selectionMode="approve" onSelect={onSelect} />, {
+      wrapper: TestProviders,
+    });
+
+    await user.click(screen.getByText("Test Credential"));
+    expect(onSelect).toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
   it("calls onSelect when checkbox is clicked", async () => {
     const user = userEvent.setup();
     const credential = makeCredential();

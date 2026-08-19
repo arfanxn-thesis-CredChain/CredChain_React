@@ -532,6 +532,22 @@ export const handlers = [
     });
   }),
 
+  http.post("*/api/credentials/batch/approve", () => {
+    return HttpResponse.json({
+      code: 401200,
+      message: "Credential review recorded successfully.",
+      data: [],
+    });
+  }),
+
+  http.post("*/api/credentials/batch/reject", () => {
+    return HttpResponse.json({
+      code: 401200,
+      message: "Credential review recorded successfully.",
+      data: [],
+    });
+  }),
+
   http.post("*/api/credentials/verify", () => {
     return HttpResponse.json({
       code: 400407,

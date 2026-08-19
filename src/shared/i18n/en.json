@@ -354,6 +354,8 @@
   "cred.detail.notFound.body": "The credential you are looking for does not exist or has been removed.",
   "cred.detail.notFound.title": "Credential Not Found",
   "cred.detail.reExtract": "Re-Extract",
+  "cred.detail.approve": "Approve",
+  "cred.detail.reject": "Reject",
   "cred.detail.revokedDate": "Revoked Date",
   "cred.detail.revoker": "Revoker",
   "cred.detail.status": "Status",
@@ -869,14 +871,19 @@
       "revoked": "Revoked",
       "revokeMode": "Revoke",
       "reExtractMode": "Re-extract",
+      "approveMode": "Approve",
+      "rejectMode": "Reject",
       "cancel": "Cancel",
       "revokeSelectedCount": "Revoke ({{count}})",
       "reExtractSelectedCount": "Re-extract ({{count}})",
+      "approveSelectedCount": "Approve ({{count}})",
+      "rejectSelectedCount": "Reject ({{count}})",
       "select": "Select credential",
       "deselect": "Deselect credential",
       "selectionCapReached": "Maximum of 100 credentials selected. Deselect some to add more.",
       "alreadyRevoked": "This credential is already revoked.",
-      "alreadySucceeded": "Extraction has already succeeded."
+      "alreadySucceeded": "Extraction has already succeeded.",
+      "notPendingReview": "Only credentials pending review can be approved or rejected."
     },
     "status": { "active": "Active", "revoked": "Revoked", "menuLabel": "Status" },
     "field": {
@@ -921,6 +928,25 @@
       "approved": "Approved",
       "rejected": "Rejected",
       "revoked": "Revoked"
+    },
+    "approve": {
+      "success": "Credential(s) approved successfully.",
+      "failed": "Credential approval failed. Please try again."
+    },
+    "reject": {
+      "success": "Credential(s) rejected successfully.",
+      "failed": "Credential rejection failed. Please try again.",
+      "modal": {
+        "title": "Reject Credentials",
+        "description": "Provide a rejection reason for each selected credential.",
+        "reasonLabel": "Rejection reason",
+        "reasonPlaceholder": "Explain why this credential is rejected (max 1000 characters)",
+        "reasonRequired": "A rejection reason is required.",
+        "reasonTooLong": "Reason must be 1000 characters or fewer.",
+        "applyToAll": "Apply same reason to all",
+        "submit": "Reject",
+        "submitting": "Rejecting..."
+      }
     },
     "extract": {
       "menuLabel": "Extraction",
