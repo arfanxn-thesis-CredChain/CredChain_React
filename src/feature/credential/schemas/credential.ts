@@ -88,6 +88,21 @@ export const credentialBatchSubmitSchema = z.object({
 
 export type CredentialBatchSubmitInput = z.infer<typeof credentialBatchSubmitSchema>;
 
+export const credentialEditRowSchema = z.object({
+  name: z.string().max(256, "zod.credential.nameTooLong").optional(),
+  number: z.string().max(256, "zod.credential.numberTooLong").optional(),
+  type_id: z.string().min(1, "zod.credential.typeRequired").optional(),
+  issuer_organization_id: z
+    .string()
+    .min(1, "zod.credential.issuerOrganizationRequired")
+    .optional(),
+  issued_at: z.string().regex(ISO_DATE, "zod.credential.dateFormat").optional().or(z.literal("")),
+  expires_at: z.string().regex(ISO_DATE, "zod.credential.dateFormat").optional().or(z.literal("")),
+  meta_entries: metaEntriesSchema.optional(),
+});
+
+export type CredentialEditRowInput = z.infer<typeof credentialEditRowSchema>;
+
 export function defaultCredentialSubmitRow(): CredentialSubmitRowInput {
   return {
     name: "",

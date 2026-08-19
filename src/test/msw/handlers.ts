@@ -317,6 +317,9 @@ export const handlers = [
         id: "cred_01HX",
         holder_user_id: "usr_01",
         issuer_user_id: "usr_02",
+        issuer_organization_id: "iorg_01",
+        type_id: "ctype_01",
+        number: null,
         revoker_user_id: null,
         name: "Bachelor's Degree",
         meta: { institution: "University of Indonesia" },
@@ -329,6 +332,7 @@ export const handlers = [
         extracted_at: "2024-01-15T10:00:00Z",
         issued_at: "2024-01-15T10:00:00Z",
         revoked_at: null,
+        expires_at: null,
         holder: {
           id: "usr_01",
           name: "John Doe",
@@ -529,6 +533,22 @@ export const handlers = [
       code: 400500,
       message: "Re-extraction queued successfully",
       data: [],
+    });
+  }),
+
+  http.put("*/api/credentials/batch", () => {
+    return HttpResponse.json({
+      code: 401400,
+      message: "Credential(s) updated successfully",
+      data: [],
+    });
+  }),
+
+  http.put("*/api/credentials/:id/competencies", () => {
+    return HttpResponse.json({
+      code: 401300,
+      message: "Credential competencies linked successfully",
+      data: null,
     });
   }),
 

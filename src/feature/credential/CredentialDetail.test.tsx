@@ -148,4 +148,87 @@ describe("CredentialDetail", () => {
       }),
     );
   });
+
+  it("shows the Edit button for a pending credential and saves only changed fields", async () => {
+    let recordedBody: unknown;
+    server.use(
+      http.get("*/api/credentials/:id", () => pendingCredentialResponse()),
+      http.put("*/api/credentials/batch", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({ code: 401400, message: "ok", data: [] });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+
+    const nameInput = screen.getByPlaceholderText("Credential name");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Updated Degree");
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(recordedBody).toEqual({
+        credentials: [{ id: "cred_01HX", name: "Updated Degree" }],
+      }),
+    );
+  });
+
+  it("does not show Edit for a non-pending credential and shows the pending-only helper", async () => {
+    renderPage();
+
+    expect(await screen.findByText("Only pending credentials can be edited.")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
+  it("revokes an approved credential after confirm", async () => {
+    let recordedBody: unknown;
+    server.use(
+      http.post("*/api/credentials/batch/revoke", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({ code: 400300, message: "ok", data: [] });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Revoke" }));
+
+    const confirmDialog = await screen.findByRole("alertdialog");
+    expect(screen.getByText("Revoke 1 credential?")).toBeInTheDocument();
+
+    await user.click(within(confirmDialog).getByRole("button", { name: "Revoke" }));
+
+    await waitFor(() => expect(recordedBody).toEqual({ ids: ["cred_01HX"] }));
+  });
+
+  it("saves the competency replace-set via PUT /credentials/:id/competencies", async () => {
+    let recordedUrl = "";
+    let recordedBody: unknown;
+    server.use(
+      http.put("*/api/credentials/:id/competencies", async ({ request }) => {
+        recordedUrl = request.url;
+        recordedBody = await request.json();
+        return HttpResponse.json({ code: 401300, message: "ok", data: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    const combobox = await screen.findByRole("combobox");
+    await user.click(combobox);
+
+    await user.click(await screen.findByRole("button", { name: /Machine Learning/ }));
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(recordedBody).toEqual({ competency_ids: ["comp_01"] }));
+    expect(recordedUrl).toContain("/credentials/cred_01HX/competencies");
+  });
 });

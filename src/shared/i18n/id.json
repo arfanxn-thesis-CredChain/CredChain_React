@@ -820,7 +820,17 @@
       "metadataAttachment": "Lampiran Metadata",
       "audit": "Audit",
       "created": "Dibuat",
-      "lastUpdated": "Terakhir diperbarui"
+      "lastUpdated": "Terakhir diperbarui",
+      "editDetails": "Edit Detail",
+      "editOnlyPending": "Hanya kredensial berstatus pending yang dapat diedit.",
+      "updateFailed": "Gagal memperbarui kredensial. Silakan coba lagi."
+    },
+    "competency": {
+      "title": "Kompetensi",
+      "empty": "Belum ada kompetensi yang diterapkan.",
+      "saveToApply": "Simpan untuk menerapkan perubahan",
+      "save": "Simpan",
+      "linkFailed": "Gagal menautkan kompetensi. Silakan coba lagi."
     },
     "issue": {
       "title": "Terbitkan Kredensial",

@@ -816,7 +816,17 @@
       "metadataAttachment": "Metadata Attachment",
       "audit": "Audit",
       "created": "Created",
-      "lastUpdated": "Last updated"
+      "lastUpdated": "Last updated",
+      "editDetails": "Edit details",
+      "editOnlyPending": "Only pending credentials can be edited.",
+      "updateFailed": "Failed to update the credential. Please try again."
+    },
+    "competency": {
+      "title": "Competencies",
+      "empty": "No competencies applied yet.",
+      "saveToApply": "Save to apply changes",
+      "save": "Save",
+      "linkFailed": "Failed to link competencies. Please try again."
     },
     "issue": {
       "title": "Issue Credentials",
