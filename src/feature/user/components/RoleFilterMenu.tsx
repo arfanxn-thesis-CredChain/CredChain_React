@@ -1,8 +1,8 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Role } from "@shared/auth/role";
+import { FilterTrigger } from "@shared/components/FilterTrigger";
 import type { RoleFilter } from "../hooks/useUserListParams";
-import { Button } from "@ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,12 +31,11 @@ export function RoleFilterMenu({ value, onChange }: RoleFilterMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <FilterTrigger active={value !== "all"}>
           {activeOption
             ? `${t("user.role.filter.label")}: ${activeOption.label}`
             : t("user.role.filter.label")}
-          <ChevronDown className="ml-1 h-3 w-3 text-gray-400" aria-hidden="true" />
-        </Button>
+        </FilterTrigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {options.map((opt) => {

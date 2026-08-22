@@ -1,6 +1,6 @@
-import { ChevronDown, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@ui/button";
+import { FilterTrigger } from "@shared/components/FilterTrigger";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,10 +29,9 @@ export function SortMenu({ value, onChange }: SortMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <FilterTrigger>
           {activeOption ? `${t("user.sort.label")}: ${activeOption.label}` : t("user.sort.label")}
-          <ChevronDown className="ml-1 h-3 w-3 text-gray-400" aria-hidden="true" />
-        </Button>
+        </FilterTrigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {options.map((opt) => {

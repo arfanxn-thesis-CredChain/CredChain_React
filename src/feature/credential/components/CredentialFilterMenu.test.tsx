@@ -31,7 +31,7 @@ function renderMenu(props: Partial<React.ComponentProps<typeof CredentialFilterM
 describe("CredentialFilterMenu", () => {
   it("shows the all label when no option is selected", () => {
     renderMenu();
-    expect(screen.getByRole("button", { name: /all types/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /all/i })).toBeInTheDocument();
   });
 
   it("shows the selected option name in the trigger", () => {
@@ -44,7 +44,7 @@ describe("CredentialFilterMenu", () => {
     const onChange = vi.fn();
     renderMenu({ value: "opt_a", onChange });
     await user.click(screen.getByRole("button", { name: /alpha/i }));
-    await user.click(await screen.findByRole("menuitem", { name: /all types/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /all/i }));
     expect(onChange).toHaveBeenCalledWith(null);
   });
 
@@ -52,7 +52,7 @@ describe("CredentialFilterMenu", () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     renderMenu({ onChange });
-    await user.click(screen.getByRole("button", { name: /all types/i }));
+    await user.click(screen.getByRole("button", { name: /all/i }));
     await user.click(await screen.findByRole("menuitem", { name: /beta/i }));
     expect(onChange).toHaveBeenCalledWith("opt_b");
   });

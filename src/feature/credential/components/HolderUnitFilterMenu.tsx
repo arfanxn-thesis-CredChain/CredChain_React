@@ -1,3 +1,4 @@
+import { flattenUnitTree } from "@shared/lib/units";
 import { useUserUnits } from "../api/useUserUnits";
 import { CredentialFilterMenu } from "./CredentialFilterMenu";
 
@@ -14,7 +15,7 @@ export function HolderUnitFilterMenu({ value, onChange }: HolderUnitFilterMenuPr
       allLabelKey="cred.filter.unitAll"
       value={value}
       onChange={onChange}
-      options={data ?? []}
+      options={flattenUnitTree(data ?? [])}
     />
   );
 }

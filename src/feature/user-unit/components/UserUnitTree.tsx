@@ -1,15 +1,28 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
   ChevronRight,
   FolderTree,
+  GripVertical,
   Loader2,
   Pencil,
   Plus,
-  Search,
   Trash2,
 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { isApiError } from "@shared/api/envelope";
 import { EmptyState } from "@shared/components/EmptyState";
 import { RoleGate } from "@shared/auth/guards";
@@ -18,7 +31,6 @@ import { cn } from "@shared/lib/cn";
 import type { HolderUnitDTO } from "@shared/types/api";
 import { Button } from "@ui/button";
 import { useConfirm } from "@ui/confirm-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@ui/dialog";
 import { Input } from "@ui/input";
 import { Skeleton } from "@ui/skeleton";
 import {
@@ -26,6 +38,7 @@ import {
   useStoreUserUnit,
   useUpdateUserUnit,
 } from "../api/useMutateUserUnits";
+import { ROOT_DROP_ID, resolveMove } from "../lib/resolveMove";
 
 interface UserUnitTreeProps {
   units: HolderUnitDTO[];
@@ -40,6 +53,74 @@ interface TreeNode {
 
 const ADMIN_ROLES = [Role.ADMIN, Role.SUPER_ADMIN];
 
+/** Grip drag handle: drag (mouse or touch) to reparent a unit. */
+function DragHandle({ id, label }: { id: string; label: string }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id });
+  return (
+    <Button
+      ref={setNodeRef}
+      type="button"
+      variant="ghost"
+      size="icon"
+      aria-label={label}
+      className={cn("cursor-grab touch-none", isDragging && "cursor-grabbing opacity-40")}
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical className="h-4 w-4" />
+    </Button>
+  );
+}
+
+/** A tree row that is a drop target; highlights gold for a valid drop, red for invalid. */
+function DroppableRow({
+  id,
+  style,
+  className,
+  activeId,
+  isInvalidTarget,
+  children,
+}: {
+  id: string;
+  style?: CSSProperties;
+  className?: string;
+  activeId: string | null;
+  isInvalidTarget: boolean;
+  children: ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  const highlight = isOver && activeId !== null && activeId !== id;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        className,
+        highlight && !isInvalidTarget && "bg-gold/10 ring-2 ring-inset ring-gold/60",
+        highlight && isInvalidTarget && "cursor-no-drop bg-error/5 ring-2 ring-inset ring-error/40",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Drop zone shown while dragging a nested unit — dropping here promotes it to a root unit. */
+function RootDropZone({ label }: { label: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id: ROOT_DROP_ID });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "mt-3 rounded-xl border-2 border-dashed px-4 py-3 text-center text-sm transition-colors",
+        isOver ? "border-gold bg-gold/10 font-medium text-navy" : "border-gray-200 text-gray-400",
+      )}
+    >
+      {label}
+    </div>
+  );
+}
+
 export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
   const { t } = useTranslation();
   const store = useStoreUserUnit();
@@ -53,10 +134,15 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
   const [createError, setCreateError] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
-  const [moving, setMoving] = useState<HolderUnitDTO | null>(null);
-  const [moveQuery, setMoveQuery] = useState("");
-  const [moveParentId, setMoveParentId] = useState<string | undefined>(undefined);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    // Mouse: start after an 8px drag so a plain click still opens the dialog.
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    // Touch: press-and-hold to drag so a swipe scrolls the page instead of dragging.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
 
   const childrenMap = useMemo(() => {
     const map = new Map<string | null, HolderUnitDTO[]>();
@@ -108,24 +194,26 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
     return out;
   }, [roots, expanded]);
 
-  const moveOptions = useMemo(() => {
-    if (!moving) return [];
-    const excluded = new Set([moving.id]);
-    const walkDescendants = (id: string) => {
+  // Drop targets that are illegal or no-ops for the current drag (self, current
+  // parent, own descendants) — used purely to tint the drop highlight red.
+  const invalidTargets = useMemo(() => {
+    const set = new Set<string>();
+    if (!activeId) return set;
+    const active = units.find((u) => u.id === activeId);
+    if (!active) return set;
+    set.add(activeId);
+    if (active.parent_id) set.add(active.parent_id);
+    const walk = (id: string) => {
       for (const child of childrenMap.get(id) ?? []) {
-        excluded.add(child.id);
-        walkDescendants(child.id);
+        set.add(child.id);
+        walk(child.id);
       }
     };
-    walkDescendants(moving.id);
-    const q = moveQuery.trim().toLowerCase();
-    return units.filter((u) => {
-      if (excluded.has(u.id)) return false;
-      if (!q) return true;
-      const label = pathOf.get(u.id)?.join(" › ").toLowerCase() ?? "";
-      return label.includes(q);
-    });
-  }, [moving, units, childrenMap, pathOf, moveQuery]);
+    walk(activeId);
+    return set;
+  }, [activeId, units, childrenMap]);
+
+  const activeUnit = activeId ? (units.find((u) => u.id === activeId) ?? null) : null;
 
   const setRowError = (id: string, key: string) => {
     setRowErrors((prev) => ({ ...prev, [id]: key }));
@@ -188,21 +276,27 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
     );
   };
 
-  const submitMove = () => {
-    if (!moving || moveParentId === undefined) return;
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const draggedId = String(event.active.id);
+    setActiveId(null);
+    const overId = event.over ? String(event.over.id) : null;
+    const result = resolveMove(draggedId, overId, units);
+    if (!result) return;
     update.mutate(
-      { id: moving.id, parent_id: moveParentId },
+      { id: draggedId, parent_id: result.parentId },
       {
         onSuccess: () => {
-          setMoving(null);
-          setMoveQuery("");
-          setMoveParentId(undefined);
-          clearRowError(moving.id);
+          if (result.parentId) {
+            setExpanded((prev) => new Set(prev).add(result.parentId as string));
+          }
+          clearRowError(draggedId);
         },
         onError: (error) => {
-          setRowError(moving.id, isApiError(error) ? error.messageKey : "admin.userUnit.actionError");
-          setMoving(null);
-          setMoveQuery("");
+          setRowError(draggedId, isApiError(error) ? error.messageKey : "admin.userUnit.actionError");
         },
       },
     );
@@ -238,7 +332,7 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
         onChange={(event) => setCreateName(event.target.value)}
         placeholder={t("userUnit.createPlaceholder")}
         autoFocus
-        className="h-9 py-2"
+        className="h-9 w-full py-2 sm:max-w-md"
         aria-label={t("userUnit.createPlaceholder")}
       />
       <Button type="submit" size="sm" disabled={store.isPending} className="shrink-0">
@@ -279,260 +373,200 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
 
   return (
     <div>
-      <div className="p-4 sm:p-6">
-        <RoleGate allowed={ADMIN_ROLES}>
-          {creatingParentId === null ? (
-            createForm("flex flex-col items-stretch gap-2 sm:flex-row sm:items-center")
-          ) : (
-            <Button variant="dashed" size="sm" onClick={openRootCreate}>
-              <Plus className="h-4 w-4" />
-              {t("userUnit.addRoot")}
-            </Button>
-          )}
-        </RoleGate>
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
+        <div className="p-4 sm:p-6">
+          <RoleGate allowed={ADMIN_ROLES}>
+            {creatingParentId === null ? (
+              createForm("flex flex-col items-stretch gap-2 sm:flex-row sm:items-center")
+            ) : (
+              <Button variant="dashed" size="sm" onClick={openRootCreate}>
+                <Plus className="h-4 w-4" />
+                {t("userUnit.addRoot")}
+              </Button>
+            )}
+            {activeUnit && activeUnit.parent_id !== null && (
+              <RootDropZone label={t("userUnit.rootDropZone")} />
+            )}
+          </RoleGate>
+        </div>
 
-      {units.length === 0 ? (
-        <EmptyState
-          icon={FolderTree}
-          title={t("userUnit.empty.title")}
-          description={t("userUnit.empty.description")}
-          className="rounded-none border-0 shadow-none"
-        />
-      ) : (
-        <div className="divide-y divide-gray-50">
-          {visibleRows.map((node) => {
-            const path = pathOf.get(node.unit.id) ?? [];
-            const isExpanded = expanded.has(node.unit.id);
-            const rowError = rowErrors[node.unit.id];
-            return (
-              <Fragment key={node.unit.id}>
-                <div
-                  className="flex items-start gap-2 px-4 py-3 sm:px-6"
-                  style={{ paddingLeft: `${node.depth * 24 + 16}px` }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setExpanded((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(node.unit.id)) next.delete(node.unit.id);
-                        else next.add(node.unit.id);
-                        return next;
-                      });
-                    }}
-                    disabled={node.children.length === 0}
-                    aria-label={
-                      isExpanded ? t("userUnit.collapse", { name: node.unit.name }) : t("userUnit.expand", { name: node.unit.name })
-                    }
-                    aria-expanded={node.children.length > 0 ? isExpanded : undefined}
-                    className={cn(
-                      "mt-0.5 shrink-0 rounded p-0.5 text-gray-400 transition-colors",
-                      "hover:text-navy focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none",
-                      node.children.length === 0 && "invisible",
-                    )}
+        {units.length === 0 ? (
+          <EmptyState
+            icon={FolderTree}
+            title={t("userUnit.empty.title")}
+            description={t("userUnit.empty.description")}
+            className="rounded-none border-0 shadow-none"
+          />
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {visibleRows.map((node) => {
+              const path = pathOf.get(node.unit.id) ?? [];
+              const isExpanded = expanded.has(node.unit.id);
+              const rowError = rowErrors[node.unit.id];
+              return (
+                <Fragment key={node.unit.id}>
+                  <DroppableRow
+                    id={node.unit.id}
+                    activeId={activeId}
+                    isInvalidTarget={invalidTargets.has(node.unit.id)}
+                    className="flex items-start gap-2 px-4 py-3 sm:px-6"
+                    style={{ paddingLeft: `${node.depth * 24 + 16}px` }}
                   >
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpanded((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(node.unit.id)) next.delete(node.unit.id);
+                          else next.add(node.unit.id);
+                          return next;
+                        });
+                      }}
+                      disabled={node.children.length === 0}
+                      aria-label={
+                        isExpanded ? t("userUnit.collapse", { name: node.unit.name }) : t("userUnit.expand", { name: node.unit.name })
+                      }
+                      aria-expanded={node.children.length > 0 ? isExpanded : undefined}
+                      className={cn(
+                        "mt-0.5 shrink-0 rounded p-0.5 text-gray-400 transition-colors",
+                        "hover:text-navy focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none",
+                        node.children.length === 0 && "invisible",
+                      )}
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
 
-                  <div className="min-w-0 flex-1">
-                    {renamingId === node.unit.id ? (
-                      <form
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          submitRename(node.unit);
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <Input
-                          value={renameName}
-                          onChange={(event) => setRenameName(event.target.value)}
-                          autoFocus
-                          className="h-9 py-2"
-                          aria-label={t("userUnit.renamePlaceholder")}
-                        />
-                        <Button type="submit" size="sm" disabled={update.isPending} className="shrink-0">
-                          {update.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                          ) : null}
-                          {t("userUnit.renameSubmit")}
+                    <div className="min-w-0 flex-1">
+                      {renamingId === node.unit.id ? (
+                        <form
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            submitRename(node.unit);
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Input
+                            value={renameName}
+                            onChange={(event) => setRenameName(event.target.value)}
+                            autoFocus
+                            className="h-9 min-w-0 flex-1 py-2"
+                            aria-label={t("userUnit.renamePlaceholder")}
+                          />
+                          <Button type="submit" size="sm" disabled={update.isPending} className="shrink-0">
+                            {update.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                            ) : null}
+                            {t("userUnit.renameSubmit")}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() => setRenamingId(null)}
+                          >
+                            {t("common.cancel")}
+                          </Button>
+                        </form>
+                      ) : (
+                        <span className="text-sm font-medium text-navy">{node.unit.name}</span>
+                      )}
+                      {path.length > 0 && (
+                        <p aria-label={t("userUnit.path")} className="mt-0.5 truncate text-xs text-gray-400">
+                          {path.join(" › ")}
+                        </p>
+                      )}
+                      {rowError && (
+                        <p role="alert" className="mt-1 text-xs text-error">
+                          {t(rowError)}
+                        </p>
+                      )}
+                    </div>
+
+                    {renamingId !== node.unit.id && (
+                    <RoleGate allowed={ADMIN_ROLES}>
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("userUnit.addSubunit", { name: node.unit.name })}
+                          onClick={() => {
+                            setCreateName("");
+                            setCreateError(null);
+                            setCreatingParentId(node.unit.id);
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
                         </Button>
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
-                          className="shrink-0"
-                          onClick={() => setRenamingId(null)}
+                          size="icon"
+                          aria-label={t("userUnit.rename", { name: node.unit.name })}
+                          onClick={() => {
+                            setRenamingId(node.unit.id);
+                            setRenameName(node.unit.name);
+                          }}
                         >
-                          {t("common.cancel")}
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                      </form>
-                    ) : (
-                      <span className="text-sm font-medium text-navy">{node.unit.name}</span>
+                        <DragHandle
+                          id={node.unit.id}
+                          label={t("userUnit.move", { name: node.unit.name })}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("userUnit.destroy.menu", { name: node.unit.name })}
+                          onClick={() => void handleDestroy(node.unit)}
+                        >
+                          <Trash2 className="h-4 w-4 text-error" />
+                        </Button>
+                      </div>
+                    </RoleGate>
                     )}
-                    {path.length > 0 && (
-                      <p aria-label={t("userUnit.path")} className="mt-0.5 truncate text-xs text-gray-400">
-                        {path.join(" › ")}
-                      </p>
-                    )}
-                    {rowError && (
-                      <p role="alert" className="mt-1 text-xs text-error">
-                        {t(rowError)}
-                      </p>
-                    )}
-                  </div>
+                  </DroppableRow>
 
-                  <RoleGate allowed={ADMIN_ROLES}>
-                    <div className="flex shrink-0 items-center gap-0.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("userUnit.addSubunit", { name: node.unit.name })}
-                        onClick={() => {
-                          setCreateName("");
-                          setCreateError(null);
-                          setCreatingParentId(node.unit.id);
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("userUnit.rename", { name: node.unit.name })}
-                        onClick={() => {
-                          setRenamingId(node.unit.id);
-                          setRenameName(node.unit.name);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("userUnit.move", { name: node.unit.name })}
-                        onClick={() => {
-                          setMoving(node.unit);
-                          setMoveQuery("");
-                          setMoveParentId(node.unit.parent_id ?? undefined);
-                        }}
-                      >
-                        <FolderTree className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("userUnit.destroy.menu", { name: node.unit.name })}
-                        onClick={() => void handleDestroy(node.unit)}
-                      >
-                        <Trash2 className="h-4 w-4 text-error" />
-                      </Button>
+                  {creatingParentId === node.unit.id && (
+                    <div
+                      className="pb-3"
+                      style={{ paddingLeft: `${(node.depth + 1) * 24 + 16}px`, paddingRight: "1rem" }}
+                    >
+                      {createForm("flex flex-col items-stretch gap-2 sm:flex-row sm:items-center")}
+                      {createError && (
+                        <p role="alert" className="mt-1 text-xs text-error">
+                          {t(createError)}
+                        </p>
+                      )}
                     </div>
-                  </RoleGate>
-                </div>
-
-                {creatingParentId === node.unit.id && (
-                  <div
-                    className="pb-3"
-                    style={{ paddingLeft: `${(node.depth + 1) * 24 + 16}px`, paddingRight: "1rem" }}
-                  >
-                    {createForm("flex flex-col items-stretch gap-2 sm:flex-row sm:items-center")}
-                    {createError && (
-                      <p role="alert" className="mt-1 text-xs text-error">
-                        {t(createError)}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </Fragment>
-            );
-          })}
-        </div>
-      )}
-
-      <Dialog
-        open={moving !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setMoving(null);
-            setMoveQuery("");
-          }
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("userUnit.moveTitle")}</DialogTitle>
-            {moving && (
-              <DialogDescription>{t("userUnit.moveDescription", { name: moving.name })}</DialogDescription>
-            )}
-          </DialogHeader>
-
-          <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 transition-all focus-within:border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-gold">
-            <Search className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
-            <input
-              type="text"
-              value={moveQuery}
-              onChange={(event) => setMoveQuery(event.target.value)}
-              placeholder={t("userUnit.movePlaceholder")}
-              className="h-11 w-full bg-transparent text-sm text-navy outline-none placeholder:text-gray-400"
-            />
-          </div>
-
-          <div className="scrollbar-hidden max-h-72 overflow-y-auto rounded-xl border border-gray-100">
-            {moveOptions.map((option) => {
-              const label = pathOf.get(option.id)?.join(" › ") ?? option.name;
-              const isSelected = moveParentId === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setMoveParentId(option.id)}
-                  className={cn(
-                    "flex w-full items-center px-3 py-2.5 text-left text-sm text-navy transition-colors hover:bg-navy/5",
-                    isSelected && "bg-navy/5 font-semibold",
                   )}
-                >
-                  <span className="min-w-0 flex-1 truncate">{label}</span>
-                </button>
+                </Fragment>
               );
             })}
-            {moveOptions.length === 0 && (
-              <div className="px-3 py-6 text-center text-sm text-gray-400">
-                {t("userUnit.moveNoMatch")}
-              </div>
-            )}
           </div>
+        )}
 
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setMoving(null)}
-              disabled={update.isPending}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              type="button"
-              onClick={submitMove}
-              disabled={update.isPending || moveParentId === undefined}
-            >
-              {update.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : null}
-              {t("userUnit.moveSubmit")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <DragOverlay dropAnimation={null}>
+          {activeUnit ? (
+            <div className="inline-flex w-max max-w-xs items-center gap-2 rounded-xl border border-gold/50 bg-surface px-3 py-2 text-sm font-medium text-navy shadow-lg shadow-navy/20">
+              <GripVertical className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+              <span className="truncate">{activeUnit.name}</span>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
       {dialog}
     </div>
   );

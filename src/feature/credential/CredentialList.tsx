@@ -5,7 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Ban,
   CheckCircle2,
+  ChevronDown,
   FileBadge,
+  Library,
   Loader2,
   RefreshCw,
   Search,
@@ -30,6 +32,12 @@ import { PageHeader } from "@shared/components/PageHeader";
 import { EmptyState } from "@shared/components/EmptyState";
 
 import { Button } from "@ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@ui/dropdown-menu";
 import { Card } from "@ui/card";
 import { Input } from "@ui/input";
 import { Skeleton } from "@ui/skeleton";
@@ -391,8 +399,8 @@ export function CredentialList() {
     }
 
     return (
-      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-        <Button variant="gold" onClick={() => enterMode("approve")}>
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <Button variant="outline" onClick={() => enterMode("approve")}>
           <CheckCircle2 className="h-4 w-4" />
           {t("cred.card.approveMode")}
         </Button>
@@ -408,13 +416,35 @@ export function CredentialList() {
           <RefreshCw className="h-4 w-4" />
           {t("cred.card.reExtractMode")}
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="sm:ml-auto">
+              <Library className="h-4 w-4" />
+              {t("cred.references.label")}
+              <ChevronDown className="ml-1 h-3 w-3 text-gray-400" aria-hidden="true" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link to="/credential-types">{t("cred.references.types")}</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/credential-issuer-organizations">
+                {t("cred.references.organizations")}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/competencies">{t("cred.references.competencies")}</Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button asChild variant="outline">
           <Link to="/credentials/verify">
             <ShieldCheck className="h-4 w-4" />
             {t("cred.list.verifyCta")}
           </Link>
         </Button>
-        <Button asChild variant="gold" className="w-full sm:w-auto">
+        <Button asChild variant="gold">
           <Link to="/credentials/issue">
             <FileBadge className="h-4 w-4" />
             {t("cred.list.issueCta")}
@@ -485,16 +515,13 @@ export function CredentialList() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader
-        title={t("cred.list.title")}
-        description={t("cred.list.description")}
-        action={renderActions()}
-      />
+      <PageHeader title={t("cred.list.title")} description={t("cred.list.description")} />
+      {renderActions()}
 
       <Card className="p-0">
         <div className="border-b border-gray-50 p-4 sm:p-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-            <div className="w-full md:max-w-md md:flex-1">
+          <div className="space-y-3">
+            <div className="w-full md:max-w-2xl">
               <Input
                 type="search"
                 inputMode="search"
@@ -506,7 +533,7 @@ export function CredentialList() {
                 aria-label={t("cred.list.searchAriaLabel")}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2 md:ml-auto md:shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
               <CredentialStatusMenu
                 review={review}
                 extract={extract}

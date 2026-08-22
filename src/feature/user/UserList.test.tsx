@@ -385,20 +385,19 @@ describe("UserList", () => {
     expect(await screen.findByRole("menuitem", { name: /delete/i })).toBeInTheDocument();
   });
 
-  it("renders a Joined column header and joined years in rows", async () => {
+  it("renders joined years inline in each row", async () => {
     renderUserList();
     await waitFor(() => expect(screen.getByText("Jane Doe")).toBeInTheDocument());
 
-    expect(screen.getByRole("columnheader", { name: /joined/i })).toBeInTheDocument();
-    expect(screen.getByText("2022")).toBeInTheDocument();
-    expect(screen.getByText("2023")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /joined/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/2022/)).toBeInTheDocument();
+    expect(screen.getByText(/2023/)).toBeInTheDocument();
   });
 
   it("renders an em dash placeholder when joined_year is null", async () => {
     renderUserList();
     await waitFor(() => expect(screen.getAllByText("Super Admin").length).toBeGreaterThan(0));
-    const joinedCells = screen.getAllByRole("cell").filter((c) => c.textContent === "—");
-    expect(joinedCells.length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/joined\s+—/i).length).toBeGreaterThan(0);
   });
 
   it("selecting a unit filter updates the URL with unit_id param", async () => {
@@ -406,7 +405,7 @@ describe("UserList", () => {
     renderUserList();
     await screen.findByText("User Directory");
 
-    await user.click(screen.getByRole("button", { name: /unit \(includes sub-units\): all/i }));
+    await user.click(screen.getByRole("button", { name: /unit: all/i }));
     const unitItem = await screen.findByRole("menuitem", {
       name: /computer science department/i,
     });

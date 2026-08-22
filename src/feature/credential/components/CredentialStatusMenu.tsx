@@ -1,6 +1,6 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@ui/button";
+import { FilterTrigger } from "@shared/components/FilterTrigger";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,15 +62,14 @@ export function CredentialStatusMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <FilterTrigger active={review !== "all" || extract !== "any"}>
           {triggerLabel}
           {showPendingBadge && (
             <span className="ml-1.5 rounded-full bg-gold px-1.5 text-[10px] font-bold text-navy">
               {pendingCount}
             </span>
           )}
-          <ChevronDown className="ml-1 h-3 w-3 text-gray-400" aria-hidden="true" />
-        </Button>
+        </FilterTrigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel>{t("cred.review.menuLabel")}</DropdownMenuLabel>

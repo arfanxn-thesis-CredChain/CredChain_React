@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Calendar,
   CalendarClock,
+  ListTree,
   Mail,
   Hash,
   Wallet,
@@ -115,21 +116,29 @@ export function UserList() {
         title={t("user.list.title")}
         description={t("user.list.description")}
         action={
-          <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
-            <Button asChild variant="gold">
-              <Link to="/users/create">
-                <Plus className="h-5 w-5" />
-                {t("user.list.registerCta")}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline">
+              <Link to="/user-units">
+                <ListTree className="h-5 w-5" />
+                {canManageUsers ? t("user.units.manage") : t("user.units.view")}
               </Link>
             </Button>
-          </RoleGate>
+            <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
+              <Button asChild variant="gold">
+                <Link to="/users/create">
+                  <Plus className="h-5 w-5" />
+                  {t("user.list.registerCta")}
+                </Link>
+              </Button>
+            </RoleGate>
+          </div>
         }
       />
 
       <Card className="p-0">
         <div className="border-b border-gray-50 p-4 sm:p-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-            <div className="w-full md:max-w-md md:flex-1">
+          <div className="space-y-3">
+            <div className="w-full md:max-w-2xl">
               <Input
                 type="search"
                 inputMode="search"
@@ -148,7 +157,7 @@ export function UserList() {
                 aria-label={t("user.list.searchPlaceholder")}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2 md:ml-auto md:shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
               <HolderUnitFilterMenu value={params.unit} onChange={(v) => setParam("unit", v)} />
               <RoleFilterMenu value={params.role} onChange={(r) => setParam("role", r)} />
               <StatusFilterMenu value={params.status} onChange={(v) => setParam("status", v)} />
@@ -180,7 +189,6 @@ export function UserList() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("user.column.entity")}</TableHead>
-                    <TableHead>{t("user.list.joined")}</TableHead>
                     <TableHead className="relative">
                       <span className="sr-only">{t("user.column.actions")}</span>
                     </TableHead>
@@ -201,9 +209,6 @@ export function UserList() {
                                 <Skeleton className="h-3 w-28" />
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Skeleton className="h-4 w-12" />
                           </TableCell>
                           <TableCell>
                             <Skeleton className="ml-auto h-4 w-16" />
@@ -295,6 +300,17 @@ export function UserList() {
                                   </div>
                                 </div>
                                 <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                                  <CalendarClock
+                                    className="h-3.5 w-3.5 shrink-0 text-gray-400"
+                                    aria-hidden="true"
+                                  />
+                                  <span>
+                                    {t("user.list.joinedInline", {
+                                      year: user.joined_year ?? "—",
+                                    })}
+                                  </span>
+                                </div>
+                                <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
                                   <Calendar
                                     className="h-3.5 w-3.5 text-gray-400"
                                     aria-hidden="true"
@@ -314,15 +330,6 @@ export function UserList() {
                                   </span>
                                 </div>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                              <CalendarClock
-                                className="h-3.5 w-3.5 shrink-0 text-gray-400"
-                                aria-hidden="true"
-                              />
-                              <span>{user.joined_year ?? "—"}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-right">

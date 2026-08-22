@@ -1,6 +1,6 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@ui/button";
+import { FilterTrigger } from "./FilterTrigger";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,12 +52,11 @@ export function CredentialSortMenu({ value, onChange, statusFilter }: Credential
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <FilterTrigger>
           {activeOption
             ? `${t("cred.sort.label")}: ${t(activeOption.labelKey)}`
             : t("cred.sort.label")}
-          <ChevronDown className="ml-1 h-3 w-3 text-gray-400" aria-hidden="true" />
-        </Button>
+        </FilterTrigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {OPTIONS.map((opt) => {

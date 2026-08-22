@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -114,34 +114,6 @@ describe("UserUnitTree", () => {
       expect(recordedUrl).toContain("/api/user-units/unit_01");
       expect(recordedBody).toEqual({ name: "Faculty of Informatics" });
     });
-  });
-
-  it("move dialog excludes self and descendants and PUTs the chosen parent_id", async () => {
-    let recordedBody: unknown;
-    server.use(
-      http.put("*/api/user-units/:id", async ({ request }) => {
-        recordedBody = await request.json();
-        return HttpResponse.json({ code: 301002, message: "ok", data: null });
-      }),
-    );
-
-    const user = userEvent.setup();
-    renderTree();
-
-    await user.click(screen.getByRole("button", { name: "Expand Faculty of Engineering" }));
-    await user.click(screen.getByRole("button", { name: "Move Computer Science Department" }));
-
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).queryByText("Computer Science Department")).not.toBeInTheDocument();
-    expect(within(dialog).queryByText("Software Engineering Lab")).not.toBeInTheDocument();
-    expect(within(dialog).queryByText("Top level (no parent)")).not.toBeInTheDocument();
-    expect(within(dialog).getByText("Faculty of Engineering")).toBeInTheDocument();
-    expect(within(dialog).getByText("Faculty of Medicine")).toBeInTheDocument();
-
-    await user.click(within(dialog).getByText("Faculty of Medicine"));
-    await user.click(screen.getByRole("button", { name: "Move" }));
-
-    await waitFor(() => expect(recordedBody).toEqual({ parent_id: "unit_03" }));
   });
 
   it("shows a guarded confirm for destroy and renders an inline error on an in-use destroy", async () => {

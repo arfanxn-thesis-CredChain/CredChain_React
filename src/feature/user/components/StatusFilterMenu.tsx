@@ -1,6 +1,6 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@ui/button";
+import { FilterTrigger } from "@shared/components/FilterTrigger";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,12 +29,11 @@ export function StatusFilterMenu({ value, onChange }: StatusFilterMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <FilterTrigger active={value !== "all"}>
           {activeOption
             ? `${t("user.filter.status")}: ${activeOption.label}`
             : t("user.filter.status")}
-          <ChevronDown className="ml-1 h-3 w-3 text-gray-400" aria-hidden="true" />
-        </Button>
+        </FilterTrigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {options.map((opt) => {

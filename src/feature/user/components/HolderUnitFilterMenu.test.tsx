@@ -13,7 +13,7 @@ describe("HolderUnitFilterMenu", () => {
   it("shows the all label when no unit is selected", async () => {
     render(<HolderUnitFilterMenu value="" onChange={vi.fn()} />, { wrapper: TestProviders });
     expect(
-      await screen.findByRole("button", { name: /unit \(includes sub-units\): all/i }),
+      await screen.findByRole("button", { name: /unit: all/i }),
     ).toBeInTheDocument();
   });
 
@@ -21,7 +21,7 @@ describe("HolderUnitFilterMenu", () => {
     render(<HolderUnitFilterMenu value="unit_01" onChange={vi.fn()} />, { wrapper: TestProviders });
     expect(
       await screen.findByRole("button", {
-        name: /unit \(includes sub-units\): faculty of engineering/i,
+        name: /unit: faculty of engineering/i,
       }),
     ).toBeInTheDocument();
   });
@@ -34,7 +34,7 @@ describe("HolderUnitFilterMenu", () => {
     });
 
     const trigger = await screen.findByRole("button", {
-      name: /unit \(includes sub-units\): faculty of engineering/i,
+      name: /unit: faculty of engineering/i,
     });
     await user.click(trigger);
     await user.click(await screen.findByRole("menuitem", { name: /^all$/i }));
@@ -47,7 +47,7 @@ describe("HolderUnitFilterMenu", () => {
     render(<HolderUnitFilterMenu value="" onChange={onChange} />, { wrapper: TestProviders });
 
     const trigger = await screen.findByRole("button", {
-      name: /unit \(includes sub-units\): all/i,
+      name: /unit: all/i,
     });
     await user.click(trigger);
     await user.click(await screen.findByRole("menuitem", { name: /computer science department/i }));
@@ -59,7 +59,7 @@ describe("HolderUnitFilterMenu", () => {
     render(<HolderUnitFilterMenu value="" onChange={vi.fn()} />, { wrapper: TestProviders });
 
     const trigger = await screen.findByRole("button", {
-      name: /unit \(includes sub-units\): all/i,
+      name: /unit: all/i,
     });
     await user.click(trigger);
 
