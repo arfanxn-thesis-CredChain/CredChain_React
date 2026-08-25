@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -17,6 +17,7 @@ import {
   Hash,
   Wallet,
   VenusAndMars,
+  Building2,
 } from "lucide-react";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { api } from "@shared/api/client";
@@ -50,6 +51,7 @@ import { SortMenu } from "./components/SortMenu";
 import { RoleFilterMenu } from "./components/RoleFilterMenu";
 import { StatusFilterMenu } from "./components/StatusFilterMenu";
 import { HolderUnitFilterMenu } from "./components/HolderUnitFilterMenu";
+import { useUserUnits } from "./api/useUserUnits";
 import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 import { UserAvatar } from "@shared/components/UserAvatar";
 import { UserRoleBadge } from "@shared/components/UserRoleBadge";
@@ -78,6 +80,9 @@ export function UserList() {
   const currentUser = useStore((s) => s.user);
   const canManageUsers = canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN]);
   const navigate = useNavigate();
+
+  const { data: units } = useUserUnits();
+  const unitNames = useMemo(() => new Map((units ?? []).map((u) => [u.id, u.name])), [units]);
 
   const sortArray = params.sort ? [params.sort] : ["-updated_at"];
   const filterArray: string[] = [];
@@ -244,13 +249,35 @@ export function UserList() {
                                   <UserRoleBadge role={user.role} />
                                   <UserStatusBadge deletedAt={user.deleted_at} />
                                 </div>
-                                <div className="mt-1 grid grid-cols-1 gap-x-4 gap-y-0.5 text-xs text-gray-500 lg:grid-cols-3">
+                                <div className="mt-1 grid grid-cols-1 gap-x-4 gap-y-0.5 text-xs text-gray-500 sm:grid-cols-2 lg:grid-cols-3">
+                                  {user.unit_id && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setParam("unit", user.unit_id ?? "");
+                                      }}
+                                      aria-label={t("user.filter.unit")}
+                                      title={t("user.filter.unit")}
+                                      className="flex cursor-pointer items-center gap-1 text-left hover:text-navy sm:col-span-2 lg:col-span-3"
+                                    >
+                                      <Building2
+                                        className="h-3.5 w-3.5 shrink-0 text-gray-400"
+                                        aria-hidden="true"
+                                      />
+                                      <span className="truncate">
+                                        {unitNames.get(user.unit_id) ?? "—"}
+                                      </span>
+                                    </button>
+                                  )}
                                   <div className="flex items-center gap-1">
                                     <Hash
                                       className="h-3.5 w-3.5 shrink-0 text-gray-400"
                                       aria-hidden="true"
                                     />
-                                    <span className="truncate">{user.number ?? "—"}</span>
+                                    <span className="truncate" title={user.number ?? undefined}>
+                                      {user.number ?? "—"}
+                                    </span>
                                     {user.number && (
                                       <CopyInlineButton
                                         value={user.number}
@@ -264,7 +291,9 @@ export function UserList() {
                                       className="h-3.5 w-3.5 shrink-0 text-gray-400"
                                       aria-hidden="true"
                                     />
-                                    <span className="truncate">{user.email}</span>
+                                    <span className="truncate" title={user.email}>
+                                      {user.email}
+                                    </span>
                                     <CopyInlineButton
                                       value={user.email}
                                       ariaLabel={t("user.copy.email")}
@@ -276,7 +305,10 @@ export function UserList() {
                                       className="h-3.5 w-3.5 shrink-0 text-gray-400"
                                       aria-hidden="true"
                                     />
-                                    <span className="truncate">
+                                    <span
+                                      className="truncate"
+                                      title={user.wallet_address ?? undefined}
+                                    >
                                       {user.wallet_address
                                         ? truncateAddress(user.wallet_address)
                                         : "—"}
@@ -298,36 +330,36 @@ export function UserList() {
                                       {user.gender ? t(`user.field.gender.${user.gender}`) : "—"}
                                     </span>
                                   </div>
-                                </div>
-                                <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
-                                  <CalendarClock
-                                    className="h-3.5 w-3.5 shrink-0 text-gray-400"
-                                    aria-hidden="true"
-                                  />
-                                  <span>
-                                    {t("user.list.joinedInline", {
-                                      year: user.joined_year ?? "—",
-                                    })}
-                                  </span>
-                                </div>
-                                <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
-                                  <Calendar
-                                    className="h-3.5 w-3.5 text-gray-400"
-                                    aria-hidden="true"
-                                  />
-                                  <span>
-                                    {user.deleted_at
-                                      ? t("user.list.trashed", {
-                                          time: relativeTime(user.deleted_at, i18n.language),
-                                        })
-                                      : user.updated_at !== user.created_at
-                                        ? t("user.list.updated", {
-                                            time: relativeTime(user.updated_at, i18n.language),
+                                  <div className="flex items-center gap-1">
+                                    <CalendarClock
+                                      className="h-3.5 w-3.5 shrink-0 text-gray-400"
+                                      aria-hidden="true"
+                                    />
+                                    <span>
+                                      {t("user.list.joinedInline", {
+                                        year: user.joined_year ?? "—",
+                                      })}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar
+                                      className="h-3.5 w-3.5 shrink-0 text-gray-400"
+                                      aria-hidden="true"
+                                    />
+                                    <span>
+                                      {user.deleted_at
+                                        ? t("user.list.trashed", {
+                                            time: relativeTime(user.deleted_at, i18n.language),
                                           })
-                                        : t("user.list.created", {
-                                            time: relativeTime(user.created_at, i18n.language),
-                                          })}
-                                  </span>
+                                        : user.updated_at !== user.created_at
+                                          ? t("user.list.updated", {
+                                              time: relativeTime(user.updated_at, i18n.language),
+                                            })
+                                          : t("user.list.created", {
+                                              time: relativeTime(user.created_at, i18n.language),
+                                            })}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
