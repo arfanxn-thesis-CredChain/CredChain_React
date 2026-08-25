@@ -24,7 +24,7 @@ export function useStoreUserUnit() {
       return response.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: userUnitKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: userUnitKeys.all() });
       notify.success("success_user_unit_store");
     },
     onError: handleError,
@@ -51,7 +51,7 @@ export function useUpdateUserUnit() {
       return response.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: userUnitKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: userUnitKeys.all() });
       notify.success("success_user_unit_update");
     },
     onError: handleError,
@@ -67,7 +67,7 @@ export function useDestroyUserUnit() {
       return response.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: userUnitKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: userUnitKeys.all() });
       notify.success("success_user_unit_destroy");
     },
     onError: handleError,

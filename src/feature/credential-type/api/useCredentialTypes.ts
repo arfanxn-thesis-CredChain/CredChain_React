@@ -1,6 +1,6 @@
-import { useReferenceList } from "@shared/api/useReferenceData";
+import { useReferencePage, type ReferenceQuery } from "@shared/api/useReferenceData";
 import { credentialTypeResource } from "./keys";
 
-export function useCredentialTypes() {
-  return useReferenceList(credentialTypeResource);
+export function useCredentialTypes(query: ReferenceQuery = {}) {
+  return useReferencePage(credentialTypeResource, query);
 }

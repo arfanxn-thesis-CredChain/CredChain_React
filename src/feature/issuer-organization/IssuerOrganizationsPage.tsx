@@ -6,10 +6,13 @@ import {
   useDestroyIssuerOrganization,
   useUpdateIssuerOrganization,
 } from "./api/useMutateIssuerOrganizations";
+import { BackLink } from "@shared/components/BackLink";
+import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 import { PageHeader } from "@shared/components/PageHeader";
-import { ResourceAdminCreateForm } from "@shared/components/admin/ResourceAdminCreateForm";
 import { ResourceAdminEditForm } from "@shared/components/admin/ResourceAdminEditForm";
 import { ResourceAdminTable } from "@shared/components/admin/ResourceAdminTable";
+import { ResourceAdminToolbar } from "@shared/components/admin/ResourceAdminToolbar";
+import { useDebouncedSearchParam } from "@shared/hooks/useSearchParam";
 import { RoleGate } from "@shared/auth/guards";
 import { Role } from "@shared/auth/role";
 import type { ReferenceRow } from "@shared/types/api";
@@ -26,13 +29,14 @@ import {
 
 export function IssuerOrganizationsPage() {
   const { t } = useTranslation();
-  const list = useIssuerOrganizations();
+  const { input, setInput, search } = useDebouncedSearchParam();
+  const list = useIssuerOrganizations({ search });
   const update = useUpdateIssuerOrganization();
   const destroy = useDestroyIssuerOrganization();
   const { confirm, dialog } = useConfirm();
   const [editing, setEditing] = useState<ReferenceRow | null>(null);
 
-  const rows = list.data ?? [];
+  const rows = list.items;
 
   const handleDestroy = async (row: ReferenceRow) => {
     const ok = await confirm({
@@ -47,23 +51,23 @@ export function IssuerOrganizationsPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      <BackLink />
       <PageHeader title={t("issuerOrg.title")} description={t("issuerOrg.description")} />
 
       <Card className="p-0">
-        <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
-          <div className="border-b border-gray-50 p-4 sm:p-6">
-            <ResourceAdminCreateForm
-              resource="credential-issuer-organizations"
-              rows={rows}
-              submitLabel={t("issuerOrg.createAction")}
-            />
-          </div>
-        </RoleGate>
+        <ResourceAdminToolbar
+          resource="credential-issuer-organizations"
+          rows={rows}
+          createLabel={t("issuerOrg.createAction")}
+          searchValue={input}
+          onSearchChange={setInput}
+        />
 
         <ResourceAdminTable
           rows={rows}
           isLoading={list.isLoading}
           isError={list.isError}
+          searchActive={search.length > 0}
           nameLabel={t("issuerOrg.column.name")}
           actionsLabel={t("issuerOrg.actionsMenu")}
           emptyIcon={Building2}
@@ -91,6 +95,16 @@ export function IssuerOrganizationsPage() {
             </RoleGate>
           )}
         />
+
+        {rows.length > 0 && (
+          <LoadMoreBar
+            total={list.total}
+            hasMore={list.hasMore}
+            isLoading={list.isFetchingNextPage}
+            onLoadMore={list.loadMore}
+            countLabel={t("admin.count", { shown: rows.length, total: list.total })}
+          />
+        )}
       </Card>
 
       <Dialog

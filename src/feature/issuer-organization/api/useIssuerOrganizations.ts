@@ -1,6 +1,6 @@
-import { useReferenceList } from "@shared/api/useReferenceData";
+import { useReferencePage, type ReferenceQuery } from "@shared/api/useReferenceData";
 import { issuerOrganizationResource } from "./keys";
 
-export function useIssuerOrganizations() {
-  return useReferenceList(issuerOrganizationResource);
+export function useIssuerOrganizations(query: ReferenceQuery = {}) {
+  return useReferencePage(issuerOrganizationResource, query);
 }

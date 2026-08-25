@@ -29,7 +29,7 @@ let probeCount = 0;
 
 function ListProbe() {
   useQuery({
-    queryKey: referenceKeys.list(issuerOrganizationResource),
+    queryKey: referenceKeys.all(issuerOrganizationResource),
     queryFn: async () => {
       probeCount += 1;
       return [];

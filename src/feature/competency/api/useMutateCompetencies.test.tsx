@@ -29,7 +29,7 @@ let probeCount = 0;
 
 function ListProbe() {
   useQuery({
-    queryKey: referenceKeys.list(competencyResource),
+    queryKey: referenceKeys.all(competencyResource),
     queryFn: async () => {
       probeCount += 1;
       return [];

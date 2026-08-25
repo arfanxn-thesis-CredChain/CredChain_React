@@ -5,7 +5,7 @@ import { SearchableCreateSelect } from "@shared/components/SearchableCreateSelec
 import { MonoId } from "@shared/components/MonoId";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
-import { useReferenceList } from "@shared/api/useReferenceData";
+import { useReferenceByIds } from "@shared/api/useReferenceData";
 import { useLinkCompetencies } from "../api/useLinkCompetencies";
 
 interface CredentialCompetencyEditorProps {
@@ -21,10 +21,12 @@ export function CredentialCompetencyEditor({
 }: CredentialCompetencyEditorProps) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string[]>(appliedIds);
-  const list = useReferenceList("competencies");
   const link = useLinkCompetencies();
 
-  const namesById = new Map((list.data ?? []).map((row) => [row.id, row.name]));
+  // Resolve only the applied ids. Fetching a page and hoping the applied rows
+  // are on it breaks as soon as the list is longer than one page.
+  const applied = useReferenceByIds("competencies", appliedIds);
+  const namesById = new Map((applied.data ?? []).map((row) => [row.id, row.name]));
 
   const handleSave = () => {
     link.mutate(

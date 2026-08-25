@@ -8,6 +8,8 @@ import {
   Loader2,
   Pencil,
   Plus,
+  Search,
+  SearchX,
   Trash2,
 } from "lucide-react";
 import {
@@ -25,6 +27,7 @@ import {
 } from "@dnd-kit/core";
 import { isApiError } from "@shared/api/envelope";
 import { EmptyState } from "@shared/components/EmptyState";
+import { InlineCreateRow } from "@shared/components/InlineCreateRow";
 import { RoleGate } from "@shared/auth/guards";
 import { Role } from "@shared/auth/role";
 import { cn } from "@shared/lib/cn";
@@ -43,6 +46,10 @@ import { ROOT_DROP_ID, resolveMove } from "../lib/resolveMove";
 interface UserUnitTreeProps {
   units: HolderUnitDTO[];
   isLoading?: boolean;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  /** True while a search term is applied — every returned node is a match or an ancestor of one. */
+  searchActive?: boolean;
 }
 
 interface TreeNode {
@@ -121,7 +128,13 @@ function RootDropZone({ label }: { label: string }) {
   );
 }
 
-export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
+export function UserUnitTree({
+  units,
+  isLoading = false,
+  searchValue,
+  onSearchChange,
+  searchActive = false,
+}: UserUnitTreeProps) {
   const { t } = useTranslation();
   const store = useStoreUserUnit();
   const update = useUpdateUserUnit();
@@ -130,7 +143,6 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [creatingParentId, setCreatingParentId] = useState<string | null | undefined>(undefined);
-  const [createName, setCreateName] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
@@ -187,12 +199,16 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
     const walk = (nodes: TreeNode[]) => {
       for (const node of nodes) {
         out.push(node);
-        if (expanded.has(node.unit.id)) walk(node.children);
+        // Search results are already pruned to matches + ancestors server-side,
+        // so every returned node belongs on screen regardless of expand state.
+        // `expanded` is never mutated here, so clearing the query restores the
+        // user's own expand state exactly.
+        if (searchActive || expanded.has(node.unit.id)) walk(node.children);
       }
     };
     walk(roots);
     return out;
-  }, [roots, expanded]);
+  }, [roots, expanded, searchActive]);
 
   // Drop targets that are illegal or no-ops for the current drag (self, current
   // parent, own descendants) — used purely to tint the drop highlight red.
@@ -227,25 +243,13 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
     });
   };
 
-  const openRootCreate = () => {
-    setCreateName("");
-    setCreateError(null);
-    setCreatingParentId(null);
-  };
-
-  const submitCreate = (parentId: string | null) => {
-    const name = createName.trim();
-    if (!name) {
-      setCreateError("zod.name.required");
-      return;
-    }
+  const submitCreate = (parentId: string | null, name: string) => {
     store.mutate(
       { name, parent_id: parentId },
       {
         onSuccess: () => {
           if (parentId) setExpanded((prev) => new Set(prev).add(parentId));
           setCreatingParentId(undefined);
-          setCreateName("");
           setCreateError(null);
         },
         onError: (error) => {
@@ -319,40 +323,26 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
     }
   };
 
-  const createForm = (indent: string) => (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        submitCreate(creatingParentId ?? null);
+  // One shared row for both call sites. `key` forces a fresh field per open so
+  // a name typed under one parent never leaks into the next.
+  const createForm = (parentId: string | null, triggerLabel?: string) => (
+    <InlineCreateRow
+      key={`create-${parentId ?? "root"}`}
+      open={creatingParentId === parentId}
+      onOpenChange={(next) => {
+        if (next) {
+          setCreateError(null);
+          setCreatingParentId(parentId);
+        } else {
+          setCreatingParentId(undefined);
+        }
       }}
-      className={cn("flex items-center gap-2", indent)}
-    >
-      <Input
-        value={createName}
-        onChange={(event) => setCreateName(event.target.value)}
-        placeholder={t("userUnit.createPlaceholder")}
-        autoFocus
-        className="h-9 w-full py-2 sm:max-w-md"
-        aria-label={t("userUnit.createPlaceholder")}
-      />
-      <Button type="submit" size="sm" disabled={store.isPending} className="shrink-0">
-        {store.isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        ) : (
-          <Plus className="h-4 w-4" aria-hidden="true" />
-        )}
-        {t("userUnit.createSubmit")}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="shrink-0"
-        onClick={() => setCreatingParentId(undefined)}
-      >
-        {t("common.cancel")}
-      </Button>
-    </form>
+      onSubmit={(name) => submitCreate(parentId, name)}
+      triggerLabel={triggerLabel}
+      placeholder={t("userUnit.createPlaceholder")}
+      submitLabel={t("userUnit.createSubmit")}
+      isPending={store.isPending}
+    />
   );
 
   if (isLoading) {
@@ -380,16 +370,27 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="p-4 sm:p-6">
+        {/* Search sits outside the gate: it is a read affordance every role needs. */}
+        <div className="space-y-4 p-4 sm:p-6">
+          {onSearchChange && (
+            <div className="w-full md:max-w-2xl">
+              <Input
+                type="search"
+                inputMode="search"
+                enterKeyHint="search"
+                autoCorrect="off"
+                autoComplete="off"
+                spellCheck={false}
+                leadingIcon={Search}
+                placeholder={t("userUnit.searchPlaceholder")}
+                aria-label={t("userUnit.searchPlaceholder")}
+                value={searchValue ?? ""}
+                onChange={(event) => onSearchChange(event.target.value)}
+              />
+            </div>
+          )}
           <RoleGate allowed={ADMIN_ROLES}>
-            {creatingParentId === null ? (
-              createForm("flex flex-col items-stretch gap-2 sm:flex-row sm:items-center")
-            ) : (
-              <Button variant="dashed" size="sm" onClick={openRootCreate}>
-                <Plus className="h-4 w-4" />
-                {t("userUnit.addRoot")}
-              </Button>
-            )}
+            {createForm(null, t("userUnit.addRoot"))}
             {activeUnit && activeUnit.parent_id !== null && (
               <RootDropZone label={t("userUnit.rootDropZone")} />
             )}
@@ -398,9 +399,11 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
 
         {units.length === 0 ? (
           <EmptyState
-            icon={FolderTree}
-            title={t("userUnit.empty.title")}
-            description={t("userUnit.empty.description")}
+            icon={searchActive ? SearchX : FolderTree}
+            title={searchActive ? t("userUnit.empty.search.title") : t("userUnit.empty.title")}
+            description={
+              searchActive ? t("userUnit.empty.search.body") : t("userUnit.empty.description")
+            }
             className="rounded-none border-0 shadow-none"
           />
         ) : (
@@ -455,13 +458,17 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
                           }}
                           className="flex items-center gap-2"
                         >
-                          <Input
-                            value={renameName}
-                            onChange={(event) => setRenameName(event.target.value)}
-                            autoFocus
-                            className="h-9 min-w-0 flex-1 py-2"
-                            aria-label={t("userUnit.renamePlaceholder")}
-                          />
+                          {/* flex-1 on the wrapper: Input forwards className to
+                              the inner <input>, not to this flex child. */}
+                          <div className="min-w-0 flex-1">
+                            <Input
+                              size="compact"
+                              value={renameName}
+                              onChange={(event) => setRenameName(event.target.value)}
+                              autoFocus
+                              aria-label={t("userUnit.renamePlaceholder")}
+                            />
+                          </div>
                           <Button type="submit" size="sm" disabled={update.isPending} className="shrink-0">
                             {update.isPending ? (
                               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -502,7 +509,6 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
                           size="icon"
                           aria-label={t("userUnit.addSubunit", { name: node.unit.name })}
                           onClick={() => {
-                            setCreateName("");
                             setCreateError(null);
                             setCreatingParentId(node.unit.id);
                           }}
@@ -544,7 +550,7 @@ export function UserUnitTree({ units, isLoading = false }: UserUnitTreeProps) {
                       className="pb-3"
                       style={{ paddingLeft: `${(node.depth + 1) * 24 + 16}px`, paddingRight: "1rem" }}
                     >
-                      {createForm("flex flex-col items-stretch gap-2 sm:flex-row sm:items-center")}
+                      {createForm(node.unit.id)}
                       {createError && (
                         <p role="alert" className="mt-1 text-xs text-error">
                           {t(createError)}

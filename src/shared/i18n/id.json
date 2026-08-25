@@ -137,7 +137,7 @@
   "user.units.view": "Lihat Unit Pengguna",
   "user.units.manage": "Kelola Unit Pengguna",
   "cred.references.label": "Referensi",
-  "cred.references.types": "Jenis Kredensial",
+  "cred.references.types": "Tipe Kredensial",
   "cred.references.organizations": "Organisasi Penerbit",
   "cred.references.competencies": "Kompetensi",
   "filter.searchPlaceholder": "Cari...",
@@ -549,8 +549,8 @@
   "validation_store_email_duplicate_db": "Email ini sudah terdaftar.",
   "validation_issue_holder_not_found": "Pemegang ini tidak ditemukan.",
   "validation_issue_duplicate_file_hash": "Kredensial dengan hash file ini sudah ada.",
-  "validation_issue_type_not_found": "Jenis kredensial tidak ditemukan.",
-  "validation_issue_type_inactive": "Jenis kredensial tidak aktif.",
+  "validation_issue_type_not_found": "Tipe kredensial tidak ditemukan.",
+  "validation_issue_type_inactive": "Tipe kredensial tidak aktif.",
   "validation_issue_org_not_found": "Organisasi penerbit tidak ditemukan.",
   "validation_issue_number_duplicate": "Kredensial dengan nomor ini sudah ada di organisasi ini.",
   "validation_issue_competency_not_found": "Satu atau lebih kompetensi tidak ditemukan.",
@@ -802,7 +802,7 @@
       "revoked": "Dicabut",
       "pending": "Tertunda",
       "failed": "Gagal",
-      "type": "Jenis",
+      "type": "Tipe",
       "typeAll": "Semua",
       "organization": "Organisasi",
       "organizationAll": "Semua",
@@ -1034,7 +1034,7 @@
     },
     "empty": {
       "title": "Belum ada tipe kredensial",
-      "description": "Tipe kredensial menentukan jenis kredensial yang diterbitkan."
+      "description": "Tipe kredensial menentukan bentuk kredensial yang diterbitkan."
     }
   },
   "issuerOrg": {
@@ -1077,6 +1077,7 @@
     "title": "Unit Pengguna",
     "description": "Atur pengguna ke dalam hierarki unit yang interaktif.",
     "path": "Jalur breadcrumb",
+    "searchPlaceholder": "Cari unit...",
     "addRoot": "Tambah unit akar",
     "createPlaceholder": "Nama unit baru",
     "createSubmit": "Tambah",
@@ -1095,13 +1096,25 @@
     },
     "empty": {
       "title": "Belum ada unit",
-      "description": "Unit pengguna mengelompokkan pengguna ke dalam departemen atau fakultas."
+      "description": "Unit pengguna mengelompokkan pengguna ke dalam departemen atau fakultas.",
+      "search": {
+        "title": "Tidak ada unit yang cocok",
+        "body": "Coba kata kunci lain."
+      }
     }
   },
   "admin": {
     "loadError": "Gagal memuat. Silakan coba lagi.",
     "createAction": "Tambah",
     "activeLabel": "Aktif",
+    "searchPlaceholder": "Cari berdasarkan nama...",
+    "count": "{{shown}} dari {{total}}",
+    "empty": {
+      "search": {
+        "title": "Tidak ada hasil",
+        "body": "Coba kata kunci lain."
+      }
+    },
     "credType": {
       "createLabel": "Tipe kredensial baru",
       "createPlaceholder": "Nama tipe",

@@ -28,7 +28,7 @@ let probeCount = 0;
 
 function ListProbe() {
   useQuery({
-    queryKey: userUnitKeys.list(),
+    queryKey: userUnitKeys.all(),
     queryFn: async () => {
       probeCount += 1;
       return [];

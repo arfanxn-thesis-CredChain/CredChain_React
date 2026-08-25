@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer } from "react";
 import { useQuery, type QueryKey } from "@tanstack/react-query";
 import type { PaginatedResponse } from "@shared/types/api";
 
-const BATCH_SIZE = 50;
+const DEFAULT_BATCH_SIZE = 50;
 
 interface LoadMoreState {
   page: number;
@@ -45,12 +45,15 @@ export interface UseLoadMoreResult<T> {
 export function useLoadMore<T extends { id: string }>(
   queryKey: QueryKey,
   queryFn: (page: number, limit: number) => Promise<PaginatedResponse<T>>,
+  // Match the endpoint's own default page size. A mismatch makes the server
+  // report a last_page the client's page counter cannot reach.
+  batchSize = DEFAULT_BATCH_SIZE,
 ): UseLoadMoreResult<T> {
   const [state, dispatch] = useReducer(loadMoreReducer, { page: 1, items: [], total: 0 });
 
   const query = useQuery({
     queryKey: [...queryKey, state.page],
-    queryFn: () => queryFn(state.page, BATCH_SIZE),
+    queryFn: () => queryFn(state.page, batchSize),
   });
 
   const serializedKey = JSON.stringify(queryKey);

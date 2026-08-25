@@ -42,7 +42,7 @@ function makeWrapper() {
 
 function ListProbe() {
   useQuery({
-    queryKey: referenceKeys.list(credentialTypeResource),
+    queryKey: referenceKeys.all(credentialTypeResource),
     queryFn: async () => {
       probeCount += 1;
       return [];

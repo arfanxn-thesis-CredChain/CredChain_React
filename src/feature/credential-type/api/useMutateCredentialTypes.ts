@@ -25,7 +25,7 @@ export function useStoreCredentialType() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: credentialTypeKeys.list(credentialTypeResource),
+        queryKey: credentialTypeKeys.all(credentialTypeResource),
       });
       notify.success("success_credential_type_store");
     },
@@ -43,7 +43,7 @@ export function useUpdateCredentialType() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: credentialTypeKeys.list(credentialTypeResource),
+        queryKey: credentialTypeKeys.all(credentialTypeResource),
       });
       notify.success("success_credential_type_update");
     },
@@ -61,7 +61,7 @@ export function useDestroyCredentialType() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: credentialTypeKeys.list(credentialTypeResource),
+        queryKey: credentialTypeKeys.all(credentialTypeResource),
       });
       notify.success("success_credential_type_destroy");
     },

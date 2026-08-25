@@ -694,16 +694,32 @@ const buttonVariants = cva(
           "border-2 border-dashed border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 focus-visible:ring-gold",
       },
       size: {
-        sm: "px-3 py-1.5 text-xs",
-        md: "px-4 py-2 text-sm",
-        lg: "px-6 py-3 text-sm",
-        icon: "p-2",
+        sm: "h-9 px-3 text-xs",
+        md: "h-11 px-4 text-sm",
+        lg: "h-12 px-6 text-sm",
+        icon: "h-11 w-11 p-2 [&>svg]:w-5 [&>svg]:h-5",
+        "icon-mobile": "h-12 w-12 p-3 [&>svg]:w-6 [&>svg]:h-6",
       },
     },
     defaultVariants: { variant: "primary", size: "md" },
   },
 );
 ```
+
+**Height scale.** Height is an explicit token, never a by-product of padding
+and line-height. The base class list already centres the label, so a fixed
+height needs nothing else at the call site.
+
+| Size | Height | Pairs with |
+| --- | --- | --- |
+| `sm` | `h-9` (36px) | `Input size="compact"` |
+| `md` | `h-11` (44px) | `Input size="default"` |
+| `lg` | `h-12` (48px) | — CTA only |
+
+Pair a button with the input beside it by size, and the row lines up by
+construction. **Never hand-tune a height at a call site** — `items-stretch`,
+`h-full` on an input, and `sm:mt-6` are all symptoms of a mismatched pair and
+each has drifted at least once.
 
 Usage with trailing icon hover-slide:
 
@@ -718,14 +734,23 @@ Usage with trailing icon hover-slide:
 
 Build on top of shadcn `input.tsx` with a `leadingIcon` prop:
 
+The native `size` attribute (a character-width hint, unused here) is omitted so
+the prop can carry the height token from §7.3 instead.
+
 ```tsx
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   leadingIcon?: LucideIcon;
   trailingAction?: React.ReactNode;
+  size?: "compact" | "default";
 }
 
+const inputSizes = {
+  compact: "h-9 text-xs", // pairs with Button size="sm"
+  default: "h-11 text-sm", // pairs with Button size="md"
+} as const;
+
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ leadingIcon: Icon, trailingAction, className, ...props }, ref) => (
+  ({ leadingIcon: Icon, trailingAction, className, size = "default", ...props }, ref) => (
     <div className="relative">
       {Icon && (
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -735,10 +760,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         ref={ref}
         className={cn(
-          "block w-full rounded-xl border border-gray-200 py-3 pr-3 shadow-sm",
+          "block w-full rounded-xl border border-gray-200 pr-3 shadow-sm",
           "bg-gray-50 text-navy placeholder-gray-400",
-          "focus:border-transparent focus:bg-white focus:ring-2 focus:ring-navy focus:outline-none",
-          "transition-all sm:text-sm",
+          inputSizes[size],
+          "focus:border-transparent focus:bg-white focus:ring-2 focus:ring-gold focus:outline-none",
+          "transition-all",
           Icon ? "pl-10" : "pl-4",
           trailingAction ? "pr-10" : "",
           className,
@@ -1180,14 +1206,23 @@ In `index.html`, support iOS safe areas:
 
 Every interactive element on touch devices must be at minimum **44x44px** (Apple HIG) and ideally **48x48px** (Material). Tailwind sizing for buttons:
 
-| Use case              | Class                                | Resulting size             |
-| --------------------- | ------------------------------------ | -------------------------- |
-| Primary CTA           | `px-6 py-3 text-sm`                  | 48px tall                  |
-| Secondary             | `px-4 py-2 text-sm`                  | 40px - tablet/desktop only |
-| Icon button (mobile)  | `p-3` (12px on each side, 24px icon) | 48px square                |
-| Icon button (desktop) | `p-2` (8px on each side, 24px icon)  | 40px square                |
+| Use case              | `Button size` | Resulting size |
+| --------------------- | ------------- | -------------- |
+| Primary CTA           | `lg`          | 48px tall      |
+| Default               | `md`          | 44px tall      |
+| Icon button (desktop) | `icon`        | 44px square    |
+| Icon button (mobile)  | `icon-mobile` | 48px square    |
 
-`OverviewSidebar` nav items already meet target with `px-4 py-3`. Form inputs at `py-3` produce 48px - keep that on mobile, never compress to `py-2`.
+Heights come from the §7.3 scale, not from padding — see that table for the
+matching `Input` size.
+
+`OverviewSidebar` nav items already meet target with `px-4 py-3`.
+
+**Deviation: the inline create row uses the 36px pair.** `InlineCreateRow`
+(`Button size="sm"` + `Input size="compact"`) sits under the 44px minimum. It
+is a secondary, admin-only, desktop-first affordance, and the shorter height is
+what distinguishes it from the 44px page search bar directly above it — at 44px
+the two read as two search bars. Deliberate exception, not an oversight.
 
 #### Safe-Area Insets
 
@@ -2123,6 +2158,7 @@ Keep `Last updated` at the top current. Reviewers should reject PRs that introdu
 | v1.3    | 2026-06-09 | As-built reconciliation pass. Design philosophy (§5 tokens, §6 typography, §6.5 visual language, §8.9 responsive) preserved verbatim — those still describe the intended design faithfully. Architectural sections updated to match codebase: §3 tech versions synced and `ethers` row removed; §3 install list replaced with the 12 actual primitives; §4.1 folder structure rewritten as as-built (single `store/index.ts`, `feature/landing/`, `AdaptiveLayout` + `SplitLayout`, no `AuthLayout`/`interceptors.ts`/`useConfirm.ts`); §7.9 `useConfirm` rewritten to match the real `{confirm, dialog}` shape in `@ui/confirm-dialog`; §8.1 layout shells table updated; **§8.7 mobile drawer rewritten** (hand-rolled CSS-transform `<aside>`, never adopted shadcn `Sheet`; `vaul` reserved for content drawers); §9.2 store consolidated to single-file shape with `partialize` + Indonesian default; §10.1/§10.2 axios example updated with `paramsSerializer`, `Accept-Language`, `refreshInFlight` dedup, `X-Retry: 1`, and 429 handling; §11.1 token strategy moved from "backend coordination required" to "implemented" (Go side ships cookies).                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | v1.4    | 2026-06-10 | `SplitLayout` forced to exactly 100dvh with no scrollbars. §8.1 table updated: outer container and right panel use `h-dvh overflow-hidden`; mobile brand band uses `h-[33dvh] flex items-center justify-center`; content area `flex-1` fills remaining 67dvh with `min-h-0 overflow-hidden`. `AttestationStamp` now accepts `className` prop for responsive sizing; mobile brand band renders it with `max-w-[min(160px,18vh)]` instead of hiding. Landing content vertically centered (`flex items-center justify-center`); Login content top-aligned on mobile (`justify-start`) and centered on desktop (`lg:justify-center`). Login `<BackLink>` uses `self-start` for left alignment. Landing/Login content refactored to viewport-relative units (`py-[2dvh]`, `space-y-[1.5dvh]`, card padding `p-6 sm:p-8`). Removed forced `min-h-[Xlh]` from headings/subtitles so content shrinks to fit short viewports. Added `SplitLayout.test.tsx` (5 tests).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | v1.5    | 2026-06-11 | Layout max-width alignment pass. **§8.1 table** updated: `PublicLayout` `<main>` now has `mx-auto max-w-7xl` so the public content area (About/Help/VerifyCredential, which are `max-w-4xl`) centers within a 1280px band that aligns with `NavbarPublic` width. `OverviewLayout` row expanded: container is now `min-h-dvh bg-base` (was `min-h-screen bg-gray-100` with the inner wrapper at hardcoded `bg-[#F4F7F6]`), sidebar uses `sm:h-dvh` (was `sm:h-screen`), `<main>` drops to `flex-1 overflow-y-scroll` with **no** `max-w-7xl` (the sidebar takes the fixed `w-72` and the content area fills the remaining space — adding `max-w-7xl` would double-constrain list pages like UserList). Navbar row now documents `mx-auto max-w-7xl` on the dashboard navbar's flex row (the `<header>` background still spans full width but menu/search/avatar are centered at 1280px and align with the widest page content below). **§8.1.1 CopyrightFooter** updated: footer now carries `mx-auto max-w-7xl` so footer text centers within the same 1280px band as the navbar and `<main>`. **Page-width standardization** per §8.2: `UserDetail` and `UserSelfProfile` (was `max-w-3xl`) + `About` and `VerifyCredential` (was `max-w-3xl`) bumped to `max-w-4xl` so all detail/settings pages share the same reading width. **UserList table** wrapped in `<div className="overflow-x-auto">` so the 4-column table (entity, role, wallet/status, actions) scrolls horizontally on narrow viewports instead of squishing columns past their `truncate max-w-[12rem]/[14rem]` limits. |
+| v1.6    | 2026-08-25 | **Height scale introduced.** §7.3 `Button` sizes carry an explicit `h-*` (`sm` 36px, `md` 44px, `lg` 48px) instead of vertical padding, and gain an `icon-mobile` 48px variant; §7.4 `Input` gains a `size` prop (`compact` 36px / `default` 44px) with the native `size` attribute omitted, and drops `py-3`. Sizes pair by name — `sm`+`compact`, `md`+`default` — so a row aligns by construction; the `items-stretch` / `h-full` / `sm:mt-6` workarounds are removed. §8.9 touch-target table restated in terms of the scale, plus a recorded deviation for `InlineCreateRow` (36px, admin-only, distinguishes it from the 44px search bar above). New `shared/components/InlineCreateRow.tsx` collapses the create form behind a dashed trigger; `ResourceAdminCreateForm` and `UserUnitTree` are both call sites, so the three reference admin pages and the unit tree now share one pattern. |
 
 ---
 

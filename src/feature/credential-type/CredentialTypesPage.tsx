@@ -3,10 +3,13 @@ import { useTranslation } from "react-i18next";
 import { Layers, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useCredentialTypes } from "./api/useCredentialTypes";
 import { useDestroyCredentialType, useUpdateCredentialType } from "./api/useMutateCredentialTypes";
+import { BackLink } from "@shared/components/BackLink";
+import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 import { PageHeader } from "@shared/components/PageHeader";
-import { ResourceAdminCreateForm } from "@shared/components/admin/ResourceAdminCreateForm";
 import { ActiveSwitch, ResourceAdminEditForm } from "@shared/components/admin/ResourceAdminEditForm";
 import { ResourceAdminTable } from "@shared/components/admin/ResourceAdminTable";
+import { ResourceAdminToolbar } from "@shared/components/admin/ResourceAdminToolbar";
+import { useDebouncedSearchParam } from "@shared/hooks/useSearchParam";
 import { RoleGate } from "@shared/auth/guards";
 import { Role } from "@shared/auth/role";
 import type { ReferenceRow } from "@shared/types/api";
@@ -23,13 +26,14 @@ import {
 
 export function CredentialTypesPage() {
   const { t } = useTranslation();
-  const list = useCredentialTypes();
+  const { input, setInput, search } = useDebouncedSearchParam();
+  const list = useCredentialTypes({ search });
   const update = useUpdateCredentialType();
   const destroy = useDestroyCredentialType();
   const { confirm, dialog } = useConfirm();
   const [editing, setEditing] = useState<ReferenceRow | null>(null);
 
-  const rows = list.data ?? [];
+  const rows = list.items;
 
   const handleToggleActive = (row: ReferenceRow) => {
     update.mutate({ id: row.id, name: row.name, active: row.active === false ? true : false });
@@ -48,23 +52,23 @@ export function CredentialTypesPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      <BackLink />
       <PageHeader title={t("credType.title")} description={t("credType.description")} />
 
       <Card className="p-0">
-        <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
-          <div className="border-b border-gray-50 p-4 sm:p-6">
-            <ResourceAdminCreateForm
-              resource="credential-types"
-              rows={rows}
-              submitLabel={t("credType.createAction")}
-            />
-          </div>
-        </RoleGate>
+        <ResourceAdminToolbar
+          resource="credential-types"
+          rows={rows}
+          createLabel={t("credType.createAction")}
+          searchValue={input}
+          onSearchChange={setInput}
+        />
 
         <ResourceAdminTable
           rows={rows}
           isLoading={list.isLoading}
           isError={list.isError}
+          searchActive={search.length > 0}
           nameLabel={t("credType.column.name")}
           activeLabel={t("credType.column.active")}
           actionsLabel={t("credType.actionsMenu")}
@@ -102,6 +106,16 @@ export function CredentialTypesPage() {
             </RoleGate>
           )}
         />
+
+        {rows.length > 0 && (
+          <LoadMoreBar
+            total={list.total}
+            hasMore={list.hasMore}
+            isLoading={list.isFetchingNextPage}
+            onLoadMore={list.loadMore}
+            countLabel={t("admin.count", { shown: rows.length, total: list.total })}
+          />
+        )}
       </Card>
 
       <Dialog

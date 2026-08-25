@@ -24,7 +24,7 @@ export function useStoreCompetency() {
       return response.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: competencyKeys.list(competencyResource) });
+      void queryClient.invalidateQueries({ queryKey: competencyKeys.all(competencyResource) });
       notify.success("success_competency_store");
     },
     onError: handleError,
@@ -40,7 +40,7 @@ export function useUpdateCompetency() {
       return response.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: competencyKeys.list(competencyResource) });
+      void queryClient.invalidateQueries({ queryKey: competencyKeys.all(competencyResource) });
       notify.success("success_competency_update");
     },
     onError: handleError,
@@ -56,7 +56,7 @@ export function useDestroyCompetency() {
       return response.data;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: competencyKeys.list(competencyResource) });
+      void queryClient.invalidateQueries({ queryKey: competencyKeys.all(competencyResource) });
       notify.success("success_competency_destroy");
     },
     onError: handleError,

@@ -53,6 +53,19 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "Large" }).className).toContain("px-6");
   });
 
+  it("carries an explicit height per size", () => {
+    // Heights are the contract Input pairs against. Padding-derived heights are
+    // what forced items-stretch/h-full patches at every input+button row.
+    const { rerender } = render(<Button size="sm">Small</Button>);
+    expect(screen.getByRole("button", { name: "Small" }).className).toContain("h-9");
+
+    rerender(<Button size="md">Medium</Button>);
+    expect(screen.getByRole("button", { name: "Medium" }).className).toContain("h-11");
+
+    rerender(<Button>Default</Button>);
+    expect(screen.getByRole("button", { name: "Default" }).className).toContain("h-11");
+  });
+
   it("renders as child element when asChild is true", () => {
     render(
       <Button asChild>

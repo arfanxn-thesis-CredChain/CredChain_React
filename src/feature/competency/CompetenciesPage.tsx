@@ -3,10 +3,13 @@ import { useTranslation } from "react-i18next";
 import { GraduationCap, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useCompetencies } from "./api/useCompetencies";
 import { useDestroyCompetency, useUpdateCompetency } from "./api/useMutateCompetencies";
+import { BackLink } from "@shared/components/BackLink";
+import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 import { PageHeader } from "@shared/components/PageHeader";
-import { ResourceAdminCreateForm } from "@shared/components/admin/ResourceAdminCreateForm";
 import { ResourceAdminEditForm } from "@shared/components/admin/ResourceAdminEditForm";
 import { ResourceAdminTable } from "@shared/components/admin/ResourceAdminTable";
+import { ResourceAdminToolbar } from "@shared/components/admin/ResourceAdminToolbar";
+import { useDebouncedSearchParam } from "@shared/hooks/useSearchParam";
 import { RoleGate } from "@shared/auth/guards";
 import { Role } from "@shared/auth/role";
 import type { ReferenceRow } from "@shared/types/api";
@@ -23,13 +26,14 @@ import {
 
 export function CompetenciesPage() {
   const { t } = useTranslation();
-  const list = useCompetencies();
+  const { input, setInput, search } = useDebouncedSearchParam();
+  const list = useCompetencies({ search });
   const update = useUpdateCompetency();
   const destroy = useDestroyCompetency();
   const { confirm, dialog } = useConfirm();
   const [editing, setEditing] = useState<ReferenceRow | null>(null);
 
-  const rows = list.data ?? [];
+  const rows = list.items;
 
   const handleDestroy = async (row: ReferenceRow) => {
     const ok = await confirm({
@@ -44,23 +48,23 @@ export function CompetenciesPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      <BackLink />
       <PageHeader title={t("competency.title")} description={t("competency.description")} />
 
       <Card className="p-0">
-        <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
-          <div className="border-b border-gray-50 p-4 sm:p-6">
-            <ResourceAdminCreateForm
-              resource="competencies"
-              rows={rows}
-              submitLabel={t("competency.createAction")}
-            />
-          </div>
-        </RoleGate>
+        <ResourceAdminToolbar
+          resource="competencies"
+          rows={rows}
+          createLabel={t("competency.createAction")}
+          searchValue={input}
+          onSearchChange={setInput}
+        />
 
         <ResourceAdminTable
           rows={rows}
           isLoading={list.isLoading}
           isError={list.isError}
+          searchActive={search.length > 0}
           nameLabel={t("competency.column.name")}
           actionsLabel={t("competency.actionsMenu")}
           emptyIcon={GraduationCap}
@@ -88,6 +92,16 @@ export function CompetenciesPage() {
             </RoleGate>
           )}
         />
+
+        {rows.length > 0 && (
+          <LoadMoreBar
+            total={list.total}
+            hasMore={list.hasMore}
+            isLoading={list.isFetchingNextPage}
+            onLoadMore={list.loadMore}
+            countLabel={t("admin.count", { shown: rows.length, total: list.total })}
+          />
+        )}
       </Card>
 
       <Dialog

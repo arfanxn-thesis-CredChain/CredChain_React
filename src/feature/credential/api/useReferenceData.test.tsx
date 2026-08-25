@@ -7,6 +7,7 @@ import {
   useCompetencies,
   useCredentialTypes,
   useIssuerOrganizations,
+  useReferenceByIds,
   useUpsertReference,
 } from "./useReferenceData";
 
@@ -15,7 +16,7 @@ describe("useReferenceData", () => {
     const { result } = renderHook(() => useCredentialTypes(), { wrapper: TestProviders });
 
     await waitFor(() => {
-      expect(result.current.data?.map((i) => i.name)).toEqual([
+      expect(result.current.items.map((i) => i.name)).toEqual([
         "Bachelor's Degree",
         "Professional Certificate",
       ]);
@@ -26,7 +27,7 @@ describe("useReferenceData", () => {
     const { result } = renderHook(() => useIssuerOrganizations(), { wrapper: TestProviders });
 
     await waitFor(() => {
-      expect(result.current.data?.map((i) => i.name)).toEqual([
+      expect(result.current.items.map((i) => i.name)).toEqual([
         "University of Indonesia",
         "Tech Academy",
       ]);
@@ -37,24 +38,67 @@ describe("useReferenceData", () => {
     const { result } = renderHook(() => useCompetencies(), { wrapper: TestProviders });
 
     await waitFor(() => {
-      expect(result.current.data?.map((i) => i.name)).toEqual([
+      expect(result.current.items.map((i) => i.name)).toEqual([
         "Machine Learning",
         "Data Analysis",
       ]);
     });
   });
 
-  it("upsert creates a row and invalidates the list query", async () => {
-    let listCalls = 0;
+  it("sends the search term to the server rather than filtering locally", async () => {
+    let seenSearch: string | null = null;
     server.use(
-      http.get("*/api/credential-types", () =>
-        HttpResponse.json({
+      http.get("*/api/credential-types", ({ request }) => {
+        seenSearch = new URL(request.url).searchParams.get("search");
+        return HttpResponse.json({
           code: 400600,
           message: "Credential types retrieved",
-          data: [{ id: "ctype_01", name: "Bachelor's Degree" }],
-        }),
-      ),
+          data: {
+            items: [{ id: "ctype_02", name: "Professional Certificate" }],
+            total: 1,
+            page: 1,
+            limit: 100,
+            last_page: 1,
+            from: 1,
+            to: 1,
+            first_page_url: null,
+            last_page_url: null,
+            next_page_url: null,
+            prev_page_url: null,
+          },
+        });
+      }),
     );
+
+    const { result } = renderHook(() => useCredentialTypes({ search: "profess" }), {
+      wrapper: TestProviders,
+    });
+
+    await waitFor(() => expect(result.current.items).toHaveLength(1));
+    expect(seenSearch).toBe("profess");
+  });
+
+  it("resolves rows by id through the IN filter", async () => {
+    const { result } = renderHook(() => useReferenceByIds("competencies", ["comp_02"]), {
+      wrapper: TestProviders,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data?.map((r) => r.name)).toEqual(["Data Analysis"]);
+    });
+  });
+
+  it("does not fetch by id when nothing is selected", () => {
+    const { result } = renderHook(() => useReferenceByIds("competencies", []), {
+      wrapper: TestProviders,
+    });
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("upsert creates a row and invalidates every cached page", async () => {
+    let listCalls = 0;
 
     const { result } = renderHook(
       () => ({
@@ -64,8 +108,7 @@ describe("useReferenceData", () => {
       { wrapper: TestProviders },
     );
 
-    await waitFor(() => expect(result.current.list.isSuccess).toBe(true));
-    expect(listCalls).toBe(0);
+    await waitFor(() => expect(result.current.list.items.length).toBeGreaterThan(0));
 
     server.use(
       http.get("*/api/credential-types", () => {
@@ -73,7 +116,19 @@ describe("useReferenceData", () => {
         return HttpResponse.json({
           code: 400600,
           message: "Credential types retrieved",
-          data: [{ id: "ctype_01", name: "Bachelor's Degree" }],
+          data: {
+            items: [{ id: "ctype_01", name: "Bachelor's Degree" }],
+            total: 1,
+            page: 1,
+            limit: 100,
+            last_page: 1,
+            from: 1,
+            to: 1,
+            first_page_url: null,
+            last_page_url: null,
+            next_page_url: null,
+            prev_page_url: null,
+          },
         });
       }),
     );

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import type { LucideIcon } from "lucide-react";
+import { SearchX, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { EmptyState } from "@shared/components/EmptyState";
 import type { ReferenceRow } from "@shared/types/api";
@@ -16,6 +16,8 @@ interface ResourceAdminTableProps {
   emptyTitle: string;
   emptyDescription?: string;
   emptyIcon: LucideIcon;
+  /** True when a search term is active — swaps "nothing here yet" for "no results". */
+  searchActive?: boolean;
   errorText?: string;
   renderActive?: (row: ReferenceRow) => ReactNode;
   actions?: (row: ReferenceRow) => ReactNode;
@@ -31,6 +33,7 @@ export function ResourceAdminTable({
   emptyTitle,
   emptyDescription,
   emptyIcon: EmptyIcon,
+  searchActive = false,
   errorText,
   renderActive,
   actions,
@@ -46,9 +49,9 @@ export function ResourceAdminTable({
   if (rows.length === 0 && !isLoading) {
     return (
       <EmptyState
-        icon={EmptyIcon}
-        title={emptyTitle}
-        description={emptyDescription}
+        icon={searchActive ? SearchX : EmptyIcon}
+        title={searchActive ? t("admin.empty.search.title") : emptyTitle}
+        description={searchActive ? t("admin.empty.search.body") : emptyDescription}
         className="rounded-none border-0 shadow-none"
       />
     );

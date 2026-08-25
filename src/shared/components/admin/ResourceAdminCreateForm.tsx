@@ -1,24 +1,15 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Plus } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { useUpsertReference } from "@shared/api/useReferenceData";
+import { InlineCreateRow } from "@shared/components/InlineCreateRow";
 import { notify } from "@shared/lib/notify";
 import type { ReferenceResource, ReferenceRow } from "@shared/types/api";
-import { Button } from "@ui/button";
-import { FormField } from "@ui/form-field";
-import { Input } from "@ui/input";
 
 const ADMIN_RESOURCE_KEY: Record<ReferenceResource, string> = {
   "credential-types": "credType",
   "credential-issuer-organizations": "issuerOrg",
   competencies: "competency",
 };
-
-const schema = z.object({
-  name: z.string().trim().min(1, "zod.name.required").max(256, "zod.name.tooLong"),
-});
 
 interface ResourceAdminCreateFormProps {
   resource: ReferenceResource;
@@ -42,54 +33,33 @@ export function ResourceAdminCreateForm({
   const { t } = useTranslation();
   const upsert = useUpsertReference(resource);
   const block = ADMIN_RESOURCE_KEY[resource];
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<{ name: string }>({
-    resolver: zodResolver(schema),
-  });
-
-  const onSubmit = handleSubmit(({ name }) => {
-    upsert.mutate(name, {
-      onSuccess: (row) => {
-        if (rows.some((r) => r.id === row.id)) {
-          notify.info(`admin.${block}.alreadyExists`);
-        } else {
-          notify.success(`admin.${block}.created`);
-        }
-        reset();
-      },
-    });
-  });
+  const [open, setOpen] = useState(false);
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-start">
-      <FormField
-        label={t(`admin.${block}.createLabel`)}
-        error={errors.name?.message}
-        optional={false}
-      >
-        <Input
-          placeholder={placeholder ?? t(`admin.${block}.createPlaceholder`)}
-          autoComplete="off"
-          {...register("name")}
-        />
-      </FormField>
-      <Button
-        type="submit"
-        variant="gold"
-        disabled={upsert.isPending}
-        className="shrink-0 sm:mt-6"
-      >
-        {upsert.isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-        ) : (
-          <Plus className="h-4 w-4" aria-hidden="true" />
-        )}
-        {submitLabel ?? t("admin.createAction")}
-      </Button>
-    </form>
+    <InlineCreateRow
+      open={open}
+      onOpenChange={setOpen}
+      onSubmit={(name) =>
+        upsert.mutate(name, {
+          onSuccess: (row) => {
+            if (rows.some((r) => r.id === row.id)) {
+              notify.info(`admin.${block}.alreadyExists`);
+            } else {
+              notify.success(`admin.${block}.created`);
+            }
+            setOpen(false);
+          },
+        })
+      }
+      // The resource-specific label names the trigger ("Add type"); the submit
+      // is the generic "Add", as in the unit tree. Reusing one string for both
+      // leaves two same-named buttons in the a11y tree during the open frame.
+      triggerLabel={submitLabel ?? t("admin.createAction")}
+      placeholder={placeholder ?? t(`admin.${block}.createPlaceholder`)}
+      inputAriaLabel={t(`admin.${block}.createLabel`)}
+      submitLabel={t("admin.createAction")}
+      submitVariant="gold"
+      isPending={upsert.isPending}
+    />
   );
 }

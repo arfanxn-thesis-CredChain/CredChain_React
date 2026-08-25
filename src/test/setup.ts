@@ -23,6 +23,25 @@ afterAll(() => server.close());
 
 window.scrollTo = () => {};
 
+// Polyfill: jsdom doesn't implement IntersectionObserver. LoadMoreBar's scroll
+// sentinel constructs one on mount. Nothing intersects in jsdom, so this never
+// fires — tests drive the next page through the Load More button instead.
+if (typeof window.IntersectionObserver === "undefined") {
+  class IntersectionObserverStub implements IntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = "";
+    readonly thresholds: ReadonlyArray<number> = [];
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  window.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+  globalThis.IntersectionObserver = window.IntersectionObserver;
+}
+
 // Polyfill: jsdom doesn't implement Element.scrollIntoView; Radix Select calls
 // it when auto-focusing a selected option and would crash without it.
 Element.prototype.scrollIntoView = () => {};

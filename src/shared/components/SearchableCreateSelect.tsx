@@ -1,10 +1,15 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, ChevronDown, Loader2, Plus, Search } from "lucide-react";
 import { cn } from "@shared/lib/cn";
 import { notify } from "@shared/lib/notify";
+import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import type { ReferenceResource, ReferenceRow } from "@shared/types/api";
-import { useReferenceList, useUpsertReference } from "@shared/api/useReferenceData";
+import {
+  useReferenceByIds,
+  useReferencePage,
+  useUpsertReference,
+} from "@shared/api/useReferenceData";
 import { FormField } from "@ui/form-field";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ui/dialog";
 
@@ -34,21 +39,26 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   const multiple = props.multiple === true;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const list = useReferenceList(props.resource);
+  const trimmed = query.trim();
+
+  // The option list is one server-searched page, so filtering happens in SQL.
+  // Debounced to avoid a request per keystroke.
+  const debouncedQuery = useDebouncedValue(trimmed, 300);
+  const list = useReferencePage(props.resource, { search: debouncedQuery });
   const upsert = useUpsertReference(props.resource);
 
-  const rows = useMemo(() => list.data ?? [], [list.data]);
+  const rows = list.items;
   const selectedIds = multiple ? props.value : props.value ? [props.value] : [];
-  const selectedNames = rows.filter((r) => selectedIds.includes(r.id)).map((r) => r.name);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.name.toLowerCase().includes(q));
-  }, [rows, query]);
+  // Chip names come from a dedicated by-id lookup, not from `rows`: a selection
+  // made before the current search — or living past page 1 — is not in the
+  // loaded page, and reading names from there would render bare ids.
+  const selected = useReferenceByIds(props.resource, selectedIds);
+  const selectedNames = (selected.data ?? []).map((r) => r.name);
 
-  const trimmed = query.trim();
-  const showCreateRow = trimmed.length > 0 && filtered.length === 0 && !upsert.isPending;
+  const filtered = rows;
+  const showCreateRow =
+    trimmed.length > 0 && !list.isLoading && filtered.length === 0 && !upsert.isPending;
 
   const close = () => {
     setOpen(false);
@@ -72,7 +82,11 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
     if (!name) return;
     upsert.mutate(name, {
       onSuccess: (row) => {
-        if (rows.some((r) => r.id === row.id)) {
+        // The server returns the pre-existing row when the name already matches
+        // case-insensitively, so the canonical spelling comes back instead of
+        // what was typed. Comparing against the loaded rows no longer works:
+        // this row only renders when the server search returned nothing.
+        if (row.name !== name) {
           notify.info("cred.submit.existing");
         }
         if (multiple) {
@@ -189,6 +203,17 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
                 </button>
               );
             })}
+          {list.hasMore && (
+            <button
+              type="button"
+              onClick={list.loadMore}
+              disabled={list.isFetchingNextPage}
+              className="flex w-full items-center justify-center gap-2 border-t border-gray-100 px-3 py-2.5 text-sm font-medium text-gray-500 transition-colors hover:bg-navy/5"
+            >
+              {list.isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" />}
+              {t("common.loadMore")}
+            </button>
+          )}
           {showCreateRow && (
             <button
               type="button"

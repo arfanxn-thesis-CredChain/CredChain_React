@@ -25,7 +25,7 @@ export function useStoreIssuerOrganization() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: issuerOrganizationKeys.list(issuerOrganizationResource),
+        queryKey: issuerOrganizationKeys.all(issuerOrganizationResource),
       });
       notify.success("success_issuer_organization_store");
     },
@@ -43,7 +43,7 @@ export function useUpdateIssuerOrganization() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: issuerOrganizationKeys.list(issuerOrganizationResource),
+        queryKey: issuerOrganizationKeys.all(issuerOrganizationResource),
       });
       notify.success("success_issuer_organization_update");
     },
@@ -61,7 +61,7 @@ export function useDestroyIssuerOrganization() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: issuerOrganizationKeys.list(issuerOrganizationResource),
+        queryKey: issuerOrganizationKeys.all(issuerOrganizationResource),
       });
       notify.success("success_issuer_organization_destroy");
     },

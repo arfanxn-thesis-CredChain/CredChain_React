@@ -1076,6 +1076,7 @@
     "title": "User Units",
     "description": "Organize users into an interactive hierarchy of units.",
     "path": "Breadcrumb path",
+    "searchPlaceholder": "Search units...",
     "addRoot": "Add root unit",
     "createPlaceholder": "New unit name",
     "createSubmit": "Add",
@@ -1094,13 +1095,25 @@
     },
     "empty": {
       "title": "No units yet",
-      "description": "User units organize users into departments or faculties."
+      "description": "User units organize users into departments or faculties.",
+      "search": {
+        "title": "No units match your search",
+        "body": "Try a different search term."
+      }
     }
   },
   "admin": {
     "loadError": "Failed to load. Please try again.",
     "createAction": "Add",
     "activeLabel": "Active",
+    "searchPlaceholder": "Search by name...",
+    "count": "{{shown}} of {{total}}",
+    "empty": {
+      "search": {
+        "title": "No results",
+        "body": "Try a different search term."
+      }
+    },
     "credType": {
       "createLabel": "New credential type",
       "createPlaceholder": "Type name",

@@ -55,6 +55,24 @@ describe("UserUnitTree", () => {
     expect(screen.queryByText("Computer Science Department")).not.toBeInTheDocument();
   });
 
+  it("reveals every returned node while a search is active, then restores the collapsed view", () => {
+    // The server returns matches plus their ancestor chain, so expand state is
+    // irrelevant during a search — every returned row belongs on screen.
+    const view = render(<UserUnitTree units={units} searchActive />, { wrapper: TestProviders });
+    expect(screen.getByText("Software Engineering Lab")).toBeInTheDocument();
+
+    view.rerender(<UserUnitTree units={units} searchActive={false} />);
+    expect(screen.queryByText("Software Engineering Lab")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Faculty of Engineering").length).toBeGreaterThan(0);
+  });
+
+  it("shows the search-specific empty state when a search returns nothing", () => {
+    render(<UserUnitTree units={[]} searchActive />, { wrapper: TestProviders });
+
+    expect(screen.getByText("No units match your search")).toBeInTheDocument();
+    expect(screen.queryByText("No units yet")).not.toBeInTheDocument();
+  });
+
   it("renders the breadcrumb path under a nested row", async () => {
     const user = userEvent.setup();
     renderTree();

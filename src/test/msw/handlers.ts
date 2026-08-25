@@ -35,6 +35,45 @@ const mockUserUnits: HolderUnitDTO[] = [
   },
 ];
 
+/**
+ * Reference endpoints paginate and search server-side. Mirrors the Go repos:
+ * case-insensitive name LIKE, plus the `id$a,b,c` IN filter used to resolve
+ * selected chips that live past the loaded page.
+ */
+function referencePage(store: ReferenceRow[], request: Request) {
+  const url = new URL(request.url);
+  const search = url.searchParams.get("search") ?? "";
+  const page = Number(url.searchParams.get("page") ?? 1);
+  const limit = Number(url.searchParams.get("limit") ?? 100);
+
+  let rows = store;
+  const idFilter = url.searchParams.getAll("filters").find((f) => f.startsWith("id$"));
+  if (idFilter) {
+    const ids = idFilter.slice(3).split(",");
+    rows = rows.filter((r) => ids.includes(r.id));
+  }
+  if (search) {
+    const s = search.toLowerCase();
+    rows = rows.filter((r) => r.name.toLowerCase().includes(s));
+  }
+
+  const total = rows.length;
+  const items = rows.slice((page - 1) * limit, page * limit);
+  return {
+    items,
+    total,
+    page,
+    limit,
+    last_page: Math.max(1, Math.ceil(total / limit)),
+    from: items.length ? (page - 1) * limit + 1 : 0,
+    to: (page - 1) * limit + items.length,
+    first_page_url: null,
+    last_page_url: null,
+    next_page_url: null,
+    prev_page_url: null,
+  };
+}
+
 function upsertRow(store: ReferenceRow[], prefix: string, name: string): ReferenceRow {
   const existing = store.find((r) => r.name.toLowerCase() === name.toLowerCase());
   if (existing) return existing;
@@ -462,8 +501,8 @@ export const handlers = [
     });
   }),
 
-  http.get("*/api/credential-types", () =>
-    envelope(400600, "Credential types retrieved", mockCredentialTypes),
+  http.get("*/api/credential-types", ({ request }) =>
+    envelope(400600, "Credential types retrieved", referencePage(mockCredentialTypes, request)),
   ),
 
   http.post("*/api/credential-types", async ({ request }) => {
@@ -495,8 +534,12 @@ export const handlers = [
     return envelope(400600, "Credential type destroyed", null);
   }),
 
-  http.get("*/api/issuer-organizations", () =>
-    envelope(400600, "Issuer organizations retrieved", mockIssuerOrganizations),
+  http.get("*/api/issuer-organizations", ({ request }) =>
+    envelope(
+      400600,
+      "Issuer organizations retrieved",
+      referencePage(mockIssuerOrganizations, request),
+    ),
   ),
 
   http.post("*/api/issuer-organizations", async ({ request }) => {
@@ -527,8 +570,8 @@ export const handlers = [
     return envelope(400600, "Issuer organization destroyed", null);
   }),
 
-  http.get("*/api/competencies", () =>
-    envelope(400600, "Competencies retrieved", mockCompetencies),
+  http.get("*/api/competencies", ({ request }) =>
+    envelope(400600, "Competencies retrieved", referencePage(mockCompetencies, request)),
   ),
 
   http.post("*/api/competencies", async ({ request }) => {
@@ -556,9 +599,50 @@ export const handlers = [
     return envelope(400600, "Competency destroyed", null);
   }),
 
-  http.get("*/api/user-units", () =>
-    envelope(301000, "User units retrieved successfully.", mockUserUnits),
-  ),
+  // Mirrors the search CTE: a match brings both its parent chain (so the tree
+  // stays reconstructable) and its whole subtree (so matching a parent shows
+  // what is in it). Never paginated — a truncated branch renders a broken tree.
+  http.get("*/api/user-units", ({ request }) => {
+    const search = new URL(request.url).searchParams.get("search");
+    if (!search) return envelope(301000, "User units retrieved successfully.", mockUserUnits);
+
+    const byId = new Map(mockUserUnits.map((u) => [u.id, u]));
+    const matched = mockUserUnits.filter((u) =>
+      u.name.toLowerCase().includes(search.toLowerCase()),
+    );
+    const keep = new Set<string>();
+
+    for (const unit of matched) {
+      let cursor: HolderUnitDTO | undefined = unit;
+      while (cursor && !keep.has(cursor.id)) {
+        keep.add(cursor.id);
+        cursor = cursor.parent_id ? byId.get(cursor.parent_id) : undefined;
+      }
+    }
+
+    // Descend from the matches only — never from the ancestors collected above,
+    // or a match's siblings would come along. Repeat until nothing new lands:
+    // rows are not ordered parent-before-child, so one pass can miss a
+    // grandchild.
+    const descendants = new Set(matched.map((u) => u.id));
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const unit of mockUserUnits) {
+        if (descendants.has(unit.id)) continue;
+        if (unit.parent_id && descendants.has(unit.parent_id)) {
+          descendants.add(unit.id);
+          grew = true;
+        }
+      }
+    }
+    for (const id of descendants) keep.add(id);
+
+    return envelope(
+      301000,
+      "User units retrieved successfully.",
+      mockUserUnits.filter((u) => keep.has(u.id)),
+    );
+  }),
 
   http.post("*/api/user-units", async ({ request }) => {
     const body = (await request.json()) as { name?: string; parent_id?: string | null };

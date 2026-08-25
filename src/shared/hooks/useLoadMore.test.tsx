@@ -50,6 +50,17 @@ describe("useLoadMore", () => {
     expect(queryFn).toHaveBeenCalledWith(1, 50);
   });
 
+  it("passes a custom batch size through to the query function", async () => {
+    const queryFn = vi.fn().mockResolvedValue(makeResponse([{ id: "1", name: "A" }], 1, 1, 1));
+
+    const { result } = renderHook(() => useLoadMore(["test"], queryFn, 100), {
+      wrapper: wrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(queryFn).toHaveBeenCalledWith(1, 100);
+  });
+
   it("loadMore fetches next page and appends items", async () => {
     const queryFn = vi
       .fn()

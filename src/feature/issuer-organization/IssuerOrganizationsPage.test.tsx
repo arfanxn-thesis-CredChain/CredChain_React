@@ -28,7 +28,19 @@ function paginated<T>(items: T[]) {
   return HttpResponse.json({
     code: 400600,
     message: "ok",
-    data: items,
+    data: {
+      items,
+      total: items.length,
+      page: 1,
+      limit: 100,
+      last_page: 1,
+      from: items.length ? 1 : 0,
+      to: items.length,
+      first_page_url: null,
+      last_page_url: null,
+      next_page_url: null,
+      prev_page_url: null,
+    },
   });
 }
 
@@ -76,8 +88,10 @@ describe("IssuerOrganizationsPage", () => {
     renderPage();
 
     await screen.findByText("University of Indonesia");
-    await user.type(screen.getByPlaceholderText("Organization name"), "Polytechnic");
+    // The create row starts collapsed behind its trigger.
     await user.click(screen.getByRole("button", { name: "Add organization" }));
+    await user.type(screen.getByPlaceholderText("Organization name"), "Polytechnic");
+    await user.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(recordedBody).toEqual({ name: "Polytechnic" }));
   });

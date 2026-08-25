@@ -24,12 +24,16 @@ const buttonVariants = cva(
         dashed:
           "border-2 border-dashed border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 focus-visible:ring-gold",
       },
+      // Heights are explicit, not a by-product of padding and line-height. A
+      // button and the Input beside it must line up by construction, or every
+      // row that pairs them ends up hand-patched with items-stretch/h-full.
+      // Pair sm with Input size="compact" (36px) and md with "default" (44px).
       size: {
-        sm: "px-3 py-1.5 text-xs",
-        md: "px-4 py-2 text-sm",
-        lg: "px-6 py-3 text-sm",
-        icon: "p-2 [&>svg]:w-5 [&>svg]:h-5",
-        "icon-mobile": "p-3 [&>svg]:w-6 [&>svg]:h-6",
+        sm: "h-9 px-3 text-xs",
+        md: "h-11 px-4 text-sm",
+        lg: "h-12 px-6 text-sm",
+        icon: "h-11 w-11 p-2 [&>svg]:w-5 [&>svg]:h-5",
+        "icon-mobile": "h-12 w-12 p-3 [&>svg]:w-6 [&>svg]:h-6",
       },
     },
     defaultVariants: {
