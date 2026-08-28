@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { i18n } from "@shared/i18n/config";
 import { TestProviders } from "@/test/TestProviders";
-import { COLUMN_TO_FIELD, FIXED_COLUMNS, UserImportModal } from "./UserImportModal";
+import { COLUMN_TO_FIELD, FIXED_COLUMNS, normHeader, UserImportModal } from "./UserImportModal";
 
 beforeEach(() => {
   void i18n.changeLanguage("en");
@@ -13,15 +13,26 @@ describe("UserImportModal columns (D2)", () => {
     expect(FIXED_COLUMNS).not.toContain("phone");
   });
 
-  it("adds unit_id and joined_year columns to FIXED_COLUMNS", () => {
-    expect(FIXED_COLUMNS).toContain("unit_id");
+  it("names the unit and number columns without the _id suffix", () => {
+    expect(FIXED_COLUMNS).toContain("unit");
+    expect(FIXED_COLUMNS).toContain("number");
     expect(FIXED_COLUMNS).toContain("joined_year");
+    expect(FIXED_COLUMNS).not.toContain("unit_id");
+    expect(FIXED_COLUMNS).not.toContain("number_id");
   });
 
-  it("maps unit_id and joined_year fields, and drops phone_number mapping", () => {
-    expect(COLUMN_TO_FIELD.unit_id).toBe("unit_id");
+  it("maps the renamed columns onto the unchanged field names", () => {
+    expect(COLUMN_TO_FIELD.unit).toBe("unit_id");
+    expect(COLUMN_TO_FIELD.number).toBe("number");
     expect(COLUMN_TO_FIELD.joined_year).toBe("joined_year");
     expect("phone" in COLUMN_TO_FIELD).toBe(false);
+  });
+
+  it("rewrites headers from pre-rename templates, so old files still import", () => {
+    expect(normHeader(" Unit_ID ")).toBe("unit");
+    expect(normHeader("number_id")).toBe("number");
+    // Unrecognised headers pass through lowercased and become meta entries.
+    expect(normHeader(" Program Studi ")).toBe("program studi");
   });
 
   it("keeps the required columns", () => {

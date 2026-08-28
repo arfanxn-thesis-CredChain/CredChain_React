@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
 import { server } from "@/test/msw/server";
-import { userUnitKeys } from "./keys";
+import { userUnitKeys } from "@shared/api/useUserUnits";
 import {
   useDestroyUserUnit,
   useStoreUserUnit,
@@ -132,6 +132,23 @@ describe("useMutateUserUnits", () => {
     await result.current.mutateAsync({ id: "unit_02", parent_id: "unit_03" });
 
     expect(recorded[0].body).toEqual({ parent_id: "unit_03" });
+  });
+
+  it("update PUT includes active when toggling", async () => {
+    const recorded: { body?: unknown }[] = [];
+    server.use(
+      http.put("*/api/user-units/:id", async ({ request }) => {
+        recorded.push({ body: await request.json() });
+        return envelope(301002, "Updated", null);
+      }),
+    );
+
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useUpdateUserUnit(), { wrapper });
+
+    await result.current.mutateAsync({ id: "unit_02", active: false });
+
+    expect(recorded[0].body).toEqual({ active: false });
   });
 
   it("destroy DELETEs /user-units/:id, toasts success and invalidates", async () => {

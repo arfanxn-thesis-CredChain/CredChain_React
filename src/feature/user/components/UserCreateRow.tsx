@@ -21,7 +21,7 @@ import { useStore } from "@app/store";
 import { cn } from "@shared/lib/cn";
 
 import type { UserBatchStoreFormInput } from "../schemas/user";
-import { useUserUnits } from "../api/useUserUnits";
+import { UnitPicker } from "@shared/components/UnitPicker";
 import { MetaEditor } from "@shared/components/MetaEditor";
 
 interface UserCreateRowProps {
@@ -39,7 +39,6 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
   const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
   const currentUser = useStore((s) => s.user);
   const canPromoteToAdmin = canAccess(currentUser?.role, Role.SUPER_ADMIN);
-  const { data: units } = useUserUnits();
 
   const roleOptions = [
     { value: Role.HOLDER, label: t("user.edit.role.holder") },
@@ -85,26 +84,15 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
         </FormField>
 
         <FormField label={t("user.field.unit")} error={errors?.unit_id?.message} optional>
-          <Select
-            value={unitId ?? "__none__"}
-            onValueChange={(value) => {
-              form.setValue(`users.${index}.unit_id`, value === "__none__" ? undefined : value, {
-                shouldValidate: true,
-              });
-            }}
-          >
-            <SelectTrigger aria-label={t("user.field.unit")}>
-              <SelectValue placeholder={t("userCreate.field.unit.placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">{t("common.notSet")}</SelectItem>
-              {(units ?? []).map((unit) => (
-                <SelectItem key={unit.id} value={unit.id}>
-                  {unit.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <UnitPicker
+            value={unitId}
+            onChange={(value) =>
+              form.setValue(`users.${index}.unit_id`, value, { shouldValidate: true })
+            }
+            label={t("user.field.unit")}
+            placeholder={t("userCreate.field.unit.placeholder")}
+            error={errors?.unit_id?.message}
+          />
         </FormField>
 
         <FormField label={t("user.field.joinedYear")} error={errors?.joined_year?.message} optional>
@@ -203,7 +191,7 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
           onClick={() => setCustomFieldsOpen(!customFieldsOpen)}
           className="flex items-center gap-1.5 py-2 text-sm font-medium text-gray-500 hover:text-navy"
         >
-          {t("userCreate.customFields.toggle")}
+          {t("meta.label")}
           <ChevronDown
             className={cn("h-4 w-4 transition-transform", customFieldsOpen && "rotate-180")}
           />

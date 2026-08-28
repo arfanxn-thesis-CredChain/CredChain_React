@@ -3,7 +3,7 @@ import { api } from "@shared/api/client";
 import { isApiError } from "@shared/api/envelope";
 import { notify } from "@shared/lib/notify";
 import type { HolderUnitDTO } from "@shared/types/api";
-import { userUnitKeys } from "./keys";
+import { userUnitKeys } from "@shared/api/useUserUnits";
 
 const ADMIN_FALLBACK_KEY = "admin.userUnit.actionError";
 
@@ -39,14 +39,17 @@ export function useUpdateUserUnit() {
       id,
       name,
       parent_id,
+      active,
     }: {
       id: string;
       name?: string;
       parent_id?: string | null;
+      active?: boolean;
     }) => {
       const body: Record<string, unknown> = {};
       if (name !== undefined) body.name = name;
       if (parent_id !== undefined) body.parent_id = parent_id;
+      if (active !== undefined) body.active = active;
       const response = await api.put<HolderUnitDTO>(`/user-units/${id}`, body);
       return response.data;
     },

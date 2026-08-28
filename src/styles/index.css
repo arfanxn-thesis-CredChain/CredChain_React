@@ -78,23 +78,6 @@
 }
 
 @layer base {
-  html {
-    scrollbar-gutter: stable;
-  }
-
-  /*
-   * Radix Select/Dialog use `react-remove-scroll`, which locks the <body>
-   * (`data-scroll-locked`) and injects `padding-right`/`margin-right` equal to
-   * the scrollbar width to compensate for the scrollbar it removes. Because
-   * <html> already reserves the gutter via `scrollbar-gutter: stable`, that
-   * compensation double-counts and shifts the whole page ~12px on open/close.
-   * Neutralize the injected offsets; the gutter is already stable.
-   */
-  body[data-scroll-locked] {
-    margin-right: 0 !important;
-    padding-right: 0 !important;
-  }
-
   body {
     @apply bg-base font-sans text-navy antialiased;
     font-feature-settings: "ss01", "ss02", "cv11";

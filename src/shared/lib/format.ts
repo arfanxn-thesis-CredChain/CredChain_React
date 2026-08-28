@@ -18,6 +18,18 @@ export function truncateHash(hash: string, length = 16): string {
   return `${hash.slice(0, length)}...`;
 }
 
+/**
+ * YYYY-MM-DD from a Date's *local* parts.
+ *
+ * Deliberately not `toISOString().slice(0, 10)`: that converts to UTC first, so
+ * a date-only value west of Greenwich lands on the previous day.
+ */
+export function formatISODate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 export function formatDate(value: string | number | Date | null, locale = "en"): string {
   if (!value) return "-";
   const date = new Date(value);

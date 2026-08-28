@@ -3,7 +3,7 @@ import type { HolderUnitDTO } from "@shared/types/api";
 import { ROOT_DROP_ID, resolveMove } from "./resolveMove";
 
 function unit(id: string, parent_id: string | null, name = id): HolderUnitDTO {
-  return { id, parent_id, name, created_at: "2026-01-01T00:00:00Z", updated_at: null };
+  return { id, parent_id, name, active: true, created_at: "2026-01-01T00:00:00Z", updated_at: null };
 }
 
 // root -> child -> grandchild ; sibling is a second root

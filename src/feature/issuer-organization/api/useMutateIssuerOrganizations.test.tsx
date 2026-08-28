@@ -64,7 +64,7 @@ describe("useMutateIssuerOrganizations", () => {
     mockNotify.info.mockClear();
   });
 
-  it("store POSTs /issuer-organizations with { name }, toasts success and invalidates", async () => {
+  it("store POSTs /issuer-organizations with { name, active }, toasts success and invalidates", async () => {
     const recorded: { method?: string; url?: string; body?: unknown }[] = [];
     server.use(
       http.post("*/api/issuer-organizations", async ({ request }) => {
@@ -85,7 +85,7 @@ describe("useMutateIssuerOrganizations", () => {
     await expectInvalidated();
   });
 
-  it("update PUTs /issuer-organizations/:id with { name }, toasts success and invalidates", async () => {
+  it("update PUTs /issuer-organizations/:id with { name, active }, toasts success and invalidates", async () => {
     const recorded: { method?: string; url?: string; body?: unknown }[] = [];
     server.use(
       http.put("*/api/issuer-organizations/:id", async ({ request, params }) => {
@@ -97,11 +97,11 @@ describe("useMutateIssuerOrganizations", () => {
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useUpdateIssuerOrganization(), { wrapper });
 
-    await result.current.mutateAsync({ id: "iorg_01", name: "Renamed" });
+    await result.current.mutateAsync({ id: "iorg_01", name: "Renamed", active: false });
 
     expect(recorded[0].method).toBe("PUT");
     expect(recorded[0].url).toContain("/api/issuer-organizations/iorg_01");
-    expect(recorded[0].body).toEqual({ name: "Renamed" });
+    expect(recorded[0].body).toEqual({ name: "Renamed", active: false });
     expect(mockNotify.success).toHaveBeenCalledWith("success_issuer_organization_update");
     await expectInvalidated();
   });
@@ -137,7 +137,7 @@ describe("useMutateIssuerOrganizations", () => {
     const { result } = renderHook(() => useUpdateIssuerOrganization(), { wrapper });
 
     await expect(() =>
-      result.current.mutateAsync({ id: "iorg_01", name: "Renamed" }),
+      result.current.mutateAsync({ id: "iorg_01", name: "Renamed", active: false }),
     ).rejects.toBeDefined();
 
     await waitFor(() => {

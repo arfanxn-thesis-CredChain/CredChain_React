@@ -17,7 +17,9 @@ describe("useUserListParams", () => {
       sort: "-updated_at",
       status: "all",
       role: "all",
-      unit: "",
+      unit_id: "",
+      yearFrom: "",
+      yearTo: "",
     });
   });
 
@@ -41,30 +43,77 @@ describe("useUserListParams", () => {
     expect(result.current.params.search).toBe("alice");
   });
 
-  it("setMany updates multiple", () => {
-    const { result } = renderHook(() => useUserListParams(), { wrapper: wrap() });
-    act(() => result.current.setMany({ sort: "name", status: "deleted_at_" }));
-    expect(result.current.params.sort).toBe("name");
-    expect(result.current.params.status).toBe("deleted_at_");
-  });
-
-  it("parses unit from URL", () => {
+  it("parses unit_id from URL", () => {
     const { result } = renderHook(() => useUserListParams(), {
-      wrapper: wrap(["/users?unit=unit_01"]),
+      wrapper: wrap(["/users?unit_id=unit_01"]),
     });
-    expect(result.current.params.unit).toBe("unit_01");
+    expect(result.current.params.unit_id).toBe("unit_01");
   });
 
-  it("defaults unit to empty string when absent", () => {
+  it("defaults unit_id to empty string when absent", () => {
     const { result } = renderHook(() => useUserListParams(), { wrapper: wrap() });
-    expect(result.current.params.unit).toBe("");
+    expect(result.current.params.unit_id).toBe("");
   });
 
-  it("setParam sets unit and removes it when cleared to default", () => {
+  it("setParam sets unit_id and removes it when cleared to default", () => {
     const { result } = renderHook(() => useUserListParams(), { wrapper: wrap() });
-    act(() => result.current.setParam("unit", "unit_02"));
-    expect(result.current.params.unit).toBe("unit_02");
-    act(() => result.current.setParam("unit", ""));
-    expect(result.current.params.unit).toBe("");
+    act(() => result.current.setParam("unit_id", "unit_02"));
+    expect(result.current.params.unit_id).toBe("unit_02");
+    act(() => result.current.setParam("unit_id", ""));
+    expect(result.current.params.unit_id).toBe("");
+  });
+
+  it("parses a two-sided joined_year range from the URL", () => {
+    const { result } = renderHook(() => useUserListParams(), {
+      wrapper: wrap(["/users?joined_year=2020..2024"]),
+    });
+    expect(result.current.params.yearFrom).toBe("2020");
+    expect(result.current.params.yearTo).toBe("2024");
+  });
+
+  it("parses one-sided joined_year bounds", () => {
+    const fromOnly = renderHook(() => useUserListParams(), {
+      wrapper: wrap(["/users?joined_year=2020.."]),
+    });
+    expect(fromOnly.result.current.params.yearFrom).toBe("2020");
+    expect(fromOnly.result.current.params.yearTo).toBe("");
+
+    const toOnly = renderHook(() => useUserListParams(), {
+      wrapper: wrap(["/users?joined_year=..2024"]),
+    });
+    expect(toOnly.result.current.params.yearFrom).toBe("");
+    expect(toOnly.result.current.params.yearTo).toBe("2024");
+  });
+
+  it("rejects years that are malformed, below the floor, or in the future", () => {
+    const year = new Date().getFullYear();
+    for (const raw of ["20xx", "202", "1989", String(year + 1)]) {
+      const { result } = renderHook(() => useUserListParams(), {
+        wrapper: wrap([`/users?joined_year=${raw}..2024`]),
+      });
+      expect(result.current.params.yearFrom).toBe("");
+    }
+  });
+
+  it("setYearRange writes a two-sided range and clears it when empty", () => {
+    const { result } = renderHook(() => useUserListParams(), { wrapper: wrap() });
+    act(() => result.current.setYearRange("2020", "2024"));
+    expect(result.current.params.yearFrom).toBe("2020");
+    expect(result.current.params.yearTo).toBe("2024");
+    act(() => result.current.setYearRange("", ""));
+    expect(result.current.params.yearFrom).toBe("");
+    expect(result.current.params.yearTo).toBe("");
+  });
+
+  it("setYearRange writes one-sided bounds", () => {
+    const fromOnly = renderHook(() => useUserListParams(), { wrapper: wrap() });
+    act(() => fromOnly.result.current.setYearRange("2020", ""));
+    expect(fromOnly.result.current.params.yearFrom).toBe("2020");
+    expect(fromOnly.result.current.params.yearTo).toBe("");
+
+    const toOnly = renderHook(() => useUserListParams(), { wrapper: wrap() });
+    act(() => toOnly.result.current.setYearRange("", "2024"));
+    expect(toOnly.result.current.params.yearFrom).toBe("");
+    expect(toOnly.result.current.params.yearTo).toBe("2024");
   });
 });

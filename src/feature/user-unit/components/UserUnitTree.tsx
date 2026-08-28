@@ -27,6 +27,7 @@ import {
 } from "@dnd-kit/core";
 import { isApiError } from "@shared/api/envelope";
 import { EmptyState } from "@shared/components/EmptyState";
+import { ActiveSwitch } from "@shared/components/admin/ResourceAdminEditForm";
 import { InlineCreateRow } from "@shared/components/InlineCreateRow";
 import { RoleGate } from "@shared/auth/guards";
 import { Role } from "@shared/auth/role";
@@ -323,6 +324,18 @@ export function UserUnitTree({
     }
   };
 
+  const handleToggleActive = (unit: HolderUnitDTO) => {
+    update.mutate(
+      { id: unit.id, active: !unit.active },
+      {
+        onSuccess: () => clearRowError(unit.id),
+        onError: (error) => {
+          setRowError(unit.id, isApiError(error) ? error.messageKey : "admin.userUnit.actionError");
+        },
+      },
+    );
+  };
+
   // One shared row for both call sites. `key` forces a fresh field per open so
   // a name typed under one parent never leaks into the next.
   const createForm = (parentId: string | null, triggerLabel?: string) => (
@@ -412,6 +425,12 @@ export function UserUnitTree({
               const path = pathOf.get(node.unit.id) ?? [];
               const isExpanded = expanded.has(node.unit.id);
               const rowError = rowErrors[node.unit.id];
+              const parent = node.unit.parent_id
+                ? units.find((u) => u.id === node.unit.parent_id)
+                : undefined;
+              // Invariant: an active node never has an inactive ancestor, so
+              // checking the direct parent is enough — no ancestor walk needed.
+              const blocked = !node.unit.active && parent?.active === false;
               return (
                 <Fragment key={node.unit.id}>
                   <DroppableRow
@@ -486,11 +505,23 @@ export function UserUnitTree({
                           </Button>
                         </form>
                       ) : (
-                        <span className="text-sm font-medium text-navy">{node.unit.name}</span>
+                        <span
+                          className={cn(
+                            "text-sm font-medium text-navy",
+                            !node.unit.active && "line-through opacity-60",
+                          )}
+                        >
+                          {node.unit.name}
+                        </span>
                       )}
                       {path.length > 0 && (
                         <p aria-label={t("userUnit.path")} className="mt-0.5 truncate text-xs text-gray-400">
                           {path.join(" › ")}
+                        </p>
+                      )}
+                      {blocked && (
+                        <p className="mt-1 text-xs text-error">
+                          {t("userUnit.parentInactiveHint", { name: parent?.name ?? "" })}
                         </p>
                       )}
                       {rowError && (
@@ -503,6 +534,13 @@ export function UserUnitTree({
                     {renamingId !== node.unit.id && (
                     <RoleGate allowed={ADMIN_ROLES}>
                       <div className="flex shrink-0 items-center gap-0.5">
+                        <ActiveSwitch
+                          checked={node.unit.active}
+                          disabled={blocked || update.isPending}
+                          label={t("userUnit.activeToggle", { name: node.unit.name })}
+                          onCheckedChange={() => handleToggleActive(node.unit)}
+                        />
+                        <span className="mx-1 h-4 w-px bg-gray-200" aria-hidden="true" />
                         <Button
                           type="button"
                           variant="ghost"

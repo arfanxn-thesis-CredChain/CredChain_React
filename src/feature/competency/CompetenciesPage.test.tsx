@@ -11,8 +11,8 @@ import { server } from "@/test/msw/server";
 import { CompetenciesPage } from "./CompetenciesPage";
 
 const competencies = [
-  { id: "comp_01", name: "Machine Learning" },
-  { id: "comp_02", name: "Data Analysis" },
+  { id: "comp_01", name: "Machine Learning", active: true },
+  { id: "comp_02", name: "Data Analysis", active: false },
 ];
 
 const mockNotify = vi.hoisted(() => ({
@@ -123,5 +123,26 @@ describe("CompetenciesPage", () => {
         url: expect.stringContaining("/api/competencies/comp_01") as unknown as string,
       });
     });
+  });
+
+  it("PUTs the flipped active flag when an inactive row switch is toggled", async () => {
+    let recordedBody: unknown;
+    server.use(
+      http.get("*/api/competencies", () => paginated(competencies)),
+      http.put("*/api/competencies/:id", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({ code: 401002, message: "ok", data: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    // comp_02 is seeded inactive, so this asserts the reactivation direction.
+    await user.click(
+      await screen.findByRole("switch", { name: "Toggle active state for Data Analysis" }),
+    );
+
+    await waitFor(() => expect(recordedBody).toEqual({ name: "Data Analysis", active: true }));
   });
 });

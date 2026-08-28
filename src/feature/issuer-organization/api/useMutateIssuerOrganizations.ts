@@ -37,8 +37,8 @@ export function useUpdateIssuerOrganization() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const response = await api.put<ReferenceRow>(`/issuer-organizations/${id}`, { name });
+    mutationFn: async ({ id, name, active }: { id: string; name: string; active: boolean }) => {
+      const response = await api.put<ReferenceRow>(`/issuer-organizations/${id}`, { name, active });
       return response.data;
     },
     onSuccess: () => {

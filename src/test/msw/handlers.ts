@@ -10,12 +10,12 @@ const mockCredentialTypes: ReferenceRow[] = [
   { id: "ctype_02", name: "Professional Certificate", active: true },
 ];
 const mockIssuerOrganizations: ReferenceRow[] = [
-  { id: "iorg_01", name: "University of Indonesia" },
-  { id: "iorg_02", name: "Tech Academy" },
+  { id: "iorg_01", name: "University of Indonesia", active: true },
+  { id: "iorg_02", name: "Tech Academy", active: true },
 ];
 const mockCompetencies: ReferenceRow[] = [
-  { id: "comp_01", name: "Machine Learning" },
-  { id: "comp_02", name: "Data Analysis" },
+  { id: "comp_01", name: "Machine Learning", active: true },
+  { id: "comp_02", name: "Data Analysis", active: true },
 ];
 
 const mockUserUnits: HolderUnitDTO[] = [
@@ -23,6 +23,7 @@ const mockUserUnits: HolderUnitDTO[] = [
     id: "unit_01",
     parent_id: null,
     name: "Faculty of Engineering",
+    active: true,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: null,
   },
@@ -30,6 +31,7 @@ const mockUserUnits: HolderUnitDTO[] = [
     id: "unit_02",
     parent_id: "unit_01",
     name: "Computer Science Department",
+    active: true,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: null,
   },
@@ -83,19 +85,32 @@ function upsertRow(store: ReferenceRow[], prefix: string, name: string): Referen
 }
 
 // Mirrors backend filter syntax: column<operator><value>.
-// Supports operators used by the frontend: `_` (IS NULL), `!_` (IS NOT NULL), `=`.
+// Supports operators used by the frontend: `_` (IS NULL), `!_` (IS NOT NULL),
+// `>=`, `<=`, `=`. The comparisons must be tested before `=`, or `joined_year>=2020`
+// splits on the first `=` into the column `joined_year>` and silently matches nothing.
 function applyFilters(users: UserDTO[], filters: string[]): UserDTO[] {
   let result = users;
+  const cell = (u: UserDTO, col: string) => (u as unknown as Record<string, unknown>)[col];
   for (const f of filters) {
     if (f.endsWith("!_")) {
       const col = f.slice(0, -2);
-      result = result.filter((u) => (u as unknown as Record<string, unknown>)[col] != null);
+      result = result.filter((u) => cell(u, col) != null);
     } else if (f.endsWith("_")) {
       const col = f.slice(0, -1);
-      result = result.filter((u) => (u as unknown as Record<string, unknown>)[col] == null);
+      result = result.filter((u) => cell(u, col) == null);
+    } else if (f.includes(">=") || f.includes("<=")) {
+      const gte = f.includes(">=");
+      const [col, val] = f.split(gte ? ">=" : "<=", 2);
+      const bound = Number(val);
+      result = result.filter((u) => {
+        const raw = cell(u, col);
+        if (raw == null) return false;
+        const n = Number(raw);
+        return gte ? n >= bound : n <= bound;
+      });
     } else if (f.includes("=")) {
       const [col, val] = f.split("=", 2);
-      result = result.filter((u) => String((u as unknown as Record<string, unknown>)[col]) === val);
+      result = result.filter((u) => String(cell(u, col)) === val);
     }
   }
   return result;
@@ -559,8 +574,9 @@ export const handlers = [
         { status: 404 },
       );
     }
-    const body = (await request.json()) as { name?: string };
+    const body = (await request.json()) as { name?: string; active?: boolean };
     if (body.name !== undefined) row.name = body.name;
+    if (body.active !== undefined) row.active = body.active;
     return envelope(400600, "Issuer organization updated", row);
   }),
 
@@ -588,8 +604,9 @@ export const handlers = [
     if (!row) {
       return HttpResponse.json({ code: 401040, message: "Competency not found." }, { status: 404 });
     }
-    const body = (await request.json()) as { name?: string };
+    const body = (await request.json()) as { name?: string; active?: boolean };
     if (body.name !== undefined) row.name = body.name;
+    if (body.active !== undefined) row.active = body.active;
     return envelope(400600, "Competency updated", row);
   }),
 
@@ -646,10 +663,14 @@ export const handlers = [
 
   http.post("*/api/user-units", async ({ request }) => {
     const body = (await request.json()) as { name?: string; parent_id?: string | null };
+    const parent = body.parent_id
+      ? mockUserUnits.find((u) => u.id === body.parent_id)
+      : undefined;
     const created: HolderUnitDTO = {
       id: `unit_${mockUserUnits.length + 1}`,
       parent_id: body.parent_id ?? null,
       name: body.name ?? "",
+      active: parent ? parent.active : true,
       created_at: new Date().toISOString(),
       updated_at: null,
     };
@@ -662,9 +683,31 @@ export const handlers = [
     if (!row) {
       return HttpResponse.json({ code: 301040, message: "User unit not found." }, { status: 404 });
     }
-    const body = (await request.json()) as { name?: string; parent_id?: string | null };
+    const body = (await request.json()) as {
+      name?: string;
+      parent_id?: string | null;
+      active?: boolean;
+    };
     if (body.name !== undefined) row.name = body.name;
     if (body.parent_id !== undefined) row.parent_id = body.parent_id;
+    if (body.active !== undefined) {
+      row.active = body.active;
+      // Rule 1: deactivating cascades to every descendant, mirroring the Go
+      // service's FindWithDescendants + batch Update.
+      if (!body.active) {
+        const off = new Set<string>([row.id]);
+        for (let grew = true; grew; ) {
+          grew = false;
+          for (const unit of mockUserUnits) {
+            if (unit.parent_id && off.has(unit.parent_id) && !off.has(unit.id)) {
+              off.add(unit.id);
+              unit.active = false;
+              grew = true;
+            }
+          }
+        }
+      }
+    }
     return envelope(301002, "User unit updated successfully.", row);
   }),
 

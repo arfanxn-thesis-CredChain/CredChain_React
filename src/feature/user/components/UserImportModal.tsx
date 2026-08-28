@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -8,14 +8,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { FileDropzone } from "@ui/file-dropzone";
 import { Input } from "@ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ui/table";
+import { useUserUnits } from "@shared/api/useUserUnits";
+import { createUnitResolver, flattenUnitTree } from "@shared/lib/units";
+import { formatISODate } from "@shared/lib/format";
+import type { HolderUnitDTO } from "@shared/types/api";
 import { type UserStoreFormInput, userStoreFormSchema } from "../schemas/user";
 
 export const FIXED_COLUMNS = [
   "fullname",
   "email",
-  "unit_id",
+  "unit",
   "joined_year",
-  "number_id",
+  "number",
   "birth_date",
   "gender",
   "role",
@@ -26,12 +30,25 @@ const REQUIRED_COLUMNS: readonly string[] = ["fullname", "email", "role"];
 export const COLUMN_TO_FIELD: Record<string, string> = {
   fullname: "name",
   email: "email",
-  unit_id: "unit_id",
+  unit: "unit_id",
   joined_year: "joined_year",
-  number_id: "number",
+  number: "number",
   birth_date: "birth_date",
   gender: "gender",
   role: "role",
+};
+
+/**
+ * Headers from templates downloaded before the rename.
+ *
+ * Neither old name is in REQUIRED_COLUMNS, so without this map they do not
+ * error — they fall through into meta_entries, which is a silent wrong import.
+ */
+const LEGACY_HEADERS: Record<string, string> = { unit_id: "unit", number_id: "number" };
+
+export const normHeader = (header: string): string => {
+  const key = header.trim().toLowerCase();
+  return LEGACY_HEADERS[key] ?? key;
 };
 
 const ALLOWED_EXTENSIONS = [".csv", ".xls", ".xlsx"];
@@ -43,7 +60,8 @@ interface UserImportModalProps {
 }
 
 interface ParsedRow {
-  [key: string]: string | number | boolean | null;
+  // Date because XLSX.read runs with cellDates, so date cells arrive typed.
+  [key: string]: string | number | boolean | Date | null;
 }
 
 interface ValidationError {
@@ -52,15 +70,25 @@ interface ValidationError {
   error: string;
 }
 
-function downloadTemplate() {
+/**
+ * Example unit cells drawn from real units, because the `unit` column is now
+ * resolved: an invented name would make the template fail its own first import.
+ */
+function exampleUnits(units: HolderUnitDTO[]): [string, string] {
+  const nodes = flattenUnitTree(units);
+  return [nodes[0]?.name ?? "Fakultas Teknik", nodes[1]?.name ?? "Fakultas Teknik > Teknik Informatika"];
+}
+
+function downloadTemplate(units: HolderUnitDTO[]) {
   const headers = [...FIXED_COLUMNS];
   const headerRow = headers.map((h) => ({ t: "s", v: h }) satisfies XLSX.CellObject);
+  const [unitA, unitB] = exampleUnits(units);
 
   const exampleRows: XLSX.CellObject[][] = [
     [
       { t: "s", v: "Alice Johnson" },
       { t: "s", v: "alice@example.com" },
-      { t: "s", v: "unit_01" },
+      { t: "s", v: unitA },
       { t: "s", v: "2024" },
       { t: "s", v: "EMP-001" },
       { t: "s", v: "1995-03-15" },
@@ -70,7 +98,7 @@ function downloadTemplate() {
     [
       { t: "s", v: "Bob Smith" },
       { t: "s", v: "bob@example.com" },
-      { t: "s", v: "unit_02" },
+      { t: "s", v: unitB },
       { t: "s", v: "2023" },
       { t: "s", v: "EMP-002" },
       { t: "s", v: "1990-07-22" },
@@ -101,6 +129,10 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [validatedRows, setValidatedRows] = useState<UserStoreFormInput[]>([]);
 
+  const { data: units } = useUserUnits();
+  // Maps built once per unit list, not once per row.
+  const resolveUnit = useMemo(() => createUnitResolver(units ?? []), [units]);
+
   const validateRange = useCallback(
     (from: number, to: number, total: number): string | undefined => {
       if (from < 1 || from > total) return "userImport.invalidRange";
@@ -111,23 +143,31 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
     [],
   );
 
-  const buildRowsFromParsed = useCallback((data: ParsedRow[], from: number, to: number) => {
+  const buildRowsFromParsed = useCallback(
+    (data: ParsedRow[], from: number, to: number) => {
     const slice = data.slice(from - 1, to);
     if (slice.length === 0)
-      return { rows: [] as UserStoreFormInput[], missing: [] as string[], metaCount: 0 };
+      return {
+        rows: [] as UserStoreFormInput[],
+        missing: [] as string[],
+        metaCount: 0,
+        errors: [] as ValidationError[],
+      };
 
     const headers = Object.keys(slice[0]);
-    const normalizedHeaders = headers.map((h) => h.trim().toLowerCase());
+    const normalizedHeaders = headers.map(normHeader);
 
     const missing = REQUIRED_COLUMNS.filter((col) => !normalizedHeaders.includes(col));
 
     const fixedSet = new Set(FIXED_COLUMNS);
     const metaKeys = headers.filter(
-      (h) => !fixedSet.has(h.trim().toLowerCase() as (typeof FIXED_COLUMNS)[number]),
+      (h) => !fixedSet.has(normHeader(h) as (typeof FIXED_COLUMNS)[number]),
     );
     const metaCount = metaKeys.length;
+    const errors: ValidationError[] = [];
 
-    const rows: UserStoreFormInput[] = slice.map((row) => {
+    const rows: UserStoreFormInput[] = slice.map((row, idx) => {
+      const rowNumber = from + idx;
       const mapped: UserStoreFormInput = {
         name: "",
         number: undefined,
@@ -141,27 +181,65 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
       };
 
       for (const header of headers) {
-        const key = header.trim().toLowerCase();
+        const key = normHeader(header);
         const field = COLUMN_TO_FIELD[key];
         if (!field) continue;
 
         const raw = row[header];
         if (raw === null || raw === undefined) continue;
-        const val = String(raw).trim();
+        const val = raw instanceof Date ? formatISODate(raw) : String(raw).trim();
         if (val === "") continue;
 
         if (field === "gender") {
           const lower = val.toLowerCase();
           if (lower === "male" || lower === "female") {
             mapped.gender = lower;
+          } else {
+            // Fail loud: silently dropping the cell imports the wrong record.
+            errors.push({
+              row: rowNumber,
+              field: "gender",
+              error: t("userImport.validation.genderInvalid", { value: val }),
+            });
           }
         } else if (field === "role") {
           const lower = val.toLowerCase();
           if (lower === "holder" || lower === "issuer" || lower === "admin") {
             mapped.role = lower;
+          } else {
+            // The holder default stands only for an absent column, never a typo.
+            errors.push({
+              row: rowNumber,
+              field: "role",
+              error: t("userImport.validation.roleInvalid", { value: val }),
+            });
           }
         } else if (field === "unit_id") {
-          mapped.unit_id = val;
+          const ref = resolveUnit(val);
+          if (ref.ok) {
+            mapped.unit_id = ref.id;
+          } else if (ref.reason === "ambiguous") {
+            errors.push({
+              row: rowNumber,
+              field: "unit",
+              error: t("userImport.validation.unitAmbiguous", {
+                value: val,
+                candidates: ref.candidates.join("; "),
+              }),
+            });
+          } else if (ref.reason === "inactive") {
+            errors.push({
+              row: rowNumber,
+              field: "unit",
+              error: t("userImport.validation.unitInactive", { value: val, path: ref.path }),
+            });
+          } else {
+            errors.push({
+              row: rowNumber,
+              field: "unit",
+              error: t("userImport.validation.unitUnknown", { value: val }),
+            });
+          }
         } else if (field === "joined_year") {
           const year = Number(val);
           if (Number.isInteger(year)) {
@@ -191,8 +269,10 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
       return mapped;
     });
 
-    return { rows, missing, metaCount };
-  }, []);
+    return { rows, missing, metaCount, errors };
+    },
+    [t, resolveUnit],
+  );
 
   const validateRows = useCallback(
     (
@@ -261,7 +341,9 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
+          // Excel stores 1995-03-15 as the serial 34773; without cellDates it
+          // reaches the ISO check as "34773" and only Text columns can import.
+          const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const sheetName = workbook.SheetNames[0];
           if (!sheetName) {
             setFileError(t("userImport.parseError"));
@@ -321,7 +403,7 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
                 <div className="md:shrink-0">
                   <button
                     type="button"
-                    onClick={downloadTemplate}
+                    onClick={() => downloadTemplate(units ?? [])}
                     className="flex items-center gap-2 rounded-lg border border-navy/20 bg-white px-4 py-2.5 text-sm font-medium text-navy transition-colors hover:bg-gray-50"
                   >
                     <Download className="h-4 w-4" />
@@ -489,7 +571,9 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
                       setMissingColumns(result.missing);
                       setMetaColumnCount(result.metaCount);
                       const { errors, valid } = validateRows(result.rows, fromRow);
-                      setValidationErrors(errors);
+                      // Parse errors first: a row that failed unit resolution is
+                      // also missing unit_id, so its schema error reads as noise.
+                      setValidationErrors([...result.errors, ...errors]);
                       setValidatedRows(valid);
                       setStep(3);
                     }}

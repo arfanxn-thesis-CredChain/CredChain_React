@@ -10,7 +10,7 @@ export function OverviewLayout() {
   useScrollToTop();
 
   return (
-    <div className="flex min-h-dvh bg-base font-sans">
+    <div className="flex h-dvh overflow-hidden bg-base font-sans">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div

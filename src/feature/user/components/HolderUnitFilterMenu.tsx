@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { flattenUnitTree } from "@shared/lib/units";
 import { FilterTrigger } from "@shared/components/FilterTrigger";
-import { useUserUnits } from "../api/useUserUnits";
+import { useUserUnits } from "@shared/api/useUserUnits";
 import {
   DropdownMenu,
   DropdownMenuContent,

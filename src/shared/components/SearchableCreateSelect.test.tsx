@@ -12,7 +12,7 @@ beforeEach(() => {
   void i18n.changeLanguage("en");
 });
 
-function paginated(items: Array<{ id: string; name: string }>) {
+function paginated(items: Array<{ id: string; name: string; active?: boolean }>) {
   return HttpResponse.json({
     code: 400600,
     message: "OK",
@@ -180,6 +180,36 @@ describe("SearchableCreateSelect", () => {
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toHaveTextContent("Doctoral Degree");
     });
+  });
+
+  it("renders an inactive row disabled, but keeps an already-selected one clickable", async () => {
+    server.use(
+      http.get("*/api/competencies", ({ request }) => {
+        const rows = [
+          { id: "comp_01", name: "Machine Learning", active: false },
+          { id: "comp_02", name: "Data Analysis", active: false },
+        ];
+        // The chip lookup asks by id; answer it from the same set.
+        const idFilter = new URL(request.url).searchParams
+          .getAll("filters")
+          .find((f) => f.startsWith("id$"));
+        return paginated(idFilter ? rows.filter((r) => r.id === "comp_02") : rows);
+      }),
+    );
+
+    render(
+      <SearchableCreateSelect multiple resource="competencies" value={["comp_02"]} onChange={vi.fn()} />,
+      { wrapper: TestProviders },
+    );
+
+    fireEvent.click(screen.getByRole("combobox"));
+
+    // Unselected + inactive: unpickable.
+    expect(await screen.findByRole("button", { name: /Machine Learning/ })).toBeDisabled();
+    // Selected + inactive: still removable, otherwise a since-retired row
+    // could never be deselected while editing an old credential.
+    expect(screen.getByRole("button", { name: /Data Analysis/ })).toBeEnabled();
+    expect(screen.getAllByText("Inactive")).toHaveLength(2);
   });
 
   it("toggles competencies in multi-select mode", async () => {

@@ -52,7 +52,7 @@ import { DetailEditForm } from "@shared/components/DetailEditForm";
 import type { DetailField } from "@shared/components/DetailEditForm";
 import { useUpdateUsers } from "./api/useUpdateUsers";
 import { useUpdateUserRoles } from "./api/useUpdateUserRoles";
-import { useUserUnits } from "./api/useUserUnits";
+import { useUserUnits } from "@shared/api/useUserUnits";
 import {
   userDetailEditSchema,
   type UserDetailEditInput,
@@ -404,7 +404,6 @@ export function UserDetail() {
           editControl: <MetaEditor control={editForm.control} />,
           error: editForm.formState.errors.meta_entries?.message,
           fullWidth: true,
-          selfLabeled: true,
         },
       ]
     : [];

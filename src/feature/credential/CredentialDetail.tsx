@@ -233,7 +233,6 @@ export function CredentialDetail() {
           readValue: <MetaDisplay meta={cred.meta} />,
           editControl: <MetaEditor control={form.control} name="meta_entries" />,
           fullWidth: true,
-          selfLabeled: true,
         },
       ]
     : [];

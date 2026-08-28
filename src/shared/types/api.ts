@@ -104,6 +104,7 @@ export interface HolderUnitDTO {
   id: string;
   parent_id: string | null;
   name: string;
+  active: boolean;
   created_at: string;
   updated_at: string | null;
 }

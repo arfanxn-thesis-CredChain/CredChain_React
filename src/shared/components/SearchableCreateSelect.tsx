@@ -186,17 +186,28 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
           {!list.isLoading &&
             filtered.map((row) => {
               const isSelected = selectedIds.includes(row.id);
+              // Inactive rows stay visible but unpickable — the backend rejects
+              // them at issue time. An already-selected one stays clickable so
+              // it can still be removed.
+              const blocked = row.active === false && !isSelected;
               return (
                 <button
                   key={row.id}
                   type="button"
+                  disabled={blocked}
                   onClick={() => select(row)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm text-navy transition-colors hover:bg-navy/5",
+                    "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm text-navy transition-colors",
+                    blocked ? "cursor-not-allowed opacity-50" : "hover:bg-navy/5",
                     isSelected && "bg-navy/5 font-semibold",
                   )}
                 >
                   <span className="min-w-0 flex-1 truncate">{row.name}</span>
+                  {row.active === false && (
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {t("cred.submit.inactive")}
+                    </span>
+                  )}
                   {multiple && isSelected && (
                     <Check className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
                   )}

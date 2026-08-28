@@ -412,7 +412,26 @@ describe("UserList", () => {
     await user.click(unitItem);
 
     await waitFor(() => {
-      expect(screen.getByTestId("location-search").textContent).toContain("unit=unit_02");
+      expect(screen.getByTestId("location-search").textContent).toContain("unit_id=unit_02");
     });
+  });
+
+  it("selecting a joined-year bound updates the URL and narrows the list", async () => {
+    const user = userEvent.setup();
+    renderUserList();
+    await screen.findByText("User Directory");
+    await waitFor(() => expect(screen.getByText("Jane Doe")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /joined year: all/i }));
+    await user.click(await screen.findByRole("menuitem", { name: "From 2023" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("location-search").textContent).toContain("joined_year=2023..");
+    });
+    // Jane joined 2023 and stays; the 2022 issuer drops out.
+    await waitFor(() => {
+      expect(screen.queryByText("Default Issuer")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Jane Doe")).toBeInTheDocument();
   });
 });

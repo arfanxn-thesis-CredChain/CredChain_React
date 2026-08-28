@@ -1,5 +1,5 @@
 import { flattenUnitTree } from "@shared/lib/units";
-import { useUserUnits } from "../api/useUserUnits";
+import { useUserUnits } from "@shared/api/useUserUnits";
 import { CredentialFilterMenu } from "./CredentialFilterMenu";
 
 interface HolderUnitFilterMenuProps {

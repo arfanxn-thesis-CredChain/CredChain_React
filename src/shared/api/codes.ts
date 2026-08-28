@@ -95,6 +95,7 @@ export const CODE_TO_MESSAGE_KEY: Record<number, string> = {
   301003: "success_user_unit_destroy",
   301040: "error_user_unit_not_found",
   301041: "error_user_unit_parent_invalid",
+  301042: "error_user_unit_parent_inactive",
 
   // Credential (40)
   400100: "credential.fetch.success",
@@ -114,6 +115,8 @@ export const CODE_TO_MESSAGE_KEY: Record<number, string> = {
   400249: "error_credential_issue_organization_not_found",
   400250: "error_credential_issue_number_duplicate",
   400251: "error_credential_issue_competency_not_found",
+  400252: "error_credential_issue_organization_inactive",
+  400253: "error_credential_issue_competency_inactive",
 
   400300: "credential.revoke.success",
   400340: "credential.revoke.failed",

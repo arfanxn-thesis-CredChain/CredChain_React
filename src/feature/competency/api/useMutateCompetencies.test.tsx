@@ -64,7 +64,7 @@ describe("useMutateCompetencies", () => {
     mockNotify.info.mockClear();
   });
 
-  it("store POSTs /competencies with { name }, toasts success and invalidates", async () => {
+  it("store POSTs /competencies with { name, active }, toasts success and invalidates", async () => {
     const recorded: { method?: string; url?: string; body?: unknown }[] = [];
     server.use(
       http.post("*/api/competencies", async ({ request }) => {
@@ -85,7 +85,7 @@ describe("useMutateCompetencies", () => {
     await expectInvalidated();
   });
 
-  it("update PUTs /competencies/:id with { name }, toasts success and invalidates", async () => {
+  it("update PUTs /competencies/:id with { name, active }, toasts success and invalidates", async () => {
     const recorded: { method?: string; url?: string; body?: unknown }[] = [];
     server.use(
       http.put("*/api/competencies/:id", async ({ request, params }) => {
@@ -97,11 +97,11 @@ describe("useMutateCompetencies", () => {
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useUpdateCompetency(), { wrapper });
 
-    await result.current.mutateAsync({ id: "comp_01", name: "Renamed" });
+    await result.current.mutateAsync({ id: "comp_01", name: "Renamed", active: false });
 
     expect(recorded[0].method).toBe("PUT");
     expect(recorded[0].url).toContain("/api/competencies/comp_01");
-    expect(recorded[0].body).toEqual({ name: "Renamed" });
+    expect(recorded[0].body).toEqual({ name: "Renamed", active: false });
     expect(mockNotify.success).toHaveBeenCalledWith("success_competency_update");
     await expectInvalidated();
   });
@@ -137,7 +137,7 @@ describe("useMutateCompetencies", () => {
     const { result } = renderHook(() => useUpdateCompetency(), { wrapper });
 
     await expect(() =>
-      result.current.mutateAsync({ id: "comp_01", name: "Renamed" }),
+      result.current.mutateAsync({ id: "comp_01", name: "Renamed", active: false }),
     ).rejects.toBeDefined();
 
     await waitFor(() => {

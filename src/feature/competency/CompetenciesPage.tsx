@@ -6,7 +6,7 @@ import { useDestroyCompetency, useUpdateCompetency } from "./api/useMutateCompet
 import { BackLink } from "@shared/components/BackLink";
 import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 import { PageHeader } from "@shared/components/PageHeader";
-import { ResourceAdminEditForm } from "@shared/components/admin/ResourceAdminEditForm";
+import { ActiveSwitch, ResourceAdminEditForm } from "@shared/components/admin/ResourceAdminEditForm";
 import { ResourceAdminTable } from "@shared/components/admin/ResourceAdminTable";
 import { ResourceAdminToolbar } from "@shared/components/admin/ResourceAdminToolbar";
 import { useDebouncedSearchParam } from "@shared/hooks/useSearchParam";
@@ -34,6 +34,10 @@ export function CompetenciesPage() {
   const [editing, setEditing] = useState<ReferenceRow | null>(null);
 
   const rows = list.items;
+
+  const handleToggleActive = (row: ReferenceRow) => {
+    update.mutate({ id: row.id, name: row.name, active: row.active === false ? true : false });
+  };
 
   const handleDestroy = async (row: ReferenceRow) => {
     const ok = await confirm({
@@ -66,10 +70,20 @@ export function CompetenciesPage() {
           isError={list.isError}
           searchActive={search.length > 0}
           nameLabel={t("competency.column.name")}
+          activeLabel={t("competency.column.active")}
           actionsLabel={t("competency.actionsMenu")}
           emptyIcon={GraduationCap}
           emptyTitle={t("competency.empty.title")}
           emptyDescription={t("competency.empty.description")}
+          renderActive={(row) => (
+            <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
+              <ActiveSwitch
+                checked={row.active !== false}
+                label={t("competency.activeToggle", { name: row.name })}
+                onCheckedChange={() => handleToggleActive(row)}
+              />
+            </RoleGate>
+          )}
           actions={(row) => (
             <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
               <DropdownMenu>
@@ -117,10 +131,13 @@ export function CompetenciesPage() {
           {editing && (
             <ResourceAdminEditForm
               name={editing.name}
+              active={editing.active !== false}
+              showActive
               nameLabel={t("competency.column.name")}
+              activeLabel={t("competency.column.active")}
               isPending={update.isPending}
               onSubmit={(values) => {
-                update.mutate({ id: editing.id, name: values.name });
+                update.mutate({ id: editing.id, name: values.name, active: values.active });
                 setEditing(null);
               }}
               onCancel={() => setEditing(null)}

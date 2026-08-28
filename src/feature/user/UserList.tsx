@@ -51,7 +51,8 @@ import { SortMenu } from "./components/SortMenu";
 import { RoleFilterMenu } from "./components/RoleFilterMenu";
 import { StatusFilterMenu } from "./components/StatusFilterMenu";
 import { HolderUnitFilterMenu } from "./components/HolderUnitFilterMenu";
-import { useUserUnits } from "./api/useUserUnits";
+import { JoinedYearFilterMenu } from "./components/JoinedYearFilterMenu";
+import { useUserUnits } from "@shared/api/useUserUnits";
 import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 import { UserAvatar } from "@shared/components/UserAvatar";
 import { UserRoleBadge } from "@shared/components/UserRoleBadge";
@@ -61,7 +62,7 @@ import { relativeTime, truncateAddress } from "@shared/lib/format";
 
 export function UserList() {
   const { t, i18n } = useTranslation();
-  const { params, setParam } = useUserListParams();
+  const { params, setParam, setYearRange } = useUserListParams();
   const [inputValue, setInputValue] = useState(params.search);
   const searchTypedRef = useRef<string | null>(null);
   const debouncedSearch = useDebouncedValue(inputValue, 300);
@@ -87,9 +88,12 @@ export function UserList() {
   const sortArray = params.sort ? [params.sort] : ["-updated_at"];
   const filterArray: string[] = [];
   if (params.role !== "all") filterArray.push(`role=${params.role}`);
-  if (params.unit) filterArray.push(`unit_id=${params.unit}`);
+  if (params.unit_id) filterArray.push(`unit_id=${params.unit_id}`);
   if (params.status === "deleted_at!_") filterArray.push("deleted_at!_");
   else if (params.status === "deleted_at_") filterArray.push("deleted_at_");
+  // Two bounds rather than `..` BETWEEN, which cannot express a one-sided range.
+  if (params.yearFrom) filterArray.push(`joined_year>=${params.yearFrom}`);
+  if (params.yearTo) filterArray.push(`joined_year<=${params.yearTo}`);
 
   const {
     items: users,
@@ -163,7 +167,12 @@ export function UserList() {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <HolderUnitFilterMenu value={params.unit} onChange={(v) => setParam("unit", v)} />
+              <HolderUnitFilterMenu value={params.unit_id} onChange={(v) => setParam("unit_id", v)} />
+              <JoinedYearFilterMenu
+                from={params.yearFrom}
+                to={params.yearTo}
+                onChange={({ from, to }) => setYearRange(from, to)}
+              />
               <RoleFilterMenu value={params.role} onChange={(r) => setParam("role", r)} />
               <StatusFilterMenu value={params.status} onChange={(v) => setParam("status", v)} />
               <SortMenu
@@ -255,7 +264,7 @@ export function UserList() {
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setParam("unit", user.unit_id ?? "");
+                                        setParam("unit_id", user.unit_id ?? "");
                                       }}
                                       aria-label={t("user.filter.unit")}
                                       title={t("user.filter.unit")}

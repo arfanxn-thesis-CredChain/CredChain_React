@@ -11,8 +11,8 @@ import { server } from "@/test/msw/server";
 import { IssuerOrganizationsPage } from "./IssuerOrganizationsPage";
 
 const organizations = [
-  { id: "iorg_01", name: "University of Indonesia" },
-  { id: "iorg_02", name: "Tech Academy" },
+  { id: "iorg_01", name: "University of Indonesia", active: true },
+  { id: "iorg_02", name: "Tech Academy", active: false },
 ];
 
 const mockNotify = vi.hoisted(() => ({
@@ -123,6 +123,30 @@ describe("IssuerOrganizationsPage", () => {
         url: expect.stringContaining("/api/issuer-organizations/iorg_01") as unknown as string,
       });
     });
+  });
+
+  it("PUTs the flipped active flag when the row switch is toggled", async () => {
+    let recordedBody: unknown;
+    server.use(
+      http.get("*/api/issuer-organizations", () => paginated(organizations)),
+      http.put("*/api/issuer-organizations/:id", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({ code: 400902, message: "ok", data: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole("switch", {
+        name: "Toggle active state for University of Indonesia",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(recordedBody).toEqual({ name: "University of Indonesia", active: false }),
+    );
   });
 
   it("toasts the destroy-in-use error key on a guarded destroy", async () => {

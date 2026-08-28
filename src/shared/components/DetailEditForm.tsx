@@ -14,7 +14,6 @@ export interface DetailField {
   editControl: ReactNode;
   error?: string;
   fullWidth?: boolean;
-  selfLabeled?: boolean;
 }
 
 interface DetailEditFormProps {
@@ -91,20 +90,9 @@ export function DetailEditForm({
           <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             {fields.map((field) => (
               <div key={field.key} className={cn(field.fullWidth && "sm:col-span-2")}>
-                {field.selfLabeled ? (
-                  <>
-                    {field.editControl}
-                    {field.error && (
-                      <p className="mt-1 text-xs text-error" role="alert">
-                        {t(field.error)}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <FormField label={field.label} error={field.error}>
-                    {field.editControl}
-                  </FormField>
-                )}
+                <FormField label={field.label} error={field.error}>
+                  {field.editControl}
+                </FormField>
               </div>
             ))}
           </div>

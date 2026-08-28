@@ -3,7 +3,6 @@ import { useFieldArray, type Control, type FieldValues } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Button } from "@ui/button";
 import { Input } from "@ui/input";
-import { Label } from "@ui/label";
 
 function getNestedError(
   root: Record<string, unknown>,
@@ -39,7 +38,7 @@ export function MetaEditor<T extends FieldValues>({
 
   return (
     <div className="space-y-3">
-      <Label>{t("meta.label")}</Label>
+      {/* No self-label: every call site already labels this section. */}
       <div className="space-y-2">
         {fields.length === 0 && <p className="text-xs text-gray-400 italic">{t("meta.empty")}</p>}
         {fields.map((field, idx) => {

@@ -3,7 +3,7 @@ import { BackLink } from "@shared/components/BackLink";
 import { PageHeader } from "@shared/components/PageHeader";
 import { useDebouncedSearchParam } from "@shared/hooks/useSearchParam";
 import { Card } from "@ui/card";
-import { useUserUnits } from "./api/useUserUnits";
+import { useUserUnits } from "@shared/api/useUserUnits";
 import { UserUnitTree } from "./components/UserUnitTree";
 
 export function UserUnitsPage() {

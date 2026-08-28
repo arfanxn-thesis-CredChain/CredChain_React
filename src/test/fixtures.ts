@@ -96,8 +96,8 @@ export const mockUsers: UserDTO[] = [
 ];
 
 export const mockUserUnits = [
-  { id: "unit_01", parent_id: null, name: "Faculty of Engineering" },
-  { id: "unit_02", parent_id: "unit_01", name: "Computer Science Department" },
+  { id: "unit_01", parent_id: null, name: "Faculty of Engineering", active: true },
+  { id: "unit_02", parent_id: "unit_01", name: "Computer Science Department", active: true },
 ];
 
 export const mockCredentials: CredentialDTO[] = [
