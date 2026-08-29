@@ -159,6 +159,10 @@ export const userDetailEditSchema = z.object({
   birth_date: nullableOptionalEmptyToUndefined(birthDateSchema),
   gender: genderSchema.nullable().optional(),
   meta_entries: metaEntriesSchema.optional(),
+  email: z.string().max(256, "zod.user.emailTooLong").email("zod.user.emailInvalid").optional(),
+  role: z
+    .enum([Role.HOLDER, Role.ISSUER, Role.ADMIN], { message: "zod.user.roleRequired" })
+    .optional(),
 });
 
 export type UserDetailEditInput = z.infer<typeof userDetailEditSchema>;

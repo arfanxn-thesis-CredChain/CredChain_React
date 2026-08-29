@@ -1,28 +1,23 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
-  Calendar,
   CalendarClock,
-  ChevronDown,
   Clock,
   FileBadge,
-  Hash,
-  Mail,
+  RotateCcw,
   Search,
   Trash2,
-  Users,
   Wallet,
 } from "lucide-react";
 import { useUser } from "./api/useUser";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { api } from "@shared/api/client";
-import type { CredentialDTO } from "@shared/types/api";
+import type { CredentialDTO, HolderUnitDTO, UserDTO } from "@shared/types/api";
 import { BackLink } from "@shared/components/BackLink";
 import { PageHeader } from "@shared/components/PageHeader";
 import { EmptyState } from "@shared/components/EmptyState";
@@ -35,23 +30,28 @@ import { UserAvatar } from "@shared/components/UserAvatar";
 import { UserRoleBadge } from "@shared/components/UserRoleBadge";
 import { UserStatusBadge } from "@shared/components/UserStatusBadge";
 import { EyebrowLabel } from "@shared/components/EyebrowLabel";
+import { UnitPicker } from "@shared/components/UnitPicker";
 import { Card } from "@ui/card";
 import { Input } from "@ui/input";
+import { Button } from "@ui/button";
 import { Skeleton } from "@ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@ui/select";
+import { useConfirm } from "@ui/confirm-dialog";
 import { CredentialCard } from "@shared/components/CredentialCard";
 import { CredentialStatusFilterMenu } from "@shared/components/CredentialStatusFilterMenu";
 import type { CredentialStatusFilter } from "@shared/components/CredentialStatusFilterMenu";
 import { CredentialSortMenu } from "@shared/components/CredentialSortMenu";
-import { Role, ROLE_LEVEL, canAccessAny } from "@shared/auth/role";
+import { Role, ROLE_LEVEL, canAccessAny, canEditUser, canDeleteUser } from "@shared/auth/role";
 import { formatDate, formatDateTime } from "@shared/lib/format";
-import { cn } from "@shared/lib/cn";
 import { splitMeta, mergeMeta } from "@shared/lib/meta";
+import { pathSegments, UNIT_PATH_SEPARATOR } from "@shared/lib/units";
 import { MetaEditor } from "@shared/components/MetaEditor";
 import { DetailEditForm } from "@shared/components/DetailEditForm";
 import type { DetailField } from "@shared/components/DetailEditForm";
 import { useUpdateUsers } from "./api/useUpdateUsers";
 import { useUpdateUserRoles } from "./api/useUpdateUserRoles";
+import { useDeleteUsers } from "./api/useDeleteUsers";
+import { useRestoreUsers } from "./api/useRestoreUsers";
 import { useUserUnits } from "@shared/api/useUserUnits";
 import {
   userDetailEditSchema,
@@ -59,7 +59,6 @@ import {
   type UserUpdateInput,
 } from "./schemas/user";
 import { useStore } from "@app/store";
-import { userKeys } from "./api/keys";
 
 const CRED_SORT_OPTIONS = [
   {
@@ -76,16 +75,39 @@ const CRED_SORT_OPTIONS = [
 
 const ROLE_OPTIONS: Role[] = [Role.HOLDER, Role.ISSUER, Role.ADMIN];
 
+function buildDefaults(user: UserDTO): UserDetailEditInput {
+  const { entries } = splitMeta(user.meta);
+  return {
+    name: user.name ?? "",
+    number: user.number ?? undefined,
+    unit_id: user.unit_id ?? undefined,
+    joined_year: user.joined_year ?? undefined,
+    birth_date: user.birth_date ? user.birth_date.slice(0, 10) : undefined,
+    gender: user.gender ?? null,
+    meta_entries: entries,
+    email: user.email ?? undefined,
+    role:
+      user.role === Role.HOLDER || user.role === Role.ISSUER || user.role === Role.ADMIN
+        ? user.role
+        : undefined,
+  };
+}
+
+function unitPathLabel(unitId: string | null | undefined, byId: Map<string, HolderUnitDTO>): string {
+  if (!unitId) return "—";
+  const unit = byId.get(unitId);
+  if (!unit) return unitId;
+  return pathSegments(unit, byId).join(` ${UNIT_PATH_SEPARATOR} `);
+}
+
 export function UserDetail() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { data: user, isLoading, isError } = useUser(id ?? "");
-  const queryClient = useQueryClient();
   const currentUser = useStore((s) => s.user);
 
   // Credential section state
   const [searchParams, setSearchParams] = useSearchParams();
-  const [metaOpen, setMetaOpen] = useState(false);
 
   const credStatus: CredentialStatusFilter =
     (searchParams.get("credential_status") as CredentialStatusFilter) ?? "all";
@@ -191,10 +213,20 @@ export function UserDetail() {
 
   // ── Edit profile (DetailEditForm) ──────────────────────────────────────
   const update = useUpdateUsers();
+  const roleChange = useUpdateUserRoles();
+  const deleteUsers = useDeleteUsers();
+  const restoreUsers = useRestoreUsers();
+  const { confirm, dialog } = useConfirm();
   const { data: units } = useUserUnits();
-  const canEditProfile = user
-    ? canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN])
-    : false;
+  const unitsById = useMemo(
+    () => new Map((units ?? []).map((u) => [u.id, u])),
+    [units],
+  );
+
+  const isSelf = !!user && user.id === currentUser?.id;
+  const canEdit = !!user && canEditUser(currentUser, user) && !user.deleted_at;
+  const canDelete = !!user && !!currentUser && canDeleteUser(currentUser, user) && !user.deleted_at;
+  const canRestore = !!user?.deleted_at && canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN]);
 
   const editForm = useForm<UserDetailEditInput>({
     resolver: zodResolver(userDetailEditSchema),
@@ -207,25 +239,17 @@ export function UserDetail() {
       birth_date: undefined,
       gender: null,
       meta_entries: [],
+      email: undefined,
+      role: undefined,
     },
   });
 
   const editUnitId = useWatch({ control: editForm.control, name: "unit_id" });
   const editGender = useWatch({ control: editForm.control, name: "gender" });
+  const editRole = useWatch({ control: editForm.control, name: "role" });
 
   useEffect(() => {
-    if (user) {
-      const { entries } = splitMeta(user.meta);
-      editForm.reset({
-        name: user.name ?? "",
-        number: user.number ?? undefined,
-        unit_id: user.unit_id ?? undefined,
-        joined_year: user.joined_year ?? undefined,
-        birth_date: user.birth_date ? user.birth_date.slice(0, 10) : undefined,
-        gender: user.gender ?? null,
-        meta_entries: entries,
-      });
-    }
+    if (user) editForm.reset(buildDefaults(user));
   }, [user, editForm]);
 
   const handleSave = async (): Promise<boolean> => {
@@ -264,12 +288,33 @@ export function UserDetail() {
       payload.gender = data.gender ?? null;
     }
     if (metaChanged) payload.meta = mergedMeta;
+    // Email edit is unreachable for self (locked field), but this stays as a
+    // belt-and-braces guard right at the 403 boundary (user_policy.go:69-72).
+    if (data.email && data.email !== user.email && !isSelf) {
+      payload.email = data.email;
+    }
 
-    if (Object.keys(payload).length <= 1) return true;
+    const profileChanged = Object.keys(payload).length > 1;
+    const roleChanged = !!data.role && data.role !== user.role;
+    if (!profileChanged && !roleChanged) return true;
+
+    if (roleChanged) {
+      const confirmed = await confirm({
+        title: t("user.role.confirm.title", { role: t(`user.edit.role.${data.role}`) }),
+        description: t("user.role.confirm.body"),
+        confirmLabel: t("user.role.confirm.action"),
+        cancelLabel: t("common.cancel"),
+      });
+      if (!confirmed) return false;
+    }
 
     try {
-      await update.mutateAsync({ users: [payload] });
-      void queryClient.invalidateQueries({ queryKey: userKeys.all() });
+      if (profileChanged) await update.mutateAsync({ users: [payload] });
+      if (roleChanged) {
+        await roleChange.mutateAsync({
+          user_roles: [{ user_id: user.id, role: data.role as Role }],
+        });
+      }
       return true;
     } catch {
       return false;
@@ -277,21 +322,31 @@ export function UserDetail() {
   };
 
   const handleCancelEdit = () => {
-    if (user) {
-      const { entries } = splitMeta(user.meta);
-      editForm.reset({
-        name: user.name ?? "",
-        number: user.number ?? undefined,
-        unit_id: user.unit_id ?? undefined,
-        joined_year: user.joined_year ?? undefined,
-        birth_date: user.birth_date ? user.birth_date.slice(0, 10) : undefined,
-        gender: user.gender ?? null,
-        meta_entries: entries,
-      });
-    }
+    if (user) editForm.reset(buildDefaults(user));
   };
 
-  const roleChange = useUpdateUserRoles();
+  const handleDelete = async () => {
+    if (!user) return;
+    const confirmed = await confirm({
+      title: t("user.delete.confirm.title", { name: user.name ?? user.email }),
+      description: t("user.delete.confirm.body"),
+      confirmLabel: t("user.delete.confirm.action"),
+      cancelLabel: t("common.cancel"),
+      tone: "destructive",
+    });
+    if (confirmed) deleteUsers.mutate([user.id]);
+  };
+
+  const handleRestore = async () => {
+    if (!user) return;
+    const confirmed = await confirm({
+      title: t("user.restore.confirm.title", { name: user.name ?? user.email }),
+      description: t("user.restore.confirm.body"),
+      confirmLabel: t("user.restore.confirm.action"),
+      cancelLabel: t("common.cancel"),
+    });
+    if (confirmed) restoreUsers.mutate([user.id]);
+  };
 
   const editFields: DetailField[] = user
     ? [
@@ -305,6 +360,20 @@ export function UserDetail() {
           error: editForm.formState.errors.name?.message,
         },
         {
+          key: "email",
+          label: t("user.detail.email"),
+          readValue: user.email,
+          editControl: (
+            <Input
+              type="email"
+              aria-label={t("user.detail.email")}
+              {...editForm.register("email")}
+            />
+          ),
+          error: editForm.formState.errors.email?.message,
+          lockedReason: isSelf ? t("user.edit.superAdmin.emailLocked") : undefined,
+        },
+        {
           key: "number",
           label: t("user.edit.numberId"),
           readValue: user.number ?? "—",
@@ -316,28 +385,15 @@ export function UserDetail() {
         {
           key: "unit_id",
           label: t("user.field.unit"),
-          readValue: units?.find((u) => u.id === user.unit_id)?.name ?? user.unit_id ?? "—",
+          readValue: unitPathLabel(user.unit_id, unitsById),
           editControl: (
-            <Select
-              value={editUnitId ?? "__none__"}
-              onValueChange={(value) =>
-                editForm.setValue("unit_id", value === "__none__" ? null : value, {
-                  shouldValidate: true,
-                })
+            <UnitPicker
+              value={editUnitId}
+              onChange={(value) =>
+                editForm.setValue("unit_id", value ?? null, { shouldValidate: true })
               }
-            >
-              <SelectTrigger aria-label={t("user.field.unit")}>
-                <SelectValue placeholder={t("common.notSet")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">{t("common.notSet")}</SelectItem>
-                {(units ?? []).map((unit) => (
-                  <SelectItem key={unit.id} value={unit.id}>
-                    {unit.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              label={t("user.field.unit")}
+            />
           ),
           error: editForm.formState.errors.unit_id?.message,
         },
@@ -397,6 +453,39 @@ export function UserDetail() {
           error: editForm.formState.errors.gender?.message,
         },
         {
+          key: "role",
+          label: t("user.edit.role"),
+          readValue: <UserRoleBadge role={user.role} />,
+          editControl: (
+            <Select
+              value={editRole ?? "__none__"}
+              onValueChange={(value) => {
+                if (ROLE_OPTIONS.includes(value as Role)) {
+                  editForm.setValue("role", value as UserDetailEditInput["role"], {
+                    shouldValidate: true,
+                  });
+                }
+              }}
+            >
+              <SelectTrigger aria-label={t("user.edit.role")}>
+                <SelectValue placeholder={t("user.edit.role.placeholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {t(`user.edit.role.${role}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ),
+          error: editForm.formState.errors.role?.message,
+          lockedReason:
+            isSelf || user.role === Role.SUPER_ADMIN
+              ? t("user.edit.superAdmin.roleLocked")
+              : undefined,
+        },
+        {
           key: "meta_entries",
           label: t("meta.label"),
           readValue:
@@ -410,7 +499,7 @@ export function UserDetail() {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <BackLink />
         <PageHeader title={t("user.detail.title")} />
         <EmptyState
@@ -423,7 +512,7 @@ export function UserDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <BackLink />
       <PageHeader title={user?.name ?? t("user.detail.title")} />
 
@@ -447,141 +536,103 @@ export function UserDetail() {
           </div>
         </Card>
       ) : (
-        <Card className="p-6 sm:p-8">
-          {/* Header: avatar + name + badges */}
-          <div className="mb-6 flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <UserAvatar user={user} size="xl" />
-              <div>
-                <h3 className="font-display text-xl font-bold text-navy">
-                  {user.name ?? t("user.detail.unnamed")}
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">{user.email}</p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex items-center gap-2">
-                <UserRoleBadge role={user.role} />
-                {canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN]) &&
-                  user.id !== currentUser?.id &&
-                  !user.deleted_at && (
-                    <Select
-                      value={user.role}
-                      onValueChange={(value) => {
-                        if (ROLE_OPTIONS.includes(value as Role)) {
-                          roleChange.mutate({
-                            user_roles: [{ user_id: user.id, role: value as Role }],
-                          });
-                        }
-                      }}
-                    >
-                      <SelectTrigger
-                        aria-label={t("user.edit.role")}
-                        className="h-7 w-auto px-2 py-1 text-xs"
-                      >
-                        <SelectValue placeholder={t("user.edit.role.placeholder")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLE_OPTIONS.map((role) => (
-                          <SelectItem key={role} value={role}>
-                            {t(`user.edit.role.${role}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-              </div>
-              <UserStatusBadge deletedAt={user.deleted_at} />
-            </div>
-          </div>
-
-          <hr className="my-6 border-gray-50" />
-
-          <DetailEditForm
-            fields={editFields}
-            canEdit={canEditProfile}
-            onSave={handleSave}
-            onCancel={handleCancelEdit}
-            isSaving={update.isPending}
-            className="mt-2"
-          />
-
-          <hr className="my-6 border-gray-50" />
-
-          {/* Attribute grid */}
-          <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <DetailRow icon={Hash} label={t("user.detail.number")} value={user.number ?? "—"} />
-            <DetailRow icon={Mail} label={t("user.detail.email")} value={user.email} />
-            <DetailRow
-              icon={CalendarClock}
-              label={t("user.field.joinedYear")}
-              value={user.joined_year ?? "—"}
-            />
-            <div>
-              <dt className="mb-1 flex items-center gap-1.5 text-xs font-bold tracking-wider text-gray-400 uppercase">
-                <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
-                {t("user.detail.walletAddress")}
-              </dt>
-              <dd className="text-sm break-all text-navy">
-                <MonoId value={user.wallet_address} mode="address" className="text-sm text-navy" />
-                <CopyInlineButton
-                  value={user.wallet_address}
-                  ariaLabel="Copy wallet address"
-                  className="ml-1 shrink-0"
-                />
-              </dd>
-            </div>
-            <DetailRow
-              icon={Users}
-              label={t("user.field.gender")}
-              value={user.gender ? t(`user.field.gender.${user.gender}`) : "—"}
-            />
-            <DetailRow
-              icon={Calendar}
-              label={t("user.detail.birthDate")}
-              value={user.birth_date ? formatDate(user.birth_date) : "—"}
-            />
-            <DetailRow
-              icon={Clock}
-              label={t("user.detail.created")}
-              value={formatDateTime(user.created_at)}
-            />
-            <DetailRow
-              icon={CalendarClock}
-              label={t("user.detail.updated")}
-              value={formatDateTime(user.updated_at)}
-            />
-            {user.deleted_at && (
-              <DetailRow
-                icon={Trash2}
-                label={t("user.detail.deleted")}
-                value={formatDateTime(user.deleted_at)}
-                tone="error"
-              />
-            )}
-          </dl>
-
-          {/* Metadata (collapsible) */}
-          {user.meta && Object.keys(user.meta).length > 0 && (
-            <div className="mt-6 border-t border-gray-100 pt-6">
-              <button
-                type="button"
-                onClick={() => setMetaOpen(!metaOpen)}
-                className="flex items-center gap-1.5 py-2 text-sm font-medium text-gray-500 hover:text-navy"
-              >
-                {t("user.detail.metadata")}
-                <ChevronDown
-                  className={cn("h-4 w-4 transition-transform", metaOpen && "rotate-180")}
-                />
-              </button>
-              {metaOpen && (
-                <div className="mt-4 rounded-xl bg-gray-50 p-4">
-                  <MetaDisplay meta={user.meta} />
+        <>
+          <Card className="p-6 sm:p-8">
+            {/* Header: avatar + name + badges + actions */}
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <UserAvatar user={user} size="xl" />
+                <div>
+                  <h3 className="font-display text-xl font-bold text-navy">
+                    {user.name ?? t("user.detail.unnamed")}
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">{user.email}</p>
                 </div>
-              )}
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2">
+                  <UserRoleBadge role={user.role} />
+                  <UserStatusBadge deletedAt={user.deleted_at} />
+                </div>
+                {(canDelete || canRestore) && (
+                  <div className="flex items-center gap-2">
+                    {canDelete && (
+                      <Button variant="destructive" size="sm" onClick={() => void handleDelete()}>
+                        <Trash2 className="h-4 w-4" />
+                        {t("user.actions.delete")}
+                      </Button>
+                    )}
+                    {canRestore && (
+                      <Button variant="outline" size="sm" onClick={() => void handleRestore()}>
+                        <RotateCcw className="h-4 w-4" />
+                        {t("user.actions.restore")}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </Card>
+
+            <hr className="my-6 border-gray-50" />
+
+            <DetailEditForm
+              title={t("user.detail.identity")}
+              fields={editFields}
+              canEdit={canEdit}
+              editDisabledReason={
+                user.deleted_at
+                  ? t("user.edit.trashed.body", { name: user.name ?? user.email })
+                  : undefined
+              }
+              onSave={handleSave}
+              onCancel={handleCancelEdit}
+              isSaving={update.isPending || roleChange.isPending}
+              className="mt-2"
+            />
+          </Card>
+
+          <Card className="p-6 sm:p-8">
+            <EyebrowLabel className="mb-4">{t("user.detail.audit")}</EyebrowLabel>
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+              <div>
+                <dt className="mb-1 flex items-center gap-1.5 text-xs font-bold tracking-wider text-gray-400 uppercase">
+                  <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("user.detail.walletAddress")}
+                </dt>
+                <dd className="text-sm break-all text-navy">
+                  <MonoId
+                    value={user.wallet_address}
+                    mode="address"
+                    className="text-sm text-navy"
+                  />
+                  <CopyInlineButton
+                    value={user.wallet_address}
+                    ariaLabel="Copy wallet address"
+                    className="ml-1 shrink-0"
+                  />
+                </dd>
+              </div>
+              <DetailRow
+                icon={Clock}
+                label={t("user.detail.created")}
+                value={formatDateTime(user.created_at)}
+              />
+              <DetailRow
+                icon={CalendarClock}
+                label={t("user.detail.updated")}
+                value={formatDateTime(user.updated_at)}
+              />
+              {user.deleted_at && (
+                <DetailRow
+                  icon={Trash2}
+                  label={t("user.detail.deleted")}
+                  value={formatDateTime(user.deleted_at)}
+                  tone="error"
+                />
+              )}
+            </dl>
+          </Card>
+        </>
       )}
 
       {/* Credentials section */}
@@ -670,6 +721,8 @@ export function UserDetail() {
           />
         )}
       </Card>
+
+      {dialog}
     </div>
   );
 }

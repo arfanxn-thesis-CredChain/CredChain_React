@@ -699,6 +699,33 @@ describe("userDetailEditSchema (D2)", () => {
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.joined_year).toBeNull();
   });
+
+  it("accepts a valid email", () => {
+    const result = userDetailEditSchema.safeParse({ email: "jane@credchain.demo" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid email", () => {
+    const result = userDetailEditSchema.safeParse({ email: "not-an-email" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.user.emailInvalid");
+    }
+  });
+
+  it("accepts holder/issuer/admin roles", () => {
+    for (const role of [Role.HOLDER, Role.ISSUER, Role.ADMIN]) {
+      expect(userDetailEditSchema.safeParse({ role }).success).toBe(true);
+    }
+  });
+
+  it("rejects super_admin as a role", () => {
+    const result = userDetailEditSchema.safeParse({ role: Role.SUPER_ADMIN });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.user.roleRequired");
+    }
+  });
 });
 
 describe("userBatchDeleteSchema", () => {

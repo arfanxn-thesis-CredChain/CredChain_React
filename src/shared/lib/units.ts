@@ -60,7 +60,7 @@ export type UnitRef =
   | { ok: false; reason: "ambiguous"; candidates: string[] };
 
 /** Root-first ancestor chain for one unit, e.g. ["Faculty", "Dept"]. */
-function pathSegments(unit: HolderUnitDTO, byId: Map<string, HolderUnitDTO>): string[] {
+export function pathSegments(unit: HolderUnitDTO, byId: Map<string, HolderUnitDTO>): string[] {
   const segments: string[] = [];
   const seen = new Set<string>();
   let current: HolderUnitDTO | undefined = unit;

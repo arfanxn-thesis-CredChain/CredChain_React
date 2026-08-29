@@ -14,6 +14,8 @@ export interface DetailField {
   editControl: ReactNode;
   error?: string;
   fullWidth?: boolean;
+  /** When set, edit mode shows readValue in a locked box with this hint instead of editControl. */
+  lockedReason?: string;
 }
 
 interface DetailEditFormProps {
@@ -90,8 +92,14 @@ export function DetailEditForm({
           <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             {fields.map((field) => (
               <div key={field.key} className={cn(field.fullWidth && "sm:col-span-2")}>
-                <FormField label={field.label} error={field.error}>
-                  {field.editControl}
+                <FormField label={field.label} error={field.error} hint={field.lockedReason}>
+                  {field.lockedReason ? (
+                    <div className="rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm text-navy">
+                      {field.readValue}
+                    </div>
+                  ) : (
+                    field.editControl
+                  )}
                 </FormField>
               </div>
             ))}
