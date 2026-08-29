@@ -1103,7 +1103,8 @@ The `<CopyrightFooter />` shared component (`@shared/components/CopyrightFooter.
 | Width          | Tailwind                   | Use case                          |
 | -------------- | -------------------------- | --------------------------------- |
 | Form / detail  | `max-w-md`                 | Auth card                         |
-| Detail view    | `max-w-4xl`                | UserDetail, single-record screens |
+| Detail view    | `max-w-4xl`                | Single-record screens |
+| UserDetail     | `max-w-5xl`                | Exception to Detail view: hosts a 3-col credential card grid; 4xl would cramp the cards. Was 5xl since its first commit — do not re-narrow. |
 | Settings       | `max-w-4xl`                | Settings, verification            |
 | Verification   | `max-w-3xl` to `max-w-4xl` | VerifyCredential (public)         |
 | Batch forms    | `max-w-6xl`                | UserCreate, CredentialIssue       |

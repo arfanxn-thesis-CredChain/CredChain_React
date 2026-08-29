@@ -499,7 +499,7 @@ export function UserDetail() {
 
   if (isError) {
     return (
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <BackLink />
         <PageHeader title={t("user.detail.title")} />
         <EmptyState
@@ -512,7 +512,7 @@ export function UserDetail() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <BackLink />
       <PageHeader title={user?.name ?? t("user.detail.title")} />
 
