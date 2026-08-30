@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ChevronDown, Loader2, Plus, Search } from "lucide-react";
+import { Check, ChevronDown, Loader2, Plus, Search, X } from "lucide-react";
 import { cn } from "@shared/lib/cn";
 import { notify } from "@shared/lib/notify";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
+import { useState } from "react";
 import type { ReferenceResource, ReferenceRow } from "@shared/types/api";
 import {
   useReferenceByIds,
@@ -11,7 +11,13 @@ import {
   useUpsertReference,
 } from "@shared/api/useReferenceData";
 import { FormField } from "@ui/form-field";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ui/dialog";
+import { Badge } from "@ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@ui/dropdown-menu";
 
 interface SearchableCreateSelectBaseProps {
   resource: ReferenceResource;
@@ -54,7 +60,7 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   // made before the current search — or living past page 1 — is not in the
   // loaded page, and reading names from there would render bare ids.
   const selected = useReferenceByIds(props.resource, selectedIds);
-  const selectedNames = (selected.data ?? []).map((r) => r.name);
+  const selectedRows = selected.data ?? [];
 
   const filtered = rows;
   const showCreateRow =
@@ -74,6 +80,14 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
     } else {
       props.onChange(row.id);
       close();
+    }
+  };
+
+  const deselect = (id: string) => {
+    if (multiple) {
+      props.onChange(props.value.filter((v) => v !== id));
+    } else {
+      props.onChange("");
     }
   };
 
@@ -102,44 +116,67 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   };
 
   const trigger = (
-    <button
-      type="button"
+    <div
       role="combobox"
       aria-expanded={open}
-      aria-haspopup="dialog"
-      onClick={() => setOpen(!open)}
-      disabled={props.disabled}
+      aria-label={props.label}
+      aria-invalid={props.error ? true : undefined}
+      aria-disabled={props.disabled}
+      tabIndex={props.disabled ? -1 : 0}
       className={cn(
-        "flex w-full items-center rounded-xl border px-4 py-3 text-left shadow-sm transition-all",
-        "bg-gray-50 text-sm",
-        props.disabled && "cursor-not-allowed opacity-50",
+        "flex min-h-11 w-full items-center gap-2 rounded-xl border px-4 py-2.5 text-left shadow-sm transition-all",
+        "bg-gray-50 text-sm text-navy",
+        props.disabled && "pointer-events-none cursor-not-allowed opacity-50",
         props.error
           ? "border-error"
-          : "border-gray-200 focus:border-transparent focus:bg-white focus:ring-2 focus:ring-gold focus:outline-none",
+          : "border-gray-200 focus-within:border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-gold focus:border-transparent focus:bg-white focus:ring-2 focus:ring-gold focus:outline-none",
         props.className,
       )}
     >
-      <span
-        className={cn(
-          "flex-1 truncate",
-          selectedNames.length > 0 ? "font-medium text-navy" : "text-gray-400",
-        )}
-      >
-        {selectedNames.length > 0
-          ? selectedNames.join(", ")
-          : (props.placeholder ?? t("cred.submit.searchPlaceholder"))}
-      </span>
+      {selectedRows.length === 0 ? (
+        <span className="flex-1 truncate text-gray-400">
+          {props.placeholder ?? t("cred.submit.searchPlaceholder")}
+        </span>
+      ) : !multiple ? (
+        // One value needs no chip — plain text, same as UnitPicker and the
+        // <Select> fields beside it. Chips are reserved for multi-value.
+        <span className="min-w-0 flex-1 truncate">{selectedRows[0].name}</span>
+      ) : (
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+          {selectedRows.map((row) => (
+            <Badge
+              key={row.id}
+              tone="gold"
+              className="inline-flex items-center gap-1 text-xs font-medium normal-case tracking-normal"
+            >
+              <span className="max-w-40 truncate">{row.name}</span>
+              <button
+                type="button"
+                aria-label={t("cred.submit.removeSelection", { name: row.name })}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deselect(row.id);
+                }}
+                className="rounded-full text-navy/60 hover:text-navy"
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
       <ChevronDown
         className={cn(
-          "ml-2 h-4 w-4 shrink-0 text-gray-400 transition-transform",
+          "ml-auto h-4 w-4 shrink-0 text-gray-400 transition-transform",
           open && "rotate-180",
         )}
+        aria-hidden="true"
       />
-    </button>
+    </div>
   );
 
-  const dialog = (
-    <Dialog
+  const dropdown = (
+    <DropdownMenu
       open={open}
       onOpenChange={(o) => {
         if (o) {
@@ -149,24 +186,27 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
         }
       }}
     >
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{props.label ?? t("cred.submit.searchTitle")}</DialogTitle>
-        </DialogHeader>
-
-        <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 transition-all focus-within:border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-gold">
-          <Search className="h-4 w-4 shrink-0 text-gray-400" />
+      <DropdownMenuTrigger asChild disabled={props.disabled}>
+        {trigger}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="w-(--radix-dropdown-menu-trigger-width) max-w-md p-0"
+      >
+        <div className="flex items-center gap-2 border-b border-gray-100 px-3">
+          <Search className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
           <input
             type="text"
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
             placeholder={props.placeholder ?? t("cred.submit.searchPlaceholder")}
             className="h-11 w-full bg-transparent text-sm text-navy outline-none placeholder:text-gray-400"
           />
         </div>
 
-        <div className="scrollbar-hidden max-h-72 overflow-y-auto rounded-xl border border-gray-100">
+        <div className="scrollbar-hidden max-h-72 overflow-y-auto p-1">
           {list.isLoading && (
             <div className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-gray-400">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -191,14 +231,15 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
               // it can still be removed.
               const blocked = row.active === false && !isSelected;
               return (
-                <button
+                <DropdownMenuItem
                   key={row.id}
-                  type="button"
                   disabled={blocked}
+                  // Radix closes the menu on select; multi-select must stay open
+                  // so more than one row can be toggled per visit.
+                  onSelect={(e) => multiple && e.preventDefault()}
                   onClick={() => select(row)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm text-navy transition-colors",
-                    blocked ? "cursor-not-allowed opacity-50" : "hover:bg-navy/5",
+                    "flex items-center justify-between gap-2",
                     isSelected && "bg-navy/5 font-semibold",
                   )}
                 >
@@ -208,29 +249,27 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
                       {t("cred.submit.inactive")}
                     </span>
                   )}
-                  {multiple && isSelected && (
-                    <Check className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
-                  )}
-                </button>
+                  {isSelected && <Check className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />}
+                </DropdownMenuItem>
               );
             })}
           {list.hasMore && (
-            <button
-              type="button"
+            <DropdownMenuItem
+              onSelect={(e) => e.preventDefault()}
               onClick={list.loadMore}
               disabled={list.isFetchingNextPage}
-              className="flex w-full items-center justify-center gap-2 border-t border-gray-100 px-3 py-2.5 text-sm font-medium text-gray-500 transition-colors hover:bg-navy/5"
+              className="flex items-center justify-center gap-2 border-t border-gray-100 font-medium text-gray-500"
             >
               {list.isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("common.loadMore")}
-            </button>
+            </DropdownMenuItem>
           )}
           {showCreateRow && (
-            <button
-              type="button"
+            <DropdownMenuItem
+              onSelect={(e) => multiple && e.preventDefault()}
               onClick={handleCreate}
               disabled={upsert.isPending}
-              className="flex w-full items-center gap-2 border-t border-gray-100 px-3 py-3 text-left text-sm font-medium text-navy transition-colors hover:bg-gold/10"
+              className="flex items-center gap-2 border-t border-gray-100 font-medium text-navy"
             >
               {upsert.isPending ? (
                 <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400" />
@@ -240,26 +279,18 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
               <span className="min-w-0 flex-1 truncate">
                 {t("cred.submit.create", { name: trimmed })}
               </span>
-            </button>
+            </DropdownMenuItem>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
-  if (props.label) {
-    return (
-      <FormField label={props.label} error={props.error}>
-        {trigger}
-        {dialog}
-      </FormField>
-    );
-  }
-
-  return (
-    <>
-      {trigger}
-      {dialog}
-    </>
+  return props.label ? (
+    <FormField label={props.label} error={props.error}>
+      {dropdown}
+    </FormField>
+  ) : (
+    dropdown
   );
 }

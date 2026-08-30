@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, Copy, Trash2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { SearchableCreateSelect } from "@shared/components/SearchableCreateSelec
 import { MetaEditor } from "@shared/components/MetaEditor";
 import { cn } from "@shared/lib/cn";
 import { CredentialFileInput } from "./CredentialFileInput";
+import { CredentialFileModal } from "./CredentialFileModal";
 import type { CredentialBatchSubmitInput } from "../schemas/credential";
 
 interface CredentialSubmitRowProps {
@@ -37,6 +38,9 @@ export function CredentialSubmitRow({
   const errors = form.formState.errors.credentials?.[index];
   const file = form.watch(`credentials.${index}.file`);
   const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const nameManuallyEdited = useRef(false);
+  const { onChange: rhfNameOnChange, ...nameRest } = form.register(`credentials.${index}.name`);
 
   return (
     <div className="relative flex flex-col gap-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 transition-all focus-within:border-gold/50 focus-within:bg-white sm:gap-6 sm:p-6">
@@ -68,10 +72,14 @@ export function CredentialSubmitRow({
       </div>
 
       <div className="grid w-full grid-cols-1 gap-4 pr-12 sm:gap-6 md:grid-cols-2">
-        <FormField label={t("cred.submit.field.name")} error={errorMessage(errors?.name)}>
+        <FormField label={t("cred.field.name")} error={errorMessage(errors?.name)}>
           <Input
-            placeholder={t("cred.submit.field.namePlaceholder")}
-            {...form.register(`credentials.${index}.name`)}
+            placeholder={t("cred.field.namePlaceholder")}
+            onChange={(e) => {
+              nameManuallyEdited.current = true;
+              rhfNameOnChange(e);
+            }}
+            {...nameRest}
           />
         </FormField>
 
@@ -140,9 +148,16 @@ export function CredentialSubmitRow({
           <FormField label={t("cred.field.file")} error={errorMessage(errors?.file)}>
             <CredentialFileInput
               file={file ?? null}
-              onChange={(f) =>
-                form.setValue(`credentials.${index}.file`, f, { shouldValidate: true })
-              }
+              onChange={(f) => {
+                form.setValue(`credentials.${index}.file`, f, { shouldValidate: true });
+                if (!f && !nameManuallyEdited.current) {
+                  form.setValue(`credentials.${index}.name`, "", { shouldValidate: true });
+                } else if (f && !nameManuallyEdited.current) {
+                  const stem = f.name.replace(/\.[^.]+$/, "");
+                  form.setValue(`credentials.${index}.name`, stem, { shouldValidate: true });
+                }
+              }}
+              onExpand={() => setPreviewOpen(true)}
             />
           </FormField>
         </div>
@@ -165,6 +180,9 @@ export function CredentialSubmitRow({
           </div>
         )}
       </div>
+      {file && (
+        <CredentialFileModal file={file} open={previewOpen} onClose={() => setPreviewOpen(false)} />
+      )}
     </div>
   );
 }

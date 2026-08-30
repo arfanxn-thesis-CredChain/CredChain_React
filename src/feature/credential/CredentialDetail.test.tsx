@@ -290,7 +290,7 @@ describe("CredentialDetail", () => {
     const combobox = await screen.findByRole("combobox");
     await user.click(combobox);
 
-    await user.click(await screen.findByRole("button", { name: /Machine Learning/ }));
+    await user.click(await screen.findByRole("menuitem", { name: /Machine Learning/ }));
     await user.keyboard("{Escape}");
 
     await user.click(screen.getByRole("button", { name: "Save" }));

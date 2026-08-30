@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { useState } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { i18n } from "@shared/i18n/config";
 import { server } from "@/test/msw/server";
@@ -44,7 +45,7 @@ describe("SearchableCreateSelect", () => {
       { wrapper: TestProviders },
     );
 
-    fireEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(screen.getByRole("combobox"));
     await screen.findByText("Bachelor's Degree");
     expect(screen.getByText("Professional Certificate")).toBeInTheDocument();
 
@@ -93,7 +94,7 @@ describe("SearchableCreateSelect", () => {
       { wrapper: TestProviders },
     );
 
-    fireEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(screen.getByRole("combobox"));
     await screen.findByText("Bachelor's Degree");
 
     fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
@@ -103,7 +104,7 @@ describe("SearchableCreateSelect", () => {
     // the empty result lands.
     const createRow = await screen.findByText('Create "Blockchain Architect"');
 
-    fireEvent.click(createRow);
+    await userEvent.click(createRow);
 
     await vi.waitFor(() => {
       expect(onChange).toHaveBeenCalledWith("ctype_new");
@@ -140,13 +141,13 @@ describe("SearchableCreateSelect", () => {
       { wrapper: TestProviders },
     );
 
-    fireEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(screen.getByRole("combobox"));
     await screen.findByText("Bachelor's Degree");
 
     fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
       target: { value: "zze-zz" },
     });
-    fireEvent.click(await screen.findByText('Create "zze-zz"'));
+    await userEvent.click(await screen.findByText('Create "zze-zz"'));
 
     await vi.waitFor(() => {
       expect(onChange).toHaveBeenCalledWith("ctype_01");
@@ -202,13 +203,20 @@ describe("SearchableCreateSelect", () => {
       { wrapper: TestProviders },
     );
 
-    fireEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(screen.getByRole("combobox"));
 
-    // Unselected + inactive: unpickable.
-    expect(await screen.findByRole("button", { name: /Machine Learning/ })).toBeDisabled();
+    // Unselected + inactive: unpickable. Radix disables a menu item via
+    // aria-disabled/data-disabled, not the native `disabled` attribute — it's
+    // a div, not a real form control — so assert on that instead of toBeDisabled().
+    expect(await screen.findByRole("menuitem", { name: /Machine Learning/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     // Selected + inactive: still removable, otherwise a since-retired row
     // could never be deselected while editing an old credential.
-    expect(screen.getByRole("button", { name: /Data Analysis/ })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: /Data Analysis/ })).not.toHaveAttribute(
+      "aria-disabled",
+    );
     expect(screen.getAllByText("Inactive")).toHaveLength(2);
   });
 
@@ -229,22 +237,71 @@ describe("SearchableCreateSelect", () => {
 
     expect(screen.getByRole("combobox")).toHaveTextContent("Type to search...");
 
-    fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(await screen.findByRole("button", { name: "Machine Learning" }));
+    await userEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Machine Learning" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    // Selecting in multi-select mode must not close the panel (onSelect is
+    // prevented), so closing here is Escape, not a Dialog Close button.
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
     // Chip names come from a by-ids lookup, not the loaded page, so the label
     // fills in once that request resolves.
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toHaveTextContent("Machine Learning");
     });
 
-    fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(await screen.findByRole("button", { name: "Machine Learning" }));
+    await userEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Machine Learning" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toHaveTextContent("Type to search...");
     });
+  });
+
+  it("removes a single competency chip via its x button without opening the panel", async () => {
+    function MultiHarness() {
+      const [value, setValue] = useState<string[]>(["comp_01", "comp_02"]);
+      return (
+        <SearchableCreateSelect
+          multiple
+          resource="competencies"
+          value={value}
+          onChange={setValue}
+        />
+      );
+    }
+    server.use(
+      http.get("*/api/competencies", ({ request }) => {
+        const rows = [
+          { id: "comp_01", name: "Machine Learning" },
+          { id: "comp_02", name: "Data Analysis" },
+        ];
+        const idFilter = new URL(request.url).searchParams
+          .getAll("filters")
+          .find((f) => f.startsWith("id$"));
+        if (!idFilter) return paginated(rows);
+        const ids = idFilter.slice("id$".length).split(",");
+        return paginated(rows.filter((r) => ids.includes(r.id)));
+      }),
+    );
+
+    render(<MultiHarness />, { wrapper: TestProviders });
+
+    await screen.findByText("Machine Learning");
+    expect(screen.getByText("Data Analysis")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Machine Learning" }));
+
+    // The by-ids refetch clears selectedRows mid-flight, so assert the settled
+    // state in one waitFor rather than checking presence/absence separately.
+    await waitFor(
+      () => {
+        expect(screen.queryByText("Machine Learning")).not.toBeInTheDocument();
+        expect(screen.getByText("Data Analysis")).toBeInTheDocument();
+      },
+      { timeout: 2000 },
+    );
+    // Removing a chip must not open the search panel.
+    expect(screen.queryByPlaceholderText("Type to search...")).not.toBeInTheDocument();
   });
 });

@@ -14,10 +14,13 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-3",
+      "flex min-h-11 w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-2.5",
       "bg-gray-50 text-sm text-navy shadow-sm",
       "focus:border-transparent focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-gold",
       "transition-all data-placeholder:text-gray-400",
+      // Radix stamps data-state on the trigger, not the icon, so the chevron
+      // rotation is driven from here to match the DropdownMenu-based pickers.
+      "[&>svg]:transition-transform data-[state=open]:[&>svg]:rotate-180",
       "disabled:cursor-not-allowed disabled:opacity-60",
       "[&>span]:line-clamp-1",
       className,
@@ -84,7 +87,9 @@ const SelectContent = React.forwardRef<
         className={cn(
           "p-1",
           position === "popper" &&
-            "h-(--radix-select-trigger-height) w-full min-w-(--radix-select-trigger-width)",
+            // Width-matched to the trigger, like the DropdownMenu-based pickers,
+            // so a Gender/Role panel lines up with a Unit/Type panel beside it.
+            "w-(--radix-select-trigger-width)",
         )}
       >
         {children}
@@ -117,21 +122,19 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default items-center select-none",
-      "rounded-md py-2 pr-2 pl-8 text-sm outline-none",
+      "relative flex w-full cursor-default items-center justify-between gap-2 select-none",
+      "rounded-md px-2 py-1.5 text-sm outline-none",
       "data-highlighted:bg-navy/5 data-highlighted:text-navy",
-      "data-state-checked:font-bold",
+      "data-state-checked:bg-navy/5 data-state-checked:font-semibold",
       "data-disabled:pointer-events-none data-disabled:opacity-50",
       className,
     )}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-      <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4 text-gold" />
-      </SelectPrimitive.ItemIndicator>
-    </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemIndicator>
+      <Check className="h-4 w-4 shrink-0 text-gold" />
+    </SelectPrimitive.ItemIndicator>
   </SelectPrimitive.Item>
 ));
 SelectItem.displayName = SelectPrimitive.Item.displayName;

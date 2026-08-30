@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, beforeEach, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { AxiosResponse } from "axios";
 import { i18n } from "@shared/i18n/config";
 import { TestProviders } from "@/test/TestProviders";
@@ -21,21 +22,21 @@ function makePdf(): File {
 async function fillRequiredFields(container: HTMLElement) {
   const comboboxes = () => screen.getAllByRole("combobox");
 
-  fireEvent.click(comboboxes()[0]);
+  await userEvent.click(comboboxes()[0]);
   fireEvent.change(screen.getByPlaceholderText("Search holders..."), {
     target: { value: "Jane" },
   });
-  fireEvent.click(await screen.findByText("Jane Doe", undefined, { timeout: 2000 }));
+  await userEvent.click(await screen.findByText("Jane Doe", undefined, { timeout: 2000 }));
 
   fireEvent.change(screen.getByPlaceholderText("Credential name, or leave empty to use filename"), {
     target: { value: "Bachelor's Degree" },
   });
 
-  fireEvent.click(comboboxes()[1]);
-  fireEvent.click(await screen.findByText("Bachelor's Degree"));
+  await userEvent.click(comboboxes()[1]);
+  await userEvent.click(await screen.findByText("Bachelor's Degree"));
 
-  fireEvent.click(comboboxes()[2]);
-  fireEvent.click(await screen.findByText("University of Indonesia"));
+  await userEvent.click(comboboxes()[2]);
+  await userEvent.click(await screen.findByText("University of Indonesia"));
 
   const dateInputs = container.querySelectorAll('input[type="date"]');
   fireEvent.change(dateInputs[0], { target: { value: "2024-01-15" } });
@@ -45,9 +46,9 @@ async function fillRequiredFields(container: HTMLElement) {
     target: { value: "S-123" },
   });
 
-  fireEvent.click(comboboxes()[3]);
-  fireEvent.click(await screen.findByText("Machine Learning"));
-  fireEvent.click(await screen.findByText("Data Analysis"));
+  await userEvent.click(comboboxes()[3]);
+  await userEvent.click(await screen.findByText("Machine Learning"));
+  await userEvent.click(await screen.findByText("Data Analysis"));
   fireEvent.keyDown(document.body, { key: "Escape" });
 
   const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;

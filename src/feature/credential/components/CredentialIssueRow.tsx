@@ -68,7 +68,7 @@ export function CredentialIssueRow({
             size="icon"
             onClick={onRemove}
             className="h-8 w-8 text-gray-400 hover:bg-error/10 hover:text-error sm:h-9 sm:w-9"
-            aria-label={`Remove row ${index + 1}`}
+            aria-label={t("cred.submit.removeAriaLabel", { n: index + 1 })}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

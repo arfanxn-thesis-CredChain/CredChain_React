@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, beforeEach, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { AxiosError, AxiosResponse } from "axios";
 import { i18n } from "@shared/i18n/config";
 import { TestProviders } from "@/test/TestProviders";
@@ -20,17 +21,18 @@ function makePdf(): File {
 }
 
 async function fillRequiredFields(container: HTMLElement) {
-  fireEvent.change(screen.getByPlaceholderText("Credential name"), {
-    target: { value: "Bachelor's Degree" },
-  });
+  fireEvent.change(
+    screen.getByPlaceholderText("Credential name, or leave empty to use filename"),
+    { target: { value: "Bachelor's Degree" } },
+  );
 
   const comboboxes = screen.getAllByRole("combobox");
 
-  fireEvent.click(comboboxes[0]);
-  fireEvent.click(await screen.findByText("Bachelor's Degree"));
+  await userEvent.click(comboboxes[0]);
+  await userEvent.click(await screen.findByText("Bachelor's Degree"));
 
-  fireEvent.click(screen.getAllByRole("combobox")[1]);
-  fireEvent.click(await screen.findByText("University of Indonesia"));
+  await userEvent.click(screen.getAllByRole("combobox")[1]);
+  await userEvent.click(await screen.findByText("University of Indonesia"));
 
   const dateInputs = container.querySelectorAll('input[type="date"]');
   fireEvent.change(dateInputs[0], { target: { value: "2024-01-15" } });
@@ -70,6 +72,28 @@ describe("CredentialSubmit", () => {
     expect(formData.get("credentials[0][issuer_organization_id]")).toBe("iorg_01");
     expect(formData.get("credentials[0][issued_at]")).toBe("2024-01-15");
     expect(formData.has("credentials[0][holder_user_id]")).toBe(false);
+  });
+
+  it("auto-fills the name from the uploaded filename unless one was typed first", async () => {
+    const { container } = renderPage();
+    const nameInput = screen.getByPlaceholderText(
+      "Credential name, or leave empty to use filename",
+    ) as HTMLInputElement;
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+
+    fireEvent.change(fileInput, { target: { files: [makePdf()] } });
+    await waitFor(() => {
+      expect(nameInput.value).toBe("diploma");
+    });
+
+    // Typing a name first must suppress the auto-fill on the next upload.
+    fireEvent.change(nameInput, { target: { value: "My Custom Name" } });
+    fireEvent.change(fileInput, {
+      target: { files: [new File(["%PDF-1.4"], "other.pdf", { type: "application/pdf" })] },
+    });
+    await waitFor(() => {
+      expect(nameInput.value).toBe("My Custom Name");
+    });
   });
 
   it("shows a server error under the matching row", async () => {

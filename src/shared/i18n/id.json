@@ -1005,6 +1005,7 @@
       "submitting": "Mengajukan...",
       "addAnother": "Tambah kredensial lain",
       "removeAriaLabel": "Hapus kredensial {{n}}",
+      "removeSelection": "Hapus {{name}}",
       "duplicateAriaLabel": "Duplikat baris",
       "success": "Kredensial berhasil diajukan.",
       "submitError": "Gagal mengajukan kredensial. Silakan coba lagi.",

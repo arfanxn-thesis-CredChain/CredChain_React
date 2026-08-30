@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@shared/lib/cn";
 import { flattenUnitTree } from "@shared/lib/units";
@@ -46,6 +46,7 @@ export function UnitPicker({
   const { t } = useTranslation();
   const { data: units } = useUserUnits();
   const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
 
   const nodes = flattenUnitTree(units ?? []);
   const selected = value ? nodes.find((node) => node.id === value) : undefined;
@@ -56,7 +57,13 @@ export function UnitPicker({
   const filtered = searching ? nodes.filter((node) => node.name.toLowerCase().includes(q)) : nodes;
 
   return (
-    <DropdownMenu onOpenChange={(open) => !open && setQuery("")}>
+    <DropdownMenu
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setQuery("");
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -64,7 +71,7 @@ export function UnitPicker({
           aria-label={label}
           aria-invalid={error ? true : undefined}
           className={cn(
-            "flex w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-3",
+            "flex min-h-11 w-full items-center justify-between rounded-xl border border-gray-200 px-4 py-2.5",
             "bg-gray-50 text-left text-sm text-navy shadow-sm",
             "focus:border-transparent focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-gold",
             "transition-all",
@@ -76,15 +83,19 @@ export function UnitPicker({
           <span className={cn("line-clamp-1", !selected && "text-gray-400")}>
             {selected ? selected.name : (placeholder ?? t("common.notSet"))}
           </span>
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+          <ChevronDown
+            className={cn(
+              "ml-2 h-4 w-4 shrink-0 text-gray-400 transition-transform",
+              open && "rotate-180",
+            )}
+            aria-hidden="true"
+          />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        className="max-h-80 w-(--radix-dropdown-menu-trigger-width) overflow-y-auto"
-      >
+      <DropdownMenuContent align="start" className="w-(--radix-dropdown-menu-trigger-width) p-0">
         {showSearch && (
-          <div className="px-1 pb-1">
+          <div className="flex items-center gap-2 border-b border-gray-100 px-3">
+            <Search className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
             <input
               autoFocus
               type="text"
@@ -93,42 +104,50 @@ export function UnitPicker({
               onKeyDown={(e) => e.stopPropagation()}
               placeholder={t("filter.searchPlaceholder")}
               aria-label={t("filter.searchPlaceholder")}
-              className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-navy outline-none focus:border-gold"
+              className="h-11 w-full bg-transparent text-sm text-navy outline-none placeholder:text-gray-400"
             />
           </div>
         )}
-        <DropdownMenuItem
-          onClick={() => onChange(undefined)}
-          className="flex cursor-pointer items-center justify-between"
-        >
-          <span className={!value ? "font-bold" : ""}>{t("common.notSet")}</span>
-          {!value && <Check className="h-4 w-4 text-gold" aria-hidden="true" />}
-        </DropdownMenuItem>
-        {filtered.map((node) => {
-          const selectedOpt = node.id === value;
-          // An inactive unit cannot be assigned (rule 7) — except the one
-          // already selected, which must stay clickable so an existing
-          // assignment can still be seen and changed.
-          const blocked = !node.active && !selectedOpt;
-          return (
-            <DropdownMenuItem
-              key={node.id}
-              disabled={blocked}
-              onClick={() => onChange(node.id)}
-              className={cn(
-                "flex cursor-pointer items-center justify-between",
-                blocked && "cursor-not-allowed opacity-50",
-              )}
-              style={searching ? undefined : { paddingLeft: `${0.5 + node.depth * 0.85}rem` }}
-            >
-              <span className={selectedOpt ? "font-bold" : ""}>{node.name}</span>
-              {!node.active && (
-                <span className="shrink-0 text-xs text-gray-400">{t("cred.submit.inactive")}</span>
-              )}
-              {selectedOpt && <Check className="h-4 w-4 text-gold" aria-hidden="true" />}
-            </DropdownMenuItem>
-          );
-        })}
+        <div className="scrollbar-hidden max-h-72 overflow-y-auto p-1">
+          <DropdownMenuItem
+            onClick={() => onChange(undefined)}
+            className={cn(
+              "flex items-center justify-between gap-2",
+              !value && "bg-navy/5 font-semibold",
+            )}
+          >
+            <span className="min-w-0 flex-1 truncate">{t("common.notSet")}</span>
+            {!value && <Check className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />}
+          </DropdownMenuItem>
+          {filtered.map((node) => {
+            const selectedOpt = node.id === value;
+            // An inactive unit cannot be assigned (rule 7) — except the one
+            // already selected, which must stay clickable so an existing
+            // assignment can still be seen and changed.
+            const blocked = !node.active && !selectedOpt;
+            return (
+              <DropdownMenuItem
+                key={node.id}
+                disabled={blocked}
+                onClick={() => onChange(node.id)}
+                className={cn(
+                  "flex items-center justify-between gap-2",
+                  selectedOpt && "bg-navy/5 font-semibold",
+                  blocked && "cursor-not-allowed opacity-50",
+                )}
+                style={searching ? undefined : { paddingLeft: `${0.5 + node.depth * 0.85}rem` }}
+              >
+                <span className="min-w-0 flex-1 truncate">{node.name}</span>
+                {!node.active && (
+                  <span className="shrink-0 text-xs text-gray-400">
+                    {t("cred.submit.inactive")}
+                  </span>
+                )}
+                {selectedOpt && <Check className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />}
+              </DropdownMenuItem>
+            );
+          })}
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

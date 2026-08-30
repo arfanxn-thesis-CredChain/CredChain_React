@@ -1004,6 +1004,7 @@
       "submitting": "Submitting...",
       "addAnother": "Add another credential",
       "removeAriaLabel": "Remove credential {{n}}",
+      "removeSelection": "Remove {{name}}",
       "duplicateAriaLabel": "Duplicate row",
       "success": "Credential(s) submitted successfully.",
       "submitError": "Failed to submit credentials. Please try again.",
