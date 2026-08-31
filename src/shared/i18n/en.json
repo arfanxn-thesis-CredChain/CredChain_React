@@ -722,6 +722,7 @@
   "error_credential_review_blockchain_sync_failed": "Failed to sync credential review to the blockchain.",
   "success_credential_competency_link": "Credential competencies linked successfully.",
   "success_credential_metadata_resolve": "Metadata resolved.",
+  "error_credential_approve_unresolved_metadata": "Resolve the unrecognized metadata before approving.",
   "error_credential_competency_link_credential_not_found": "Credential not found.",
   "error_credential_competency_link_competency_not_found": "One or more competencies were not found.",
   "success_credential_update": "Credential updated successfully.",
@@ -1039,6 +1040,14 @@
       "loadError": "Failed to load options."
     },
     "metadata": {
+      "title": "Unrecognized metadata",
+      "description": "This submission names metadata that has no entry yet. Link each name to an existing entry, or create it. The credential cannot be approved until every name is resolved.",
+      "pending": "needs review",
+      "didYouMean": "Closest existing entries",
+      "noMatches": "No similar entries found",
+      "createAsTyped": "Create \"{{name}}\"",
+      "apply": "Apply",
+      "blocksApproval": "Resolve the unrecognized metadata before approving",
       "resolveFailed": "Could not resolve metadata."
     }
   },
