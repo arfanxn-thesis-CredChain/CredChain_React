@@ -728,6 +728,12 @@
   "success_credential_update": "Credential updated successfully.",
   "error_credential_update_not_found": "Credential not found.",
   "error_credential_update_not_pending": "Only pending credentials can be updated.",
+  "error_credential_metadata_resolve_not_found": "Credential not found.",
+  "error_credential_metadata_resolve_not_pending": "Only pending credentials can have their metadata resolved.",
+  "error_credential_metadata_resolve_nothing_staged": "There is no unresolved metadata to resolve.",
+  "error_credential_metadata_resolve_target_not_found": "The linked metadata entry was not found.",
+  "error_credential_metadata_resolve_target_inactive": "The linked metadata entry is inactive.",
+  "error_credential_metadata_resolve_number_duplicate": "This number is already in use by the resolved organization.",
   "not_found": {
     "code": "404",
     "title": "Page not found",

@@ -206,6 +206,16 @@ export const CODE_TO_MESSAGE_KEY: Record<number, string> = {
   401400: "success_credential_update",
   401440: "error_credential_update_not_found",
   401441: "error_credential_update_not_pending",
+
+  // Metadata resolution (40 + 15)
+  401500: "success_credential_metadata_resolve",
+  401540: "error_credential_metadata_resolve_not_found",
+  401541: "error_credential_metadata_resolve_not_pending",
+  401542: "error_credential_metadata_resolve_nothing_staged",
+  401543: "error_credential_metadata_resolve_target_not_found",
+  401544: "error_credential_metadata_resolve_target_inactive",
+  401545: "error_credential_metadata_resolve_number_duplicate",
+  401546: "error_credential_approve_unresolved_metadata",
 };
 
 export function codeToMessageKey(code?: number): string {

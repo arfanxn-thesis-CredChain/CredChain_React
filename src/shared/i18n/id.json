@@ -729,6 +729,12 @@
   "success_credential_update": "Kredensial berhasil diperbarui.",
   "error_credential_update_not_found": "Kredensial tidak ditemukan.",
   "error_credential_update_not_pending": "Hanya kredensial berstatus pending yang dapat diperbarui.",
+  "error_credential_metadata_resolve_not_found": "Kredensial tidak ditemukan.",
+  "error_credential_metadata_resolve_not_pending": "Hanya kredensial berstatus pending yang dapat diselesaikan metadatanya.",
+  "error_credential_metadata_resolve_nothing_staged": "Tidak ada metadata yang belum diselesaikan.",
+  "error_credential_metadata_resolve_target_not_found": "Entri metadata yang dituju tidak ditemukan.",
+  "error_credential_metadata_resolve_target_inactive": "Entri metadata yang dituju tidak aktif.",
+  "error_credential_metadata_resolve_number_duplicate": "Nomor ini sudah digunakan oleh organisasi yang dituju.",
   "not_found": {
     "code": "404",
     "title": "Halaman tidak ditemukan",

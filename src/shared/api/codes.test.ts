@@ -81,6 +81,17 @@ describe("CODE_TO_MESSAGE_KEY", () => {
     expect(CODE_TO_MESSAGE_KEY[401441]).toBe("error_credential_update_not_pending");
   });
 
+  it("maps the step-13 metadata resolution codes", () => {
+    expect(CODE_TO_MESSAGE_KEY[401500]).toBe("success_credential_metadata_resolve");
+    expect(CODE_TO_MESSAGE_KEY[401540]).toBe("error_credential_metadata_resolve_not_found");
+    expect(CODE_TO_MESSAGE_KEY[401541]).toBe("error_credential_metadata_resolve_not_pending");
+    expect(CODE_TO_MESSAGE_KEY[401542]).toBe("error_credential_metadata_resolve_nothing_staged");
+    expect(CODE_TO_MESSAGE_KEY[401543]).toBe("error_credential_metadata_resolve_target_not_found");
+    expect(CODE_TO_MESSAGE_KEY[401544]).toBe("error_credential_metadata_resolve_target_inactive");
+    expect(CODE_TO_MESSAGE_KEY[401545]).toBe("error_credential_metadata_resolve_number_duplicate");
+    expect(CODE_TO_MESSAGE_KEY[401546]).toBe("error_credential_approve_unresolved_metadata");
+  });
+
   it("maps the expired verify verdict", () => {
     expect(CODE_TO_MESSAGE_KEY[400413]).toBe("error_credential_verify_expired");
   });
