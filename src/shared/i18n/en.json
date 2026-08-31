@@ -284,6 +284,8 @@
   "zod.credential.batchMaxHundred": "Maximum 100 credentials per batch",
   "zod.credential.typeRequired": "Credential type is required",
   "zod.credential.issuerOrganizationRequired": "Issuer organization is required",
+  "zod.credential.submitTypeRequired": "Pick a credential type or propose a new one",
+  "zod.credential.submitOrganizationRequired": "Pick an issuing organization or propose a new one",
   "zod.credential.issuedAtRequired": "Issued date is required",
   "zod.credential.numberTooLong": "Number must be 256 characters or fewer",
   "zod.credential.dateFormat": "Use YYYY-MM-DD format",

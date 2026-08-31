@@ -62,20 +62,37 @@ export const credentialBatchIssueSchema = z.object({
 
 export type CredentialBatchIssueInput = z.infer<typeof credentialBatchIssueSchema>;
 
-export const credentialSubmitRowSchema = z.object({
-  name: z.string().min(1, "zod.credential.nameRequired").max(256, "zod.credential.nameTooLong"),
-  type_id: z.string().min(1, "zod.credential.typeRequired"),
-  issuer_organization_id: z.string().min(1, "zod.credential.issuerOrganizationRequired"),
-  issued_at: z
-    .string()
-    .min(1, "zod.credential.issuedAtRequired")
-    .regex(ISO_DATE, "zod.credential.dateFormat"),
-  number: z.string().max(256, "zod.credential.numberTooLong").optional(),
-  expires_at: z.string().regex(ISO_DATE, "zod.credential.dateFormat").optional().or(z.literal("")),
-  competency_ids: z.array(z.string().min(1)).optional(),
-  meta_entries: metaEntriesSchema.optional(),
-  file: credentialFileSchema,
-});
+export const credentialSubmitRowSchema = z
+  .object({
+    name: z.string().min(1, "zod.credential.nameRequired").max(256, "zod.credential.nameTooLong"),
+    type_id: z.string().optional(),
+    submitted_type_name: z.string().trim().optional(),
+    issuer_organization_id: z.string().optional(),
+    submitted_issuer_organization_name: z.string().trim().optional(),
+    issued_at: z
+      .string()
+      .min(1, "zod.credential.issuedAtRequired")
+      .regex(ISO_DATE, "zod.credential.dateFormat"),
+    number: z.string().max(256, "zod.credential.numberTooLong").optional(),
+    expires_at: z.string().regex(ISO_DATE, "zod.credential.dateFormat").optional().or(z.literal("")),
+    competency_ids: z.array(z.string().min(1)).optional(),
+    submitted_competency_names: z.array(z.string().trim()).optional(),
+    meta_entries: metaEntriesSchema.optional(),
+    file: credentialFileSchema,
+  })
+  // Exactly one of id / name per kind. A name with no matching row is staged
+  // on the credential and resolved by a reviewer before approval.
+  .refine((v) => Boolean(v.type_id) !== Boolean(v.submitted_type_name), {
+    path: ["type_id"],
+    message: "zod.credential.submitTypeRequired",
+  })
+  .refine(
+    (v) => Boolean(v.issuer_organization_id) !== Boolean(v.submitted_issuer_organization_name),
+    {
+      path: ["issuer_organization_id"],
+      message: "zod.credential.submitOrganizationRequired",
+    },
+  );
 
 export type CredentialSubmitRowInput = z.infer<typeof credentialSubmitRowSchema>;
 
@@ -107,11 +124,14 @@ export function defaultCredentialSubmitRow(): CredentialSubmitRowInput {
   return {
     name: "",
     type_id: "",
+    submitted_type_name: "",
     issuer_organization_id: "",
+    submitted_issuer_organization_name: "",
     issued_at: "",
     number: "",
     expires_at: "",
     competency_ids: [],
+    submitted_competency_names: [],
     meta_entries: [],
     file: null,
   };

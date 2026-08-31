@@ -61,11 +61,17 @@ export function CredentialSubmit() {
                         append({
                           name: values.name,
                           type_id: values.type_id,
+                          submitted_type_name: values.submitted_type_name,
                           issuer_organization_id: values.issuer_organization_id,
+                          submitted_issuer_organization_name:
+                            values.submitted_issuer_organization_name,
                           issued_at: values.issued_at,
                           number: values.number,
                           expires_at: values.expires_at,
                           competency_ids: values.competency_ids ? [...values.competency_ids] : [],
+                          submitted_competency_names: values.submitted_competency_names
+                            ? [...values.submitted_competency_names]
+                            : [],
                           meta_entries: values.meta_entries
                             ? values.meta_entries.map((e) => ({ ...e }))
                             : [],

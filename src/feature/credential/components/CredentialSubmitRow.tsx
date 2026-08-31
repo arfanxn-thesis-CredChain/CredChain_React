@@ -84,6 +84,7 @@ export function CredentialSubmitRow({
         </FormField>
 
         <SearchableCreateSelect
+          mode="propose"
           resource="credential-types"
           label={t("cred.submit.field.type")}
           placeholder={t("cred.submit.field.typePlaceholder")}
@@ -91,16 +92,27 @@ export function CredentialSubmitRow({
           onChange={(id) =>
             form.setValue(`credentials.${index}.type_id`, id, { shouldValidate: true })
           }
+          proposed={form.watch(`credentials.${index}.submitted_type_name`) ?? ""}
+          onProposeChange={(name) =>
+            form.setValue(`credentials.${index}.submitted_type_name`, name, { shouldValidate: true })
+          }
           error={errorMessage(errors?.type_id)}
         />
 
         <SearchableCreateSelect
+          mode="propose"
           resource="credential-issuer-organizations"
           label={t("cred.submit.field.issuerOrganization")}
           placeholder={t("cred.submit.field.orgPlaceholder")}
           value={form.watch(`credentials.${index}.issuer_organization_id`) ?? ""}
           onChange={(id) =>
             form.setValue(`credentials.${index}.issuer_organization_id`, id, {
+              shouldValidate: true,
+            })
+          }
+          proposed={form.watch(`credentials.${index}.submitted_issuer_organization_name`) ?? ""}
+          onProposeChange={(name) =>
+            form.setValue(`credentials.${index}.submitted_issuer_organization_name`, name, {
               shouldValidate: true,
             })
           }
@@ -133,12 +145,19 @@ export function CredentialSubmitRow({
         <div className="md:col-span-2">
           <SearchableCreateSelect
             multiple
+            mode="propose"
             resource="competencies"
             label={t("cred.submit.field.competencies")}
             placeholder={t("cred.submit.field.competencyPlaceholder")}
             value={form.watch(`credentials.${index}.competency_ids`) ?? []}
             onChange={(ids) =>
               form.setValue(`credentials.${index}.competency_ids`, ids, { shouldValidate: true })
+            }
+            proposedNames={form.watch(`credentials.${index}.submitted_competency_names`) ?? []}
+            onProposedNamesChange={(names) =>
+              form.setValue(`credentials.${index}.submitted_competency_names`, names, {
+                shouldValidate: true,
+              })
             }
             error={errorMessage(errors?.competency_ids)}
           />

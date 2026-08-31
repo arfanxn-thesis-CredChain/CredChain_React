@@ -118,8 +118,12 @@ describe("CredentialSubmit", () => {
     fireEvent.click(screen.getByRole("button", { name: "Submit Credentials" }));
 
     expect(await screen.findByText("Name is required")).toBeInTheDocument();
-    expect(await screen.findByText("Credential type is required")).toBeInTheDocument();
-    expect(await screen.findByText("Issuer organization is required")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Pick a credential type or propose a new one"),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("Pick an issuing organization or propose a new one"),
+    ).toBeInTheDocument();
     expect(await screen.findByText("Issued date is required")).toBeInTheDocument();
     expect(await screen.findByText("File is required")).toBeInTheDocument();
     expect(container.querySelectorAll('input[type="file"]')).toHaveLength(1);

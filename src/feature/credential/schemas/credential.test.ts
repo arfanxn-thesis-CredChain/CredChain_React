@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { credentialIssueRowSchema, verifyFileSchema } from "./credential";
+import { credentialIssueRowSchema, credentialSubmitRowSchema, verifyFileSchema } from "./credential";
 
 function makeFile(name: string, type: string, size = 1024): File {
   const buffer = new ArrayBuffer(size);
@@ -108,6 +108,64 @@ describe("credentialIssueRowSchema", () => {
   it("still requires name and file", () => {
     expect(credentialIssueRowSchema.safeParse({ ...makeIssueRow(), name: "" }).success).toBe(false);
     expect(credentialIssueRowSchema.safeParse({ ...makeIssueRow(), file: null }).success).toBe(false);
+  });
+});
+
+function makeSubmitRow() {
+  return {
+    name: "Bootcamp Certificate",
+    type_id: "ctype_01",
+    issuer_organization_id: "iorg_01",
+    issued_at: "2026-01-15",
+    file: makeFile("doc.pdf", "application/pdf"),
+  };
+}
+
+describe("credentialSubmitRowSchema", () => {
+  it("accepts a proposed type name with no id", () => {
+    const result = credentialSubmitRowSchema.safeParse({
+      ...makeSubmitRow(),
+      type_id: undefined,
+      issuer_organization_id: undefined,
+      submitted_type_name: "Micro-credential",
+      submitted_issuer_organization_name: "Cyfrin Updraft",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a row with neither type id nor type name", () => {
+    const result = credentialSubmitRowSchema.safeParse({
+      ...makeSubmitRow(),
+      type_id: undefined,
+      submitted_issuer_organization_name: "Cyfrin Updraft",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.credential.submitTypeRequired");
+    }
+  });
+
+  it("rejects a row carrying both a type id and a type name", () => {
+    const result = credentialSubmitRowSchema.safeParse({
+      ...makeSubmitRow(),
+      submitted_type_name: "Micro-credential",
+      submitted_issuer_organization_name: "Cyfrin Updraft",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.credential.submitTypeRequired");
+    }
+  });
+
+  it("rejects a row with neither organization id nor organization name", () => {
+    const result = credentialSubmitRowSchema.safeParse({
+      ...makeSubmitRow(),
+      issuer_organization_id: undefined,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe("zod.credential.submitOrganizationRequired");
+    }
   });
 });
 

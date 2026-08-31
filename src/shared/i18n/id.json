@@ -284,6 +284,8 @@
   "zod.credential.batchMaxHundred": "Maksimal 100 kredensial per batch",
   "zod.credential.typeRequired": "Tipe kredensial wajib diisi",
   "zod.credential.issuerOrganizationRequired": "Organisasi penerbit wajib diisi",
+  "zod.credential.submitTypeRequired": "Pilih jenis kredensial atau ajukan yang baru",
+  "zod.credential.submitOrganizationRequired": "Pilih organisasi penerbit atau ajukan yang baru",
   "zod.credential.issuedAtRequired": "Tanggal terbit wajib diisi",
   "zod.credential.numberTooLong": "Nomor maksimal 256 karakter",
   "zod.credential.dateFormat": "Gunakan format YYYY-MM-DD",

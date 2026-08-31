@@ -12,11 +12,14 @@ const BACKEND_TO_FRONTEND_PATH: Record<string, string> = {
   Credentials: "credentials",
   Name: "name",
   TypeID: "type_id",
+  SubmittedTypeName: "submitted_type_name",
   IssuerOrganizationID: "issuer_organization_id",
+  SubmittedIssuerOrganizationName: "submitted_issuer_organization_name",
   Number: "number",
   IssuedAt: "issued_at",
   ExpiresAt: "expires_at",
   CompetencyIDs: "competency_ids",
+  SubmittedCompetencyNames: "submitted_competency_names",
   Meta: "meta_entries",
   File: "file",
 };
@@ -39,8 +42,21 @@ export function useSubmitCredentials<T extends FieldValues>(form?: UseFormReturn
       const formData = new FormData();
       rows.forEach((row, i) => {
         formData.append(`credentials[${i}][name]`, row.name);
-        formData.append(`credentials[${i}][type_id]`, row.type_id);
-        formData.append(`credentials[${i}][issuer_organization_id]`, row.issuer_organization_id);
+        if (row.type_id) {
+          formData.append(`credentials[${i}][type_id]`, row.type_id);
+        }
+        if (row.submitted_type_name) {
+          formData.append(`credentials[${i}][submitted_type_name]`, row.submitted_type_name);
+        }
+        if (row.issuer_organization_id) {
+          formData.append(`credentials[${i}][issuer_organization_id]`, row.issuer_organization_id);
+        }
+        if (row.submitted_issuer_organization_name) {
+          formData.append(
+            `credentials[${i}][submitted_issuer_organization_name]`,
+            row.submitted_issuer_organization_name,
+          );
+        }
         formData.append(`credentials[${i}][issued_at]`, row.issued_at);
         if (row.number) {
           formData.append(`credentials[${i}][number]`, row.number);
@@ -50,6 +66,11 @@ export function useSubmitCredentials<T extends FieldValues>(form?: UseFormReturn
         }
         if (row.competency_ids && row.competency_ids.length > 0) {
           formData.append(`credentials[${i}][competency_ids]`, row.competency_ids.join(","));
+        }
+        if (row.submitted_competency_names && row.submitted_competency_names.length > 0) {
+          row.submitted_competency_names.forEach((name) => {
+            formData.append(`credentials[${i}][submitted_competency_names]`, name);
+          });
         }
         if (row.meta_entries && row.meta_entries.length > 0) {
           const metaObj = mergeMeta(row.meta_entries, {});

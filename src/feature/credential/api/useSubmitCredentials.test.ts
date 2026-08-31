@@ -96,6 +96,42 @@ describe("useSubmitCredentials", () => {
     expect((uploaded as File).name).toBe("diploma.pdf");
   });
 
+  it("emits proposed metadata names (repeated competency names)", async () => {
+    const postSpy = mockSubmitSuccess();
+
+    const form = createFormMock();
+    const { result } = renderHook(() => useSubmitCredentials(form), {
+      wrapper: TestProviders,
+    });
+
+    result.current.mutate([
+      {
+        name: "Bootcamp Certificate",
+        submitted_type_name: "Micro-credential",
+        submitted_issuer_organization_name: "Cyfrin Updraft",
+        issued_at: "2026-01-15",
+        submitted_competency_names: ["Teamwork", "Solidity"],
+        file: new File(["x"], "c.pdf", { type: "application/pdf" }),
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    const formData = postSpy.mock.calls[0][1] as FormData;
+    expect(formData.get("credentials[0][submitted_type_name]")).toBe("Micro-credential");
+    expect(formData.get("credentials[0][submitted_issuer_organization_name]")).toBe(
+      "Cyfrin Updraft",
+    );
+    expect(formData.getAll("credentials[0][submitted_competency_names]")).toEqual([
+      "Teamwork",
+      "Solidity",
+    ]);
+    expect(formData.has("credentials[0][type_id]")).toBe(false);
+    expect(formData.has("credentials[0][issuer_organization_id]")).toBe(false);
+  });
+
   it("omits optional keys when empty", async () => {
     const postSpy = mockSubmitSuccess();
 
