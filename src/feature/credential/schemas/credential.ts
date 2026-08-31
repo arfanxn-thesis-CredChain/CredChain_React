@@ -76,7 +76,7 @@ export const credentialSubmitRowSchema = z
     number: z.string().max(256, "zod.credential.numberTooLong").optional(),
     expires_at: z.string().regex(ISO_DATE, "zod.credential.dateFormat").optional().or(z.literal("")),
     competency_ids: z.array(z.string().min(1)).optional(),
-    submitted_competency_names: z.array(z.string().trim()).optional(),
+    submitted_competency_names: z.array(z.string().trim().min(1)).optional(),
     meta_entries: metaEntriesSchema.optional(),
     file: credentialFileSchema,
   })
