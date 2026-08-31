@@ -358,6 +358,8 @@ className={`base classes ${isActive ? "active" : ""} ${className}`}
 
 `LoadMoreBar` replaces `PaginationBar` for list pagination. Used in `CredentialList`, `UserList`, and `MyCredentials` with `useLoadMore` hook (cumulative offset-based pagination with count label + Load More button).
 
+`SearchableCreateSelect` (taxonomy picker) has two modes via `mode` prop: `create` (default) POSTs a new taxonomy row when the user picks the create row — Issuer+ only, since taxonomy writes are role-guarded; `propose` emits the typed name via `onProposeChange` / `onProposedNamesChange` instead, so a holder submitting a credential stages the name on the row and a reviewer resolves it later. Never wire `create` mode into a holder-facing form.
+
 ### Error Handling Layers
 
 **Three-layer error handling:**
