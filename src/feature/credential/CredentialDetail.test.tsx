@@ -298,4 +298,84 @@ describe("CredentialDetail", () => {
     await waitFor(() => expect(recordedBody).toEqual({ competency_ids: ["comp_01"] }));
     expect(recordedUrl).toContain("/credentials/cred_01HX/competencies");
   });
+
+  it("seeds the competency editor from the loaded credential", async () => {
+    server.use(
+      http.get("*/api/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            lifecycle_status: "pending",
+            approved_at: null,
+            rejected_at: null,
+            competencies: [{ id: "comp_01", name: "Machine Learning", active: true }],
+          }),
+        }),
+      ),
+    );
+    renderPage();
+
+    // Chip proves appliedIds was seeded — an empty seed would silently wipe the link on save.
+    expect(await screen.findByText("Machine Learning")).toBeInTheDocument();
+  });
+
+  it("disables approve while metadata is unresolved", async () => {
+    server.use(
+      http.get("*/api/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            lifecycle_status: "pending",
+            approved_at: null,
+            rejected_at: null,
+            type_id: null,
+            submitted_type_name: "Micro-credential",
+            unresolved_metadata: ["type"],
+          }),
+        }),
+      ),
+      http.get("*/api/credentials/:id/metadata/suggestions", () =>
+        HttpResponse.json({
+          code: 401501,
+          message: "ok",
+          data: {
+            credential_id: "cred_01HX",
+            type: null,
+            organization: null,
+            competencies: [],
+          },
+        }),
+      ),
+    );
+    renderPage();
+
+    const approve = await screen.findByRole("button", { name: /approve/i });
+    expect(approve).toBeDisabled();
+  });
+
+  it("enables approve once metadata resolves", async () => {
+    server.use(
+      http.get("*/api/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            lifecycle_status: "pending",
+            approved_at: null,
+            rejected_at: null,
+            unresolved_metadata: [],
+          }),
+        }),
+      ),
+    );
+    renderPage();
+
+    const approve = await screen.findByRole("button", { name: /approve/i });
+    expect(approve).toBeEnabled();
+  });
 });

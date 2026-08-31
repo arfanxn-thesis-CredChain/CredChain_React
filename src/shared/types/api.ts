@@ -58,6 +58,8 @@ export interface CredentialDTO {
   submitted_competencies: SubmittedCompetencyDTO[] | null;
   /** Metadata kinds blocking approval; empty means approvable. */
   unresolved_metadata: string[];
+  /** Resolved competency rows linked through competency_credential. */
+  competencies?: ReferenceRow[];
   token_id: string | null;
   file_hash: string;
   file_uri: string | null;

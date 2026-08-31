@@ -20,6 +20,7 @@ import { useRevokeCredentials } from "./api/useRevokeCredentials";
 import { useUpdateCredentials, type CredentialUpdateItem } from "./api/useUpdateCredentials";
 import { CredentialRejectReasonModal } from "./components/CredentialRejectReasonModal";
 import { CredentialCompetencyEditor } from "./components/CredentialCompetencyEditor";
+import { CredentialMetadataResolver } from "./components/CredentialMetadataResolver";
 import { credentialEditRowSchema, type CredentialEditRowInput } from "./schemas/credential";
 import { useStore } from "@app/store";
 import { Role, canAccessAny } from "@shared/auth/role";
@@ -51,8 +52,8 @@ function buildCredentialEditDefaults(cred: CredentialDTO): CredentialEditRowInpu
   return {
     name: cred.name,
     number: cred.number ?? "",
-    type_id: cred.type_id,
-    issuer_organization_id: cred.issuer_organization_id,
+    type_id: cred.type_id ?? undefined,
+    issuer_organization_id: cred.issuer_organization_id ?? undefined,
     issued_at: cred.issued_at.slice(0, 10),
     expires_at: cred.expires_at ? cred.expires_at.slice(0, 10) : "",
     meta_entries: splitMeta(cred.meta).entries,
@@ -68,7 +69,7 @@ export function CredentialDetail() {
     data: cred,
     isLoading,
     isError,
-  } = useCredential(id ?? "", ["holder", "issuer", "revoker"]);
+  } = useCredential(id ?? "", ["holder", "issuer", "revoker", "competencies"]);
   const reExtract = useReExtractCredentials();
   const approve = useApproveCredentials();
   const reject = useRejectCredentials();
@@ -77,19 +78,25 @@ export function CredentialDetail() {
   const { confirm, dialog } = useConfirm();
   const [metaOpen, setMetaOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  // Seeded from the loaded credential, not []. The competency editor below is a
+  // replace-set: an empty seed makes Save delete every existing link.
   const [competencyIds, setCompetencyIds] = useState<string[]>([]);
   const form = useForm<CredentialEditRowInput>({
     resolver: zodResolver(credentialEditRowSchema),
   });
 
   useEffect(() => {
-    if (cred) form.reset(buildCredentialEditDefaults(cred));
+    if (cred) {
+      form.reset(buildCredentialEditDefaults(cred));
+      setCompetencyIds((cred.competencies ?? []).map((c) => c.id));
+    }
   }, [cred, form]);
 
   const revoked = cred?.revoked_at !== null;
   const extractFailed = cred?.extract_status === "failed";
   const extractSucceeded = cred?.extract_status === "succeeded";
   const isPendingReview = cred?.lifecycle_status === "pending";
+  const hasUnresolvedMetadata = (cred?.unresolved_metadata?.length ?? 0) > 0;
   const hasFileUri = cred?.file_uri != null;
   const hasMeta = cred?.meta != null && Object.keys(cred.meta).length > 0;
 
@@ -182,7 +189,13 @@ export function CredentialDetail() {
         {
           key: "type_id",
           label: t("cred.submit.field.type"),
-          readValue: <MonoId value={cred.type_id} mode="id" />,
+          readValue: cred.type_id ? (
+            <MonoId value={cred.type_id} mode="id" />
+          ) : (
+            <span className="text-gray-500">
+              {cred.submitted_type_name} · {t("cred.metadata.pending")}
+            </span>
+          ),
           editControl: (
             <SearchableCreateSelect
               resource="credential-types"
@@ -197,7 +210,13 @@ export function CredentialDetail() {
         {
           key: "issuer_organization_id",
           label: t("cred.submit.field.issuerOrganization"),
-          readValue: <MonoId value={cred.issuer_organization_id} mode="id" />,
+          readValue: cred.issuer_organization_id ? (
+            <MonoId value={cred.issuer_organization_id} mode="id" />
+          ) : (
+            <span className="text-gray-500">
+              {cred.submitted_issuer_organization_name} · {t("cred.metadata.pending")}
+            </span>
+          ),
           editControl: (
             <SearchableCreateSelect
               resource="credential-issuer-organizations"
@@ -389,7 +408,10 @@ export function CredentialDetail() {
                       <Button
                         variant="gold"
                         onClick={() => cred.id && approve.mutate([cred.id])}
-                        disabled={approve.isPending}
+                        disabled={approve.isPending || hasUnresolvedMetadata}
+                        title={
+                          hasUnresolvedMetadata ? t("cred.metadata.blocksApproval") : undefined
+                        }
                       >
                         {approve.isPending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -435,6 +457,13 @@ export function CredentialDetail() {
                 onCancel={() => form.reset(buildCredentialEditDefaults(cred))}
                 isSaving={update.isPending}
               />
+            </Card>
+          )}
+
+          {/* Card: staged metadata resolution (pending + unresolved only) */}
+          {canManage && isPendingReview && hasUnresolvedMetadata && (
+            <Card className="p-6 sm:p-8">
+              <CredentialMetadataResolver credentialId={cred.id} />
             </Card>
           )}
 
