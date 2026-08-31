@@ -46,12 +46,18 @@ export interface CredentialDTO {
   holder_user_id: string;
   submitter_user_id: string;
   issuer_user_id: string;
-  issuer_organization_id: string;
-  type_id: string;
+  submitted_issuer_organization_name: string | null;
+  issuer_organization_id: string | null;
+  submitted_type_name: string | null;
+  type_id: string | null;
   number: string | null;
   revoker_user_id: string | null;
   name: string;
   meta: Record<string, unknown> | null;
+  /** Staged competency names; resolved_id null means still awaiting review. */
+  submitted_competencies: SubmittedCompetencyDTO[] | null;
+  /** Metadata kinds blocking approval; empty means approvable. */
+  unresolved_metadata: string[];
   token_id: string | null;
   file_hash: string;
   file_uri: string | null;
@@ -90,6 +96,32 @@ export interface ReferenceRow {
   id: string;
   name: string;
   active?: boolean;
+}
+
+export interface SubmittedCompetencyDTO {
+  name: string;
+  resolved_id: string | null;
+}
+
+/** Mirrors credential.MetadataMatch. */
+export interface MetadataMatchDTO {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+/** Mirrors credential.StagedNameSuggestion. */
+export interface StagedNameSuggestionDTO {
+  submitted_name: string;
+  matches: MetadataMatchDTO[];
+}
+
+/** Mirrors credential.CredentialMetadataSuggestions. */
+export interface CredentialMetadataSuggestionsDTO {
+  credential_id: string;
+  type: StagedNameSuggestionDTO | null;
+  organization: StagedNameSuggestionDTO | null;
+  competencies: StagedNameSuggestionDTO[];
 }
 
 export type ReferenceResource =

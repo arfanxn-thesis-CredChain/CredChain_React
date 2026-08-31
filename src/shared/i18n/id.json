@@ -722,6 +722,7 @@
   "error_credential_review_already_revoked": "Satu atau lebih kredensial sudah dicabut.",
   "error_credential_review_blockchain_sync_failed": "Gagal menyinkronkan tinjauan kredensial ke blockchain.",
   "success_credential_competency_link": "Kompetensi kredensial berhasil ditautkan.",
+  "success_credential_metadata_resolve": "Metadata diselesaikan.",
   "error_credential_competency_link_credential_not_found": "Kredensial tidak ditemukan.",
   "error_credential_competency_link_competency_not_found": "Satu atau lebih kompetensi tidak ditemukan.",
   "success_credential_update": "Kredensial berhasil diperbarui.",
@@ -1037,6 +1038,9 @@
       "noMatch": "Tidak ada entri yang cocok. Buat yang baru.",
       "inactive": "Nonaktif",
       "loadError": "Gagal memuat opsi."
+    },
+    "metadata": {
+      "resolveFailed": "Gagal menyelesaikan metadata."
     }
   },
   "credType": {
