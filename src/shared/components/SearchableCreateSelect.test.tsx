@@ -332,6 +332,34 @@ describe("SearchableCreateSelect", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("proposing clears a previously picked id (mutual exclusivity)", async () => {
+    const onChange = vi.fn();
+    const onProposeChange = vi.fn();
+
+    render(
+      <SearchableCreateSelect
+        mode="propose"
+        resource="competencies"
+        value="comp_01"
+        onChange={onChange}
+        proposed=""
+        onProposeChange={onProposeChange}
+      />,
+      { wrapper: TestProviders },
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
+      target: { value: "Discrete Math" },
+    });
+    await userEvent.click(await screen.findByText('Propose "Discrete Math" for review'));
+
+    expect(onProposeChange).toHaveBeenCalledWith("Discrete Math");
+    // Picked id and proposed name are mutually exclusive — the service
+    // rejects a submission carrying both.
+    expect(onChange).toHaveBeenCalledWith("");
+  });
+
   it("default create mode still POSTs and selects a row", async () => {
     const onChange = vi.fn();
     const onProposeChange = vi.fn();
