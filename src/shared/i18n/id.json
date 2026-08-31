@@ -1026,6 +1026,8 @@
       "searchTitle": "Cari",
       "searchPlaceholder": "Ketik untuk mencari...",
       "create": "Buat \"{{name}}\"",
+      "propose": "Ajukan \"{{name}}\" untuk ditinjau",
+      "proposed": "menunggu tinjauan",
       "existing": "Sudah ada — menggunakan data yang ada",
       "createError": "Gagal membuat entri. Silakan coba lagi.",
       "loading": "Memuat...",

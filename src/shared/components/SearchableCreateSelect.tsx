@@ -26,6 +26,20 @@ interface SearchableCreateSelectBaseProps {
   disabled?: boolean;
   error?: string;
   className?: string;
+  /**
+   * "create" (default) POSTs a new taxonomy row when the user picks the
+   * create row — Issuer+ only, since taxonomy writes are role-guarded.
+   * "propose" emits the typed name via onProposeChange instead, for holders
+   * submitting a credential: the name is staged on the credential and a
+   * reviewer resolves it later.
+   */
+  mode?: "create" | "propose";
+  /** The currently proposed free-text name (propose mode, single only). */
+  proposed?: string;
+  onProposeChange?: (name: string) => void;
+  /** Proposed free-text names (propose mode, multiple only). */
+  proposedNames?: string[];
+  onProposedNamesChange?: (names: string[]) => void;
 }
 
 export type SearchableCreateSelectProps =
@@ -64,7 +78,10 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
 
   const filtered = rows;
   const showCreateRow =
-    trimmed.length > 0 && !list.isLoading && filtered.length === 0 && !upsert.isPending;
+    trimmed.length > 0 &&
+    !list.isLoading &&
+    filtered.length === 0 &&
+    (props.mode === "propose" || !upsert.isPending);
 
   const close = () => {
     setOpen(false);
@@ -72,6 +89,10 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   };
 
   const select = (row: ReferenceRow) => {
+    // Picking a real row supersedes a proposed name for the same slot.
+    if (props.mode === "propose" && !multiple) {
+      props.onProposeChange?.("");
+    }
     if (multiple) {
       const next = props.value.includes(row.id)
         ? props.value.filter((id) => id !== row.id)
@@ -94,6 +115,25 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   const handleCreate = () => {
     const name = trimmed;
     if (!name) return;
+
+    // Propose mode never writes to the taxonomy: the name rides along on the
+    // credential and a reviewer resolves it. Holders cannot POST here anyway.
+    if (props.mode === "propose") {
+      if (multiple) {
+        const current = props.proposedNames ?? [];
+        if (!current.some((n) => n.toLowerCase() === name.toLowerCase())) {
+          props.onProposedNamesChange?.([...current, name]);
+        }
+      } else {
+        props.onProposeChange?.(name);
+        // A proposed name and a picked id are mutually exclusive. Clear only
+        // when a real id is currently selected — an empty value is already empty.
+        if (props.value) props.onChange("");
+        close();
+      }
+      return;
+    }
+
     upsert.mutate(name, {
       onSuccess: (row) => {
         // The server returns the pre-existing row when the name already matches
@@ -115,6 +155,9 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
     });
   };
 
+  const proposedList = multiple ? (props.proposedNames ?? []) : props.proposed ? [props.proposed] : [];
+  const isEmpty = selectedRows.length === 0 && proposedList.length === 0;
+
   const trigger = (
     <div
       role="combobox"
@@ -133,14 +176,16 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
         props.className,
       )}
     >
-      {selectedRows.length === 0 ? (
+      {isEmpty ? (
         <span className="flex-1 truncate text-gray-400">
           {props.placeholder ?? t("cred.submit.searchPlaceholder")}
         </span>
       ) : !multiple ? (
         // One value needs no chip — plain text, same as UnitPicker and the
         // <Select> fields beside it. Chips are reserved for multi-value.
-        <span className="min-w-0 flex-1 truncate">{selectedRows[0].name}</span>
+        <span className="min-w-0 flex-1 truncate">
+          {selectedRows[0]?.name ?? props.proposed}
+        </span>
       ) : (
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
           {selectedRows.map((row) => (
@@ -156,6 +201,27 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
                 onClick={(e) => {
                   e.stopPropagation();
                   deselect(row.id);
+                }}
+                className="rounded-full text-navy/60 hover:text-navy"
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            </Badge>
+          ))}
+          {proposedList.map((name) => (
+            <Badge
+              key={`proposed:${name}`}
+              tone="gray"
+              className="inline-flex items-center gap-1 text-xs font-medium normal-case tracking-normal"
+            >
+              <span className="max-w-40 truncate">{name}</span>
+              <span className="text-xs text-gray-400">{t("cred.submit.proposed")}</span>
+              <button
+                type="button"
+                aria-label={t("cred.submit.removeSelection", { name })}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  props.onProposedNamesChange?.(proposedList.filter((n) => n !== name));
                 }}
                 className="rounded-full text-navy/60 hover:text-navy"
               >
@@ -268,16 +334,18 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
             <DropdownMenuItem
               onSelect={(e) => multiple && e.preventDefault()}
               onClick={handleCreate}
-              disabled={upsert.isPending}
+              disabled={props.mode !== "propose" && upsert.isPending}
               className="flex items-center gap-2 border-t border-gray-100 font-medium text-navy"
             >
-              {upsert.isPending ? (
+              {props.mode !== "propose" && upsert.isPending ? (
                 <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400" />
               ) : (
                 <Plus className="h-4 w-4 shrink-0 text-gold" />
               )}
               <span className="min-w-0 flex-1 truncate">
-                {t("cred.submit.create", { name: trimmed })}
+                {props.mode === "propose"
+                  ? t("cred.submit.propose", { name: trimmed })
+                  : t("cred.submit.create", { name: trimmed })}
               </span>
             </DropdownMenuItem>
           )}

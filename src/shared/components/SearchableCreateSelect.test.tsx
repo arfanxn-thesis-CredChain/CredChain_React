@@ -304,4 +304,75 @@ describe("SearchableCreateSelect", () => {
     // Removing a chip must not open the search panel.
     expect(screen.queryByPlaceholderText("Type to search...")).not.toBeInTheDocument();
   });
+
+  it("emits a proposed name instead of creating a row", async () => {
+    const onChange = vi.fn();
+    const onProposeChange = vi.fn();
+
+    render(
+      <SearchableCreateSelect
+        mode="propose"
+        resource="competencies"
+        value=""
+        onChange={onChange}
+        proposed=""
+        onProposeChange={onProposeChange}
+      />,
+      { wrapper: TestProviders },
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
+      target: { value: "Discrete Math" },
+    });
+    await userEvent.click(await screen.findByText('Propose "Discrete Math" for review'));
+
+    expect(onProposeChange).toHaveBeenCalledWith("Discrete Math");
+    // The whole point: no row is created and no id is selected.
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("default create mode still POSTs and selects a row", async () => {
+    const onChange = vi.fn();
+    const onProposeChange = vi.fn();
+    server.use(
+      http.get("*/api/competencies", ({ request }) =>
+        paginated(
+          new URL(request.url).searchParams.get("search")
+            ? []
+            : [{ id: "comp_01", name: "Machine Learning" }],
+        ),
+      ),
+      http.post("*/api/competencies", async ({ request }) => {
+        const body = (await request.json()) as { name?: string };
+        return HttpResponse.json({
+          code: 400600,
+          message: "OK",
+          data: { id: "comp_new", name: body.name ?? "" },
+        });
+      }),
+    );
+
+    render(
+      <SearchableCreateSelect
+        resource="competencies"
+        value=""
+        onChange={onChange}
+        proposed=""
+        onProposeChange={onProposeChange}
+      />,
+      { wrapper: TestProviders },
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
+      target: { value: "Discrete Math" },
+    });
+    await userEvent.click(await screen.findByText('Create "Discrete Math"'));
+
+    await vi.waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith("comp_new");
+    });
+    expect(onProposeChange).not.toHaveBeenCalled();
+  });
 });

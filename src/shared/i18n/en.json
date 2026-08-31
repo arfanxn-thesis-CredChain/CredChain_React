@@ -1025,6 +1025,8 @@
       "searchTitle": "Search",
       "searchPlaceholder": "Type to search...",
       "create": "Create \"{{name}}\"",
+      "propose": "Propose \"{{name}}\" for review",
+      "proposed": "pending review",
       "existing": "Already exists — using existing row",
       "createError": "Failed to create the entry. Please try again.",
       "loading": "Loading...",
