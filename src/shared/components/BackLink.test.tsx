@@ -79,4 +79,12 @@ describe("BackLink", () => {
     expect(navigateMock).toHaveBeenCalledWith("/overview");
     expect(navigateMock).not.toHaveBeenCalledWith(-1);
   });
+
+  it("calls custom onClick when provided instead of navigating history", async () => {
+    const customClick = vi.fn();
+    render(<BackLink onClick={customClick} />, { wrapper: TestProviders });
+    await userEvent.click(screen.getByRole("button", { name: /back/i }));
+    expect(customClick).toHaveBeenCalledOnce();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
 });

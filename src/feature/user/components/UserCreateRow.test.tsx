@@ -11,6 +11,7 @@ import {
   defaultUserStoreFormRow,
 } from "../schemas/user";
 import { UserCreateRow } from "./UserCreateRow";
+import type { UserKind } from "../UserCreate";
 
 vi.mock("@shared/api/useUserUnits", () => ({
   useUserUnits: () => ({
@@ -21,13 +22,13 @@ vi.mock("@shared/api/useUserUnits", () => ({
   }),
 }));
 
-function RowHarness() {
+function RowHarness({ kind = "employee" }: { kind?: UserKind }) {
   const form = useForm<UserBatchStoreFormInput>({
     resolver: zodResolver(userBatchStoreFormSchema),
     defaultValues: { users: [defaultUserStoreFormRow()] },
     mode: "onBlur",
   });
-  return <UserCreateRow index={0} form={form} />;
+  return <UserCreateRow index={0} form={form} kind={kind} />;
 }
 
 describe("UserCreateRow (D2)", () => {
@@ -79,5 +80,41 @@ describe("UserCreateRow (D2)", () => {
         "Faculty of Engineering",
       );
     });
+  });
+
+  it("shows the role picker for employee, hides it for student", () => {
+    const { rerender } = render(
+      <TestProviders>
+        <RowHarness kind="employee" />
+      </TestProviders>,
+    );
+    expect(screen.getByText("Role")).toBeInTheDocument();
+
+    rerender(
+      <TestProviders>
+        <RowHarness kind="student" />
+      </TestProviders>,
+    );
+    expect(screen.queryByText("Role")).not.toBeInTheDocument();
+  });
+
+  it("labels the identifier field ID Number for student, Employee Number for employee", () => {
+    const { rerender } = render(
+      <TestProviders>
+        <RowHarness kind="student" />
+      </TestProviders>,
+    );
+    expect(screen.getByText("ID Number")).toBeInTheDocument();
+    expect(screen.getByText("Student ID, student number, etc.")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("22100001")).toBeInTheDocument();
+
+    rerender(
+      <TestProviders>
+        <RowHarness kind="employee" />
+      </TestProviders>,
+    );
+    expect(screen.getByText("Employee Number")).toBeInTheDocument();
+    expect(screen.getByText("Employee ID, staff number, etc.")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("EMP-12345")).toBeInTheDocument();
   });
 });

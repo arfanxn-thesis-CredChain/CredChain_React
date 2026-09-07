@@ -13,6 +13,7 @@ import { createUnitResolver, flattenUnitTree } from "@shared/lib/units";
 import { formatISODate } from "@shared/lib/format";
 import type { HolderUnitDTO } from "@shared/types/api";
 import { type UserStoreFormInput, userStoreFormSchema } from "../schemas/user";
+import type { UserKind } from "../UserCreate";
 
 export const FIXED_COLUMNS = [
   "fullname",
@@ -57,6 +58,7 @@ interface UserImportModalProps {
   open: boolean;
   onClose: () => void;
   onImport: (rows: UserStoreFormInput[]) => void;
+  kind?: UserKind;
 }
 
 interface ParsedRow {
@@ -79,42 +81,41 @@ function exampleUnits(units: HolderUnitDTO[]): [string, string] {
   return [nodes[0]?.name ?? "Fakultas Teknik", nodes[1]?.name ?? "Fakultas Teknik > Teknik Informatika"];
 }
 
-function downloadTemplate(units: HolderUnitDTO[]) {
+/**
+ * Example rows for the downloadable template, branched on kind so the file
+ * the app hands out never fails the app's own import: a Student-mode
+ * template with an "issuer" example row is a self-contradiction, same class
+ * of bug as an invented unit name (see exampleUnits above).
+ */
+export function templateRows(units: HolderUnitDTO[], kind: UserKind): string[][] {
+  const [unitA, unitB] = exampleUnits(units);
+  if (kind === "student") {
+    return [
+      ["Alice Johnson", "alice@example.com", unitA, "2024", "22100001", "1995-03-15", "female", "holder"],
+      ["Bob Smith", "bob@example.com", unitB, "2023", "22100002", "1990-07-22", "male", "holder"],
+    ];
+  }
+  return [
+    ["Alice Johnson", "alice@example.com", unitA, "2024", "EMP-001", "1995-03-15", "female", "holder"],
+    ["Bob Smith", "bob@example.com", unitB, "2023", "EMP-002", "1990-07-22", "male", "issuer"],
+  ];
+}
+
+function downloadTemplate(units: HolderUnitDTO[], kind: UserKind) {
   const headers = [...FIXED_COLUMNS];
   const headerRow = headers.map((h) => ({ t: "s", v: h }) satisfies XLSX.CellObject);
-  const [unitA, unitB] = exampleUnits(units);
-
-  const exampleRows: XLSX.CellObject[][] = [
-    [
-      { t: "s", v: "Alice Johnson" },
-      { t: "s", v: "alice@example.com" },
-      { t: "s", v: unitA },
-      { t: "s", v: "2024" },
-      { t: "s", v: "EMP-001" },
-      { t: "s", v: "1995-03-15" },
-      { t: "s", v: "female" },
-      { t: "s", v: "holder" },
-    ],
-    [
-      { t: "s", v: "Bob Smith" },
-      { t: "s", v: "bob@example.com" },
-      { t: "s", v: unitB },
-      { t: "s", v: "2023" },
-      { t: "s", v: "EMP-002" },
-      { t: "s", v: "1990-07-22" },
-      { t: "s", v: "male" },
-      { t: "s", v: "issuer" },
-    ],
-  ];
+  const exampleRows: XLSX.CellObject[][] = templateRows(units, kind).map((row) =>
+    row.map((v) => ({ t: "s", v }) satisfies XLSX.CellObject),
+  );
 
   const aoa: XLSX.CellObject[][] = [headerRow, ...exampleRows];
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Users");
-  XLSX.writeFile(wb, "credchain-users-template.xlsx", { bookType: "xlsx" });
+  XLSX.writeFile(wb, `credchain-users-template-${kind}.xlsx`, { bookType: "xlsx" });
 }
 
-export function UserImportModal({ open, onClose, onImport }: UserImportModalProps) {
+export function UserImportModal({ open, onClose, onImport, kind }: UserImportModalProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
@@ -205,7 +206,17 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
         } else if (field === "role") {
           const lower = val.toLowerCase();
           if (lower === "holder" || lower === "issuer" || lower === "admin") {
-            mapped.role = lower;
+            if (kind === "student" && lower !== "holder") {
+              // Students are always Holder; a non-holder cell is a real
+              // conflict, not something to silently overwrite.
+              errors.push({
+                row: rowNumber,
+                field: "role",
+                error: t("userImport.validation.roleNotHolder", { value: val }),
+              });
+            } else {
+              mapped.role = lower;
+            }
           } else {
             // The holder default stands only for an absent column, never a typo.
             errors.push({
@@ -271,7 +282,7 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
 
     return { rows, missing, metaCount, errors };
     },
-    [t, resolveUnit],
+    [t, resolveUnit, kind],
   );
 
   const validateRows = useCallback(
@@ -403,7 +414,7 @@ export function UserImportModal({ open, onClose, onImport }: UserImportModalProp
                 <div className="md:shrink-0">
                   <button
                     type="button"
-                    onClick={() => downloadTemplate(units ?? [])}
+                    onClick={() => downloadTemplate(units ?? [], kind ?? "employee")}
                     className="flex items-center gap-2 rounded-lg border border-navy/20 bg-white px-4 py-2.5 text-sm font-medium text-navy transition-colors hover:bg-gray-50"
                   >
                     <Download className="h-4 w-4" />

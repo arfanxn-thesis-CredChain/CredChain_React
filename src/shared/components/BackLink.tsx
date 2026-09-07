@@ -5,16 +5,17 @@ import { cn } from "@shared/lib/cn";
 
 interface BackLinkProps {
   className?: string;
+  onClick?: () => void;
 }
 
-export function BackLink({ className }: BackLinkProps) {
+export function BackLink({ className, onClick }: BackLinkProps) {
   const { t } = useTranslation();
   const handleBack = useSmartBack();
 
   return (
     <button
       type="button"
-      onClick={handleBack}
+      onClick={onClick ?? handleBack}
       className={cn(
         "inline-flex items-center gap-1.5 text-sm font-medium text-gray-500",
         "transition-colors hover:text-navy",

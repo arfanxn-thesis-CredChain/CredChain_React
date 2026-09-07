@@ -21,16 +21,18 @@ import { useStore } from "@app/store";
 import { cn } from "@shared/lib/cn";
 
 import type { UserBatchStoreFormInput } from "../schemas/user";
+import type { UserKind } from "../UserCreate";
 import { UnitPicker } from "@shared/components/UnitPicker";
 import { MetaEditor } from "@shared/components/MetaEditor";
 
 interface UserCreateRowProps {
   index: number;
   form: UseFormReturn<UserBatchStoreFormInput>;
+  kind: UserKind;
   onRemove?: () => void;
 }
 
-export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
+export function UserCreateRow({ index, form, kind, onRemove }: UserCreateRowProps) {
   const { t } = useTranslation();
   const errors = form.formState.errors.users?.[index];
   const role = form.watch(`users.${index}.role`);
@@ -61,7 +63,7 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
         </Button>
       )}
 
-      <div className="grid w-full grid-cols-1 gap-4 pr-12 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid w-full grid-cols-1 gap-x-6 gap-y-4 pr-12 sm:grid-cols-2">
         <FormField label={t("user.edit.fullName")} error={errors?.name?.message}>
           <Input
             leadingIcon={User}
@@ -80,6 +82,27 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
             leadingIcon={Mail}
             placeholder={t("userCreate.field.email.placeholder")}
             {...form.register(`users.${index}.email`)}
+          />
+        </FormField>
+
+        <FormField
+          label={kind === "student" ? t("userCreate.field.number.nim") : t("userCreate.field.number.employee")}
+          hint={
+            kind === "student"
+              ? t("userCreate.field.number.hint.student")
+              : t("userCreate.field.number.hint.employee")
+          }
+          error={errors?.number?.message}
+          optional
+        >
+          <Input
+            leadingIcon={Hash}
+            placeholder={
+              kind === "student"
+                ? t("userCreate.field.number.placeholder.student")
+                : t("userCreate.field.number.placeholder.employee")
+            }
+            {...form.register(`users.${index}.number`)}
           />
         </FormField>
 
@@ -104,19 +127,6 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
             {...form.register(`users.${index}.joined_year`, {
               valueAsNumber: true,
             })}
-          />
-        </FormField>
-
-        <FormField
-          label={t("user.edit.numberId")}
-          hint={t("userCreate.field.number.hint")}
-          error={errors?.number?.message}
-          optional
-        >
-          <Input
-            leadingIcon={Hash}
-            placeholder={t("userCreate.field.number.placeholder")}
-            {...form.register(`users.${index}.number`)}
           />
         </FormField>
 
@@ -150,39 +160,41 @@ export function UserCreateRow({ index, form, onRemove }: UserCreateRowProps) {
           </Select>
         </FormField>
 
-        <FormField label={t("user.edit.role")} error={errors?.role?.message}>
-          <Select
-            value={role}
-            onValueChange={(value) => {
-              if (value === Role.HOLDER || value === Role.ISSUER || value === Role.ADMIN) {
-                form.setValue(`users.${index}.role`, value, {
-                  shouldValidate: true,
-                });
-              }
-            }}
-          >
-            <SelectTrigger>
-              <div className="flex items-center gap-3">
-                <Briefcase className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                <SelectValue placeholder={t("user.edit.role.placeholder")} />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {roleOptions.map((opt) => (
-                <SelectItem
-                  key={opt.value}
-                  value={opt.value}
-                  disabled={opt.value === Role.ADMIN && !canPromoteToAdmin}
-                >
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!canPromoteToAdmin && (
-            <p className="mt-1 text-xs text-gray-400">{t("user.edit.role.adminDisabled")}</p>
-          )}
-        </FormField>
+        {kind === "employee" && (
+          <FormField label={t("user.edit.role")} error={errors?.role?.message}>
+            <Select
+              value={role}
+              onValueChange={(value) => {
+                if (value === Role.HOLDER || value === Role.ISSUER || value === Role.ADMIN) {
+                  form.setValue(`users.${index}.role`, value, {
+                    shouldValidate: true,
+                  });
+                }
+              }}
+            >
+              <SelectTrigger>
+                <div className="flex items-center gap-3">
+                  <Briefcase className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  <SelectValue placeholder={t("user.edit.role.placeholder")} />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {roleOptions.map((opt) => (
+                  <SelectItem
+                    key={opt.value}
+                    value={opt.value}
+                    disabled={opt.value === Role.ADMIN && !canPromoteToAdmin}
+                  >
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!canPromoteToAdmin && (
+              <p className="mt-1 text-xs text-gray-400">{t("user.edit.role.adminDisabled")}</p>
+            )}
+          </FormField>
+        )}
       </div>
 
       <div className="mt-2 sm:mt-4">

@@ -2,7 +2,13 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { i18n } from "@shared/i18n/config";
 import { TestProviders } from "@/test/TestProviders";
-import { COLUMN_TO_FIELD, FIXED_COLUMNS, normHeader, UserImportModal } from "./UserImportModal";
+import {
+  COLUMN_TO_FIELD,
+  FIXED_COLUMNS,
+  normHeader,
+  templateRows,
+  UserImportModal,
+} from "./UserImportModal";
 
 beforeEach(() => {
   void i18n.changeLanguage("en");
@@ -39,6 +45,20 @@ describe("UserImportModal columns (D2)", () => {
     for (const col of ["fullname", "email", "role"]) {
       expect(FIXED_COLUMNS).toContain(col);
     }
+  });
+});
+
+describe("templateRows", () => {
+  const roleIndex = FIXED_COLUMNS.indexOf("role");
+
+  it("keeps every student example row at role=holder", () => {
+    for (const row of templateRows([], "student")) {
+      expect(row[roleIndex]).toBe("holder");
+    }
+  });
+
+  it("still shows a non-holder role in the employee example", () => {
+    expect(templateRows([], "employee").some((row) => row[roleIndex] !== "holder")).toBe(true);
   });
 });
 
