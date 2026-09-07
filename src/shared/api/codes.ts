@@ -122,6 +122,7 @@ export const CODE_TO_MESSAGE_KEY: Record<number, string> = {
   400340: "credential.revoke.failed",
   400341: "credential.revoke.not_found",
   400342: "credential.revoke.already_revoked",
+  400344: "credential.revoke.not_approved",
   400343: "credential.revoke.blockchain_sync_failed",
   400400: "credential.verify.success",
   400440: "credential.verify.failed",
