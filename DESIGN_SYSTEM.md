@@ -368,7 +368,7 @@ body {
 | Destructive action                     | `bg-error`                                                                                     |
 | Body text                              | `text-navy`                                                                                    |
 | Muted / helper text                    | `text-gray-500`                                                                                |
-| Eyebrow / meta labels                  | `text-gray-400`                                                                                |
+| Eyebrow / meta labels                  | `text-gray-500`                                                                                |
 | Mono identifiers                       | `text-gray-500` (or `text-gray-600`)                                                           |
 | Card border                            | `border-gray-100`                                                                              |
 | Input border                           | `border-gray-200`                                                                              |
@@ -452,7 +452,7 @@ No Google Fonts CDN is used. Fonts are bundled with the app.
 | Stat value      | `font-display text-4xl font-extrabold tracking-tight`                  | Dashboard metrics                               |
 | Body            | `font-sans text-sm text-navy`                                          | Default body                                    |
 | Label           | `font-sans text-sm font-semibold text-gray-700`                        | Form labels                                     |
-| Eyebrow         | `font-sans text-xs font-bold uppercase tracking-wider text-gray-400`   | Meta labels above values                        |
+| Eyebrow         | `font-sans text-xs font-bold uppercase tracking-wider text-gray-500`   | Meta labels above values                        |
 | Status pill     | `font-sans text-xs font-bold uppercase tracking-wider`                 | Badge text                                      |
 | Helper          | `font-sans text-xs text-gray-500`                                      | Subtitles, muted helper text                    |
 | Mono            | `font-mono text-xs`                                                    | Hashes, IDs, addresses                          |
@@ -535,7 +535,7 @@ export function EyebrowLabel({
   children: React.ReactNode;
   tone?: "muted" | "navy";
 }) {
-  const colorClass = tone === "navy" ? "text-navy" : "text-gray-400";
+  const colorClass = tone === "navy" ? "text-navy" : "text-gray-500";
   return (
     <dt className={`text-xs font-bold ${colorClass} mb-1 tracking-wider uppercase`}>{children}</dt>
   );
@@ -581,7 +581,7 @@ These are the things that make CredChain visually distinct. Touch them only with
 2. **Tinted colored shadows** - `shadow-md shadow-navy/20`, `shadow-lg shadow-gold/20`, `shadow-error/20` under brand-colored elements. This is the signature material treatment.
 3. **Single decorative blob per hero area** - One soft radial gradient, never multiple competing blobs. Restraint is the move.
 4. **Mono-font identifiers** - Every hash, address, and ID renders in `font-mono`. This is the blockchain visual cue. Never sans-serif a hash.
-5. **Eyebrow labels** - `text-xs font-bold uppercase tracking-wider text-gray-400` precedes data values. Editorial typographic device.
+5. **Eyebrow labels** - `text-xs font-bold uppercase tracking-wider text-gray-500` precedes data values. Editorial typographic device.
 6. **Generous rounded-2xl on cards** - Default to `rounded-2xl` (16px) for content cards. Avoid `rounded-md` (6px) on anything larger than a button - it reads as default Bootstrap.
 7. **Display serif for headings** - Fraunces optical-size headings. Sans-serif headings would lose the editorial weight.
 8. **Asymmetric stat cards on dashboard** - One gold card sits among neutral cards. The chromatic anchor draws the eye. Never four identical cards.
@@ -1031,7 +1031,7 @@ export function DetailRow({
       <dt
         className={cn(
           "mb-1 flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase",
-          tone === "error" ? "text-error" : "text-gray-400",
+          tone === "error" ? "text-error" : "text-gray-500",
         )}
       >
         {Icon && <Icon className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -2054,7 +2054,7 @@ Design system rules:
 - Buttons: rounded-xl font-bold, primary=bg-navy text-surface shadow-md shadow-navy/20
 - Inputs: rounded-xl border-gray-200 bg-gray-50 focus:ring-2 focus:ring-navy focus:bg-white
 - Status pills: inline-flex rounded-md text-xs font-bold uppercase tracking-wider
-- Eyebrow labels: text-xs font-bold uppercase tracking-wider text-gray-400
+- Eyebrow labels: text-xs font-bold uppercase tracking-wider text-gray-500
 - Mono IDs: font-mono text-xs text-gray-500
 - All classNames via cn() from shared/lib/cn.ts
 - Icons from lucide-react, named imports only
@@ -2240,7 +2240,7 @@ TYPOGRAPHY
   Card title      text-lg font-bold text-navy
   Body            text-sm
   Label           text-sm font-semibold text-gray-700
-  Eyebrow         text-xs font-bold uppercase tracking-wider text-gray-400
+  Eyebrow         text-xs font-bold uppercase tracking-wider text-gray-500
   Mono            font-mono text-xs text-gray-500
 
 CONTAINERS

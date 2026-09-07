@@ -17,6 +17,9 @@
   /* === BRAND COLORS === */
   --color-navy: #0f172a;
   --color-gold: #c9a227;
+  /* Gold is 2.42:1 on white — unreadable as text. This is the on-light variant;
+     keep --color-gold for fills, borders, and text on navy (7.38:1). */
+  --color-gold-text: #8a6f13;
   --color-base: #f8fafc;
   --color-surface: #ffffff;
   --color-error: #b91c1c;

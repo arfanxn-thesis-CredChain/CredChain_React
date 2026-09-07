@@ -22,7 +22,7 @@ export function DetailRow({
       <dt
         className={cn(
           "mb-1 flex items-center gap-1.5 text-xs font-bold tracking-wider uppercase",
-          isError ? "text-error" : "text-gray-400",
+          isError ? "text-error" : "text-gray-500",
         )}
       >
         {Icon && <Icon className="h-3.5 w-3.5" aria-hidden="true" />}

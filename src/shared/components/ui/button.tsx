@@ -20,7 +20,7 @@ const buttonVariants = cva(
         outline:
           "border border-gray-200 bg-surface text-navy hover:bg-gray-50 focus-visible:ring-gold",
         ghost: "text-navy hover:bg-gray-100 focus-visible:ring-gold",
-        link: "text-gold underline-offset-4 hover:underline focus-visible:ring-gold",
+        link: "text-gold-text underline-offset-4 hover:underline focus-visible:ring-gold",
         dashed:
           "border-2 border-dashed border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 focus-visible:ring-gold",
       },

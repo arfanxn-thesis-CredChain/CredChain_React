@@ -7,7 +7,7 @@ interface MetaDisplayProps {
 
 export function MetaDisplay({ meta, className }: MetaDisplayProps) {
   if (!meta || Object.keys(meta).length === 0) {
-    return <span className="text-xs text-gray-400">—</span>;
+    return <span className="text-xs text-gray-500">—</span>;
   }
 
   return (
