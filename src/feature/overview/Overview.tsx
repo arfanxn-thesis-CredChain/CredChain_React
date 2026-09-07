@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   Layers,
-  Calendar,
   ArrowRight,
   Wallet,
 } from "lucide-react";
@@ -53,14 +52,6 @@ function relativeTime(iso: string, t: ReturnType<typeof useTranslation>["t"]): s
   if (hours < 24) return t("overview.relativeTime.hours", { n: hours });
   if (days < 7) return t("overview.relativeTime.days", { n: days });
   return t("overview.relativeTime.weeks", { n: weeks });
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 /* ── stat item ── */
@@ -298,12 +289,7 @@ function UserRow({
           copyPrefix="user"
           labelType="full"
           blockLinks
-        >
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
-            <Calendar className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
-            <span>{t("overview.recents.joined", { date: formatDate(user.created_at) })}</span>
-          </div>
-        </UserContactBlock>
+        />
       </div>
       <time dateTime={user.created_at} className="mt-0.5 shrink-0 text-xs text-gray-400">
         {relativeTime(user.created_at, t)}

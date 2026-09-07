@@ -217,4 +217,14 @@ describe("UserContactBlock", () => {
 
     expect(screen.queryByRole("button", { name: /copy holder wallet/i })).not.toBeInTheDocument();
   });
+
+  it("renders resolved unit name when user has a unit_id", async () => {
+    const user = makeUser({ unit_id: "unit_01" });
+    render(
+      <UserContactBlock user={user} fallbackId="usr_1" copyPrefix="holder" labelType="full" />,
+      { wrapper: TestProviders },
+    );
+
+    expect(await screen.findByText("Faculty of Engineering")).toBeInTheDocument();
+  });
 });

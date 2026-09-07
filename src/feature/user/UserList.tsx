@@ -268,7 +268,7 @@ export function UserList() {
                                       }}
                                       aria-label={t("user.filter.unit")}
                                       title={t("user.filter.unit")}
-                                      className="flex cursor-pointer items-center gap-1 text-left hover:text-navy sm:col-span-2 lg:col-span-3"
+                                      className="flex w-fit cursor-pointer items-center gap-1 text-left hover:text-navy sm:col-span-2 lg:col-span-3"
                                     >
                                       <Building2
                                         className="h-3.5 w-3.5 shrink-0 text-gray-400"

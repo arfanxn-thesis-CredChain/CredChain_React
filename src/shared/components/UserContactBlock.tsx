@@ -1,9 +1,19 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Hash, Mail, Phone, VenusAndMars, Wallet } from "lucide-react";
+import {
+  Building2,
+  Calendar,
+  CalendarClock,
+  Hash,
+  Mail,
+  Phone,
+  VenusAndMars,
+  Wallet,
+} from "lucide-react";
 import { cn } from "@shared/lib/cn";
-import { truncateAddress } from "@shared/lib/format";
+import { relativeTime, truncateAddress } from "@shared/lib/format";
+import { useUserUnits } from "@shared/api/useUserUnits";
 import { CopyInlineButton } from "@shared/components/CopyInlineButton";
 import { UserAvatar } from "@shared/components/UserAvatar";
 import { UserRoleBadge } from "@shared/components/UserRoleBadge";
@@ -31,11 +41,13 @@ export function UserContactBlock({
   layout = "flex",
   children,
 }: UserContactBlockProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { data: units } = useUserUnits();
+  const unitName = units?.find((u) => u.id === user?.unit_id)?.name;
 
   const name = user?.name ?? user?.email ?? fallbackId;
   const userId = user?.id ?? fallbackId;
-  const isDeleted = user?.deleted_at !== null;
+  const isDeleted = !!user?.deleted_at;
   const phoneNumber = (user as (UserDTO & { phone_number?: string | null }) | undefined)
     ?.phone_number;
 
@@ -79,15 +91,22 @@ export function UserContactBlock({
         {labelType === "full" && (
           <div
             className={cn(
-              "gap-y-0.5",
+              "gap-y-0.5 text-xs text-gray-500",
               layout === "grid"
                 ? "grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-3"
                 : "flex flex-col",
             )}
           >
+            {user?.unit_id && (
+              <div className="flex items-center gap-1 sm:col-span-2 lg:col-span-3">
+                <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
+                <span className="truncate">{unitName ?? "—"}</span>
+              </div>
+            )}
+
             {user?.number && (
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Hash className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+              <div className="flex items-center gap-1">
+                <Hash className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
                 <span className="truncate">{user.number}</span>
                 <CopyInlineButton
                   value={user.number}
@@ -98,8 +117,8 @@ export function UserContactBlock({
             )}
 
             {user?.email && (
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Mail className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+              <div className="flex items-center gap-1">
+                <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
                 <span className="truncate">{user.email}</span>
                 <CopyInlineButton
                   value={user.email}
@@ -110,8 +129,8 @@ export function UserContactBlock({
             )}
 
             {phoneNumber && (
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <Phone className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+              <div className="flex items-center gap-1">
+                <Phone className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
                 <span className="truncate">{phoneNumber}</span>
                 <CopyInlineButton
                   value={phoneNumber}
@@ -122,15 +141,15 @@ export function UserContactBlock({
             )}
 
             {user?.gender && (
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <VenusAndMars className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+              <div className="flex items-center gap-1">
+                <VenusAndMars className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
                 <span>{t(`user.field.gender.${user.gender}`)}</span>
               </div>
             )}
 
             {user?.wallet_address && (
-              <div className="flex items-center gap-1 font-mono text-xs text-gray-500">
-                <Wallet className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+              <div className="flex items-center gap-1 font-mono">
+                <Wallet className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
                 <span className="truncate" title={user.wallet_address}>
                   {truncateAddress(user.wallet_address)}
                 </span>
@@ -139,6 +158,30 @@ export function UserContactBlock({
                   ariaLabel={t(`cred.copy.${copyPrefix}Wallet`)}
                   className="shrink-0"
                 />
+              </div>
+            )}
+
+            {user && (
+              <div className="flex items-center gap-1">
+                <CalendarClock className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
+                <span>{t("user.list.joinedInline", { year: user.joined_year ?? "—" })}</span>
+              </div>
+            )}
+
+            {user && (
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
+                <span>
+                  {user.deleted_at
+                    ? t("user.list.trashed", { time: relativeTime(user.deleted_at, i18n.language) })
+                    : user.updated_at !== user.created_at
+                      ? t("user.list.updated", {
+                          time: relativeTime(user.updated_at, i18n.language),
+                        })
+                      : t("user.list.created", {
+                          time: relativeTime(user.created_at, i18n.language),
+                        })}
+                </span>
               </div>
             )}
           </div>
