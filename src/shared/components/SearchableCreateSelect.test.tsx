@@ -63,6 +63,15 @@ describe("SearchableCreateSelect", () => {
     });
   });
 
+  it("marks the trigger as a listbox popup", () => {
+    render(
+      <SearchableCreateSelect resource="credential-types" value="" onChange={() => {}} />,
+      { wrapper: TestProviders },
+    );
+
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-haspopup", "listbox");
+  });
+
   it("creates a new entry and selects it when no match", async () => {
     server.use(
       // No rows for a non-matching search, so the create row appears.
@@ -305,6 +314,182 @@ describe("SearchableCreateSelect", () => {
     expect(screen.queryByPlaceholderText("Type to search...")).not.toBeInTheDocument();
   });
 
+  it("drops a proposed name when the same name is picked as a real row", async () => {
+    function MultiHarness() {
+      const [value, setValue] = useState<string[]>([]);
+      const [proposedNames, setProposedNames] = useState<string[]>(["Machine Learning"]);
+      return (
+        <SearchableCreateSelect
+          mode="propose"
+          multiple
+          resource="competencies"
+          value={value}
+          onChange={setValue}
+          proposedNames={proposedNames}
+          onProposedNamesChange={setProposedNames}
+        />
+      );
+    }
+    server.use(
+      http.get("*/api/competencies", () => paginated([{ id: "comp_01", name: "Machine Learning" }])),
+    );
+
+    render(<MultiHarness />, { wrapper: TestProviders });
+
+    await screen.findByText("Machine Learning"); // the proposed chip
+    await userEvent.click(screen.getByRole("combobox"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Machine Learning" }));
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+
+    // The real pick supersedes the proposal for the same name — one chip, not two.
+    await waitFor(() => {
+      expect(screen.getAllByText("Machine Learning")).toHaveLength(1);
+      expect(screen.queryByText("cred.submit.proposed")).not.toBeInTheDocument();
+    });
+  });
+
+  it("refuses a proposal that duplicates an already-selected row name", async () => {
+    const infoSpy = vi.spyOn(notify, "info").mockImplementation(() => {});
+    function MultiHarness() {
+      const [value, setValue] = useState<string[]>(["comp_01"]);
+      const [proposedNames, setProposedNames] = useState<string[]>([]);
+      return (
+        <SearchableCreateSelect
+          mode="propose"
+          multiple
+          resource="competencies"
+          value={value}
+          onChange={setValue}
+          proposedNames={proposedNames}
+          onProposedNamesChange={setProposedNames}
+        />
+      );
+    }
+    server.use(
+      // The already-selected row lives past the loaded page — the by-ids chip
+      // lookup can still resolve its name, but a search for it comes back
+      // empty, which is exactly when the duplicate-by-name guard is needed.
+      http.get("*/api/competencies", ({ request }) =>
+        paginated(
+          new URL(request.url).searchParams.get("search")
+            ? []
+            : [{ id: "comp_01", name: "Machine Learning" }],
+        ),
+      ),
+    );
+
+    render(<MultiHarness />, { wrapper: TestProviders });
+
+    await screen.findByText("Machine Learning");
+    await userEvent.click(screen.getByRole("combobox"));
+    fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
+      target: { value: "machine learning" },
+    });
+    await userEvent.click(await screen.findByText('Propose "machine learning" for review'));
+
+    await waitFor(() => {
+      expect(infoSpy).toHaveBeenCalledWith("cred.submit.existing");
+    });
+    // Still exactly one entry — the duplicate proposal was refused, not added.
+    expect(screen.getAllByText("Machine Learning")).toHaveLength(1);
+    infoSpy.mockRestore();
+  });
+
+  it("marks a proposed value in a single-value trigger", async () => {
+    function SingleHarness() {
+      const [proposed, setProposed] = useState("ID Card");
+      return (
+        <SearchableCreateSelect
+          mode="propose"
+          resource="credential-types"
+          value=""
+          onChange={vi.fn()}
+          proposed={proposed}
+          onProposeChange={setProposed}
+        />
+      );
+    }
+    render(<SingleHarness />, { wrapper: TestProviders });
+
+    expect(screen.getByRole("combobox")).toHaveTextContent("ID Card");
+    expect(screen.getByRole("combobox")).toHaveTextContent("pending review");
+  });
+
+  it("does not flash the placeholder while a saved selection's name is still resolving", async () => {
+    server.use(
+      http.get("*/api/credential-types", async ({ request }) => {
+        const url = new URL(request.url);
+        // The initial by-ids resolve is the slow leg; delay only that one so
+        // the placeholder-vs-selected race is actually exercised.
+        if (url.searchParams.getAll("filters").some((f) => f.startsWith("id$"))) {
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        return paginated([{ id: "ctype_01", name: "Bachelor's Degree" }]);
+      }),
+    );
+
+    render(
+      <SearchableCreateSelect resource="credential-types" value="ctype_01" onChange={vi.fn()} />,
+      { wrapper: TestProviders },
+    );
+
+    // A real selection is pending resolution, not empty — the placeholder
+    // must never appear, even before the name loads.
+    expect(screen.queryByText("Type to search...")).not.toBeInTheDocument();
+
+    await screen.findByText("Bachelor's Degree");
+  });
+
+  it("shows a real pick with neither marker nor status text", async () => {
+    server.use(
+      http.get("*/api/credential-types", () => paginated([{ id: "ctype_01", name: "Ijazah" }])),
+    );
+
+    render(
+      <SearchableCreateSelect resource="credential-types" value="ctype_01" onChange={vi.fn()} />,
+      { wrapper: TestProviders },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toHaveTextContent("Ijazah");
+    });
+    expect(screen.queryByText("pending review")).not.toBeInTheDocument();
+  });
+
+  it("clears a single-value selection from the trigger", async () => {
+    const onChange = vi.fn();
+    render(
+      <SearchableCreateSelect resource="credential-types" value="ctype_01" onChange={onChange} />,
+      { wrapper: TestProviders },
+    );
+
+    await screen.findByText("Bachelor's Degree");
+    await userEvent.click(screen.getByRole("button", { name: /remove/i }));
+
+    expect(onChange).toHaveBeenCalledWith("");
+    // Clearing must not open the search panel.
+    expect(screen.queryByPlaceholderText("Type to search...")).not.toBeInTheDocument();
+  });
+
+  it("clears a single-value proposal from the trigger", async () => {
+    const onProposeChange = vi.fn();
+    render(
+      <SearchableCreateSelect
+        mode="propose"
+        resource="credential-types"
+        value=""
+        onChange={vi.fn()}
+        proposed="ID Card"
+        onProposeChange={onProposeChange}
+      />,
+      { wrapper: TestProviders },
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /remove/i }));
+
+    expect(onProposeChange).toHaveBeenCalledWith("");
+  });
+
   it("emits a proposed name instead of creating a row", async () => {
     const onChange = vi.fn();
     const onProposeChange = vi.fn();
@@ -358,6 +543,111 @@ describe("SearchableCreateSelect", () => {
     // Picked id and proposed name are mutually exclusive — the service
     // rejects a submission carrying both.
     expect(onChange).toHaveBeenCalledWith("");
+  });
+
+  it("keeps the create row visible when the search returns a partial match", async () => {
+    server.use(
+      // "AK" returns a fuzzy match "Akuntansi" — a partial match, not exact.
+      http.get("*/api/credential-types", () => paginated([{ id: "ctype_ak", name: "Akuntansi" }])),
+    );
+
+    render(
+      <SearchableCreateSelect resource="credential-types" label="Type" value="" onChange={vi.fn()} />,
+      { wrapper: TestProviders },
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
+      target: { value: "AK" },
+    });
+
+    await screen.findByText("Akuntansi");
+    expect(await screen.findByText('Create "AK"')).toBeInTheDocument();
+  });
+
+  it("hides the create row when a loaded row matches exactly, case-insensitively", async () => {
+    server.use(
+      http.get("*/api/credential-types", () => paginated([{ id: "ctype_ak", name: "Akuntansi" }])),
+    );
+
+    render(
+      <SearchableCreateSelect resource="credential-types" label="Type" value="" onChange={vi.fn()} />,
+      { wrapper: TestProviders },
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
+      target: { value: "akuntansi" },
+    });
+
+    await screen.findByText("Akuntansi");
+    await waitFor(() => {
+      expect(screen.queryByText(/Create "/)).not.toBeInTheDocument();
+    });
+    expect(screen.queryByText("cred.submit.noMatch")).not.toBeInTheDocument();
+    expect(screen.queryByText(/no match/i)).not.toBeInTheDocument();
+  });
+
+  it("creates the literal typed string when a partial match exists", async () => {
+    let body: { name?: string } | undefined;
+    server.use(
+      http.get("*/api/credential-types", () => paginated([{ id: "ctype_ak", name: "Akuntansi" }])),
+      http.post("*/api/credential-types", async ({ request }) => {
+        body = (await request.json()) as { name?: string };
+        return HttpResponse.json({
+          code: 400600,
+          message: "OK",
+          data: { id: "ctype_new", name: body.name ?? "" },
+        });
+      }),
+    );
+
+    render(
+      <SearchableCreateSelect resource="credential-types" label="Type" value="" onChange={vi.fn()} />,
+      { wrapper: TestProviders },
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
+      target: { value: "AK" },
+    });
+    await userEvent.click(await screen.findByText('Create "AK"'));
+
+    await vi.waitFor(() => {
+      expect(body).toEqual({ name: "AK" });
+    });
+  });
+
+  it("renders the create row disabled with a spinner while the upsert is in flight", async () => {
+    server.use(
+      http.get("*/api/credential-types", () => paginated([])),
+      http.post(
+        "*/api/credential-types",
+        () =>
+          new Promise(() => {
+            // Never resolves — pins the in-flight disabled+spinner state.
+          }),
+      ),
+    );
+
+    render(
+      <SearchableCreateSelect resource="credential-types" label="Type" value="" onChange={vi.fn()} />,
+      { wrapper: TestProviders },
+    );
+
+    await userEvent.click(screen.getByRole("combobox"));
+    fireEvent.change(screen.getByPlaceholderText("Type to search..."), {
+      target: { value: "Blockchain Architect" },
+    });
+    const createRow = await screen.findByText('Create "Blockchain Architect"');
+    await userEvent.click(createRow);
+
+    await waitFor(() => {
+      expect(screen.getByRole("menuitem", { name: /Blockchain Architect/ })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+    });
   });
 
   it("default create mode still POSTs and selects a row", async () => {

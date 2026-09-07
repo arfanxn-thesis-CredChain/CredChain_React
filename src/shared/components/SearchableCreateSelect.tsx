@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Check, ChevronDown, Loader2, Plus, Search, X } from "lucide-react";
+import { Check, ChevronDown, CircleDashed, Loader2, Plus, Search, X } from "lucide-react";
 import { cn } from "@shared/lib/cn";
 import { notify } from "@shared/lib/notify";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
@@ -10,7 +10,6 @@ import {
   useReferencePage,
   useUpsertReference,
 } from "@shared/api/useReferenceData";
-import { FormField } from "@ui/form-field";
 import { Badge } from "@ui/badge";
 import {
   DropdownMenu,
@@ -76,12 +75,13 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   const selected = useReferenceByIds(props.resource, selectedIds);
   const selectedRows = selected.data ?? [];
 
-  const filtered = rows;
-  const showCreateRow =
-    trimmed.length > 0 &&
-    !list.isLoading &&
-    filtered.length === 0 &&
-    (props.mode === "propose" || !upsert.isPending);
+  // The create row is gated on an EXACT match, not on result count: a partial
+  // match ("Akuntansi" for "AK") must not block creating the literal string.
+  // `term` is the debounced query, not `trimmed`: `rows` reflect the debounced
+  // value, and mixing the two lets the label say "AK" while the click sends "AKU".
+  const term = debouncedQuery;
+  const hasExact = rows.some((r) => r.name.trim().toLowerCase() === term.toLowerCase());
+  const showCreateRow = term.length > 0 && !list.isLoading && !hasExact;
 
   const close = () => {
     setOpen(false);
@@ -98,6 +98,15 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
         ? props.value.filter((id) => id !== row.id)
         : [...props.value, row.id];
       props.onChange(next);
+      // A real pick supersedes a proposed name for the same slot — drop any
+      // proposal that now duplicates the row just selected.
+      if (props.mode === "propose") {
+        const current = props.proposedNames ?? [];
+        const deduped = current.filter((n) => n.toLowerCase() !== row.name.toLowerCase());
+        if (deduped.length !== current.length) {
+          props.onProposedNamesChange?.(deduped);
+        }
+      }
     } else {
       props.onChange(row.id);
       close();
@@ -113,7 +122,7 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   };
 
   const handleCreate = () => {
-    const name = trimmed;
+    const name = term;
     if (!name) return;
 
     // Propose mode never writes to the taxonomy: the name rides along on the
@@ -121,7 +130,15 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
     if (props.mode === "propose") {
       if (multiple) {
         const current = props.proposedNames ?? [];
-        if (!current.some((n) => n.toLowerCase() === name.toLowerCase())) {
+        // Reject a proposal that duplicates a proposed OR an already-selected
+        // real row by name — each slot holds one of {id, proposedName}, never
+        // both for the same name.
+        const isDuplicate =
+          current.some((n) => n.toLowerCase() === name.toLowerCase()) ||
+          selectedRows.some((r) => r.name.toLowerCase() === name.toLowerCase());
+        if (isDuplicate) {
+          notify.info("cred.submit.existing");
+        } else {
           props.onProposedNamesChange?.([...current, name]);
         }
       } else {
@@ -136,10 +153,9 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
 
     upsert.mutate(name, {
       onSuccess: (row) => {
-        // The server returns the pre-existing row when the name already matches
-        // case-insensitively, so the canonical spelling comes back instead of
-        // what was typed. Comparing against the loaded rows no longer works:
-        // this row only renders when the server search returned nothing.
+        // The server returns the pre-existing row when the name matches
+        // case-insensitively, so the canonical spelling can come back instead of what
+        // was typed — the exact match may simply have been past page 1.
         if (row.name !== name) {
           notify.info("cred.submit.existing");
         }
@@ -156,11 +172,18 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   };
 
   const proposedList = multiple ? (props.proposedNames ?? []) : props.proposed ? [props.proposed] : [];
-  const isEmpty = selectedRows.length === 0 && proposedList.length === 0;
+  // Gate on selectedIds, not selectedRows: a saved selection has an id before
+  // the by-ids fetch resolves its name, and that in-flight window is not empty
+  // — it's a real selection whose name hasn't loaded yet.
+  const isEmpty = selectedIds.length === 0 && proposedList.length === 0;
+  // A real selection whose name hasn't resolved yet is still real — gate the
+  // proposed marker on the id, not on the (possibly still-loading) row.
+  const hasRealSelection = selectedIds.length > 0;
 
   const trigger = (
     <div
       role="combobox"
+      aria-haspopup="listbox"
       aria-expanded={open}
       aria-label={props.label}
       aria-invalid={props.error ? true : undefined}
@@ -182,10 +205,42 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
         </span>
       ) : !multiple ? (
         // One value needs no chip — plain text, same as UnitPicker and the
-        // <Select> fields beside it. Chips are reserved for multi-value.
-        <span className="min-w-0 flex-1 truncate">
-          {selectedRows[0]?.name ?? props.proposed}
-        </span>
+        // <Select> fields beside it. Chips are reserved for multi-value. A
+        // proposed (not yet real) value gets an inline marker instead: a
+        // gray glyph + status text, never a chip and never gold — gold means
+        // confirmed, and a proposal is the opposite of confirmed.
+        <>
+          {!hasRealSelection && (
+            <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+          )}
+          <span className="min-w-0 flex-1 truncate">
+            {selectedRows[0]?.name ?? props.proposed}
+          </span>
+          {!hasRealSelection && (
+            <span className="shrink-0 text-xs text-gray-400">{t("cred.submit.proposed")}</span>
+          )}
+          <button
+            type="button"
+            aria-label={t("cred.submit.removeSelection", {
+              name: selectedRows[0]?.name ?? props.proposed,
+            })}
+            // Radix opens the trigger on pointerdown, before React's click
+            // handler runs — stopPropagation there too, or the panel flashes
+            // open on the way to clearing.
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (hasRealSelection) {
+                deselect(selectedIds[0]);
+              } else {
+                props.onProposeChange?.("");
+              }
+            }}
+            className="shrink-0 rounded-full text-navy/60 hover:text-navy"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </>
       ) : (
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
           {selectedRows.map((row) => (
@@ -198,6 +253,7 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
               <button
                 type="button"
                 aria-label={t("cred.submit.removeSelection", { name: row.name })}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   deselect(row.id);
@@ -214,11 +270,13 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
               tone="gray"
               className="inline-flex items-center gap-1 text-xs font-medium normal-case tracking-normal"
             >
+              <CircleDashed className="h-3 w-3 shrink-0" aria-hidden="true" />
               <span className="max-w-40 truncate">{name}</span>
               <span className="text-xs text-gray-400">{t("cred.submit.proposed")}</span>
               <button
                 type="button"
                 aria-label={t("cred.submit.removeSelection", { name })}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   props.onProposedNamesChange?.(proposedList.filter((n) => n !== name));
@@ -275,13 +333,13 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
         <div className="scrollbar-hidden max-h-72 overflow-y-auto p-1">
           {list.isLoading && (
             <div className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-gray-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               {t("cred.submit.loading")}
             </div>
           )}
-          {!list.isLoading && !list.isError && filtered.length === 0 && !showCreateRow && (
+          {!list.isLoading && !list.isError && rows.length === 0 && !showCreateRow && (
             <div className="px-3 py-6 text-center text-sm text-gray-400">
-              {trimmed ? t("cred.submit.noMatch") : t("cred.submit.emptyList")}
+              {t("cred.submit.emptyList")}
             </div>
           )}
           {!list.isLoading && list.isError && (
@@ -290,7 +348,7 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
             </div>
           )}
           {!list.isLoading &&
-            filtered.map((row) => {
+            rows.map((row) => {
               const isSelected = selectedIds.includes(row.id);
               // Inactive rows stay visible but unpickable — the backend rejects
               // them at issue time. An already-selected one stays clickable so
@@ -326,39 +384,39 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
               disabled={list.isFetchingNextPage}
               className="flex items-center justify-center gap-2 border-t border-gray-100 font-medium text-gray-500"
             >
-              {list.isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" />}
+              {list.isFetchingNextPage && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               {t("common.loadMore")}
             </DropdownMenuItem>
           )}
-          {showCreateRow && (
+        </div>
+        {showCreateRow && (
+          <div className="border-t border-gray-100 p-1">
             <DropdownMenuItem
-              onSelect={(e) => multiple && e.preventDefault()}
+              // Always prevented, not just for multi: Radix's default onSelect
+              // closes the menu immediately, which would hide the disabled +
+              // spinner state below during the POST. `handleCreate` already
+              // calls `close()` explicitly once it's done.
+              onSelect={(e) => e.preventDefault()}
               onClick={handleCreate}
               disabled={props.mode !== "propose" && upsert.isPending}
-              className="flex items-center gap-2 border-t border-gray-100 font-medium text-navy"
+              className="flex items-center gap-2 font-medium text-navy"
             >
               {props.mode !== "propose" && upsert.isPending ? (
-                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400" aria-hidden="true" />
               ) : (
                 <Plus className="h-4 w-4 shrink-0 text-gold" />
               )}
               <span className="min-w-0 flex-1 truncate">
                 {props.mode === "propose"
-                  ? t("cred.submit.propose", { name: trimmed })
-                  : t("cred.submit.create", { name: trimmed })}
+                  ? t("cred.submit.propose", { name: term })
+                  : t("cred.submit.create", { name: term })}
               </span>
             </DropdownMenuItem>
-          )}
-        </div>
+          </div>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 
-  return props.label ? (
-    <FormField label={props.label} error={props.error}>
-      {dropdown}
-    </FormField>
-  ) : (
-    dropdown
-  );
+  return dropdown;
 }

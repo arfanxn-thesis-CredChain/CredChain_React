@@ -33,7 +33,7 @@ export function CredentialFileInput({ file, onChange, onExpand, error }: Credent
         accept=".pdf,.jpg,.jpeg,.png,.webp,.tiff"
         emptyLabel={t("credential.issue.preview.dragDrop")}
         hint={t("cred.field.fileHint")}
-        error={error}
+        error={error ? t(error) : undefined}
       />
     );
   }
