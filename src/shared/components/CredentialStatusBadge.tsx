@@ -1,68 +1,40 @@
 import { useTranslation } from "react-i18next";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  FileQuestion,
-  ShieldAlert,
-  ShieldCheck,
-} from "lucide-react";
-import { StatusPill } from "@shared/components/StatusPill";
-import type { ExtractStatus } from "@shared/types/api";
+import { Ban, CheckCircle2, Clock, XCircle, type LucideIcon } from "lucide-react";
+import { StatusPill, type StatusTone } from "@shared/components/StatusPill";
+import type { CredentialStatus } from "@shared/types/api";
 
-interface CredentialStatusBadgeProps {
-  revoked: boolean;
-  extractStatus?: ExtractStatus;
-  showExtractStatus?: boolean;
-}
+const TONE_MAP: Record<CredentialStatus, StatusTone> = {
+  pending: "gold",
+  approved: "green",
+  rejected: "error",
+  revoked: "gray",
+};
+
+const ICON_MAP: Record<CredentialStatus, LucideIcon> = {
+  pending: Clock,
+  approved: CheckCircle2,
+  rejected: XCircle,
+  revoked: Ban,
+};
+
+const LABEL_KEY: Record<CredentialStatus, string> = {
+  pending: "cred.lifecycle.pending",
+  approved: "cred.lifecycle.approved",
+  rejected: "cred.lifecycle.rejected",
+  revoked: "cred.lifecycle.revoked",
+};
 
 export function CredentialStatusBadge({
-  revoked,
-  extractStatus,
-  showExtractStatus,
-}: CredentialStatusBadgeProps) {
+  status,
+  className,
+}: {
+  status: CredentialStatus;
+  className?: string;
+}) {
   const { t } = useTranslation();
-
-  if (revoked) {
-    return (
-      <StatusPill tone="error" icon={ShieldAlert}>
-        {t("cred.status.revoked")}
-      </StatusPill>
-    );
-  }
-
-  if (showExtractStatus && extractStatus) {
-    switch (extractStatus) {
-      case "unextracted":
-        return (
-          <StatusPill tone="gray" icon={FileQuestion}>
-            {t("cred.extract.unextracted")}
-          </StatusPill>
-        );
-      case "pending":
-        return (
-          <StatusPill tone="gold" icon={Clock}>
-            {t("cred.extract.pendingExtraction")}
-          </StatusPill>
-        );
-      case "succeeded":
-        return (
-          <StatusPill tone="green" icon={CheckCircle2}>
-            {t("cred.extract.succeeded")}
-          </StatusPill>
-        );
-      case "failed":
-        return (
-          <StatusPill tone="error" icon={AlertTriangle}>
-            {t("cred.extract.failed")}
-          </StatusPill>
-        );
-    }
-  }
-
   return (
-    <StatusPill tone="green" icon={ShieldCheck}>
-      {t("cred.status.active")}
+    <StatusPill tone={TONE_MAP[status]} icon={ICON_MAP[status]} className={className}>
+      {t(LABEL_KEY[status])}
     </StatusPill>
   );
 }

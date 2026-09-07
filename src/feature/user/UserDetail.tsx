@@ -134,13 +134,13 @@ export function UserDetail() {
       case "all":
         return base;
       case "active":
-        return [...base, "revoked_at_", "extract_status!=failed"];
+        return [...base, "revoked_at_", "extract_failed_at_"];
       case "revoked":
-        return [...base, "revoked_at!_", "extract_status!=failed"];
+        return [...base, "revoked_at!_", "extract_failed_at_"];
       case "pending":
-        return [...base, "extract_status=pending"];
+        return [...base, "extract_enqueued_at!_", "extracted_at_", "extract_failed_at_"];
       case "failed":
-        return [...base, "extract_status=failed"];
+        return [...base, "extract_failed_at!_"];
     }
   })();
 

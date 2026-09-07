@@ -59,7 +59,7 @@ function credentialsResponse(items: CredentialDTO[]) {
 
 function pendingCredential(overrides: Partial<CredentialDTO> = {}): CredentialDTO {
   return makeCredential({
-    lifecycle_status: "pending",
+    status: "pending",
     approved_at: null,
     rejected_at: null,
     ...overrides,
@@ -148,7 +148,7 @@ describe("CredentialList", () => {
       const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
       expect(filters).toContain("approved_at_");
       expect(filters).toContain("rejected_at_");
-      expect(filters).toContain("extract_status=failed");
+      expect(filters).toContain("extract_failed_at!_");
     });
   });
 
@@ -359,6 +359,39 @@ describe("CredentialList", () => {
       }),
     );
     expect(dialog).toBeDefined();
+  });
+
+  it("requests /users/self/credentials for a holder and keeps the credentials query-key namespace", async () => {
+    useStore.setState({
+      user: {
+        id: "usr_holder_test",
+        name: "Test Holder",
+        number: null,
+        unit_id: null,
+        joined_year: null,
+        email: "holder@test.com",
+        birth_date: null,
+        gender: null,
+        role: Role.HOLDER,
+        meta: null,
+        wallet_address: "0x" + "0".repeat(40),
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        deleted_at: null,
+      },
+      isAuthenticated: true,
+    });
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/users/self/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+
+    renderList();
+
+    await waitFor(() => expect(listRequestsOf(recorded).length).toBeGreaterThan(0));
   });
 
   it("renders without crashing when lookup reference endpoints omit the data key (empty tables)", async () => {

@@ -84,6 +84,8 @@
   "user.copy.number": "Salin nomor",
   "user.copy.wallet": "Salin alamat wallet",
   "cred.copy.credentialId": "Salin ID kredensial",
+  "cred.copy.fileHash": "Salin hash berkas",
+  "cred.copy.tokenId": "Salin ID token",
   "cred.copy.holderEmail": "Salin email pemegang",
   "cred.copy.holderNumber": "Salin nomor pemegang",
   "cred.copy.holderPhone": "Salin telepon pemegang",
@@ -382,13 +384,14 @@
   "cred.detail.download": "Unduh",
   "cred.detail.extractionFailed": "Ekstraksi gagal",
   "cred.detail.extractionStatus": "Status Ekstraksi",
+  "cred.detail.credentialId": "ID Kredensial",
   "cred.detail.file": "Berkas Kredensial",
   "cred.detail.fileHash": "Hash File",
   "cred.detail.fileUri": "File Sumber",
   "cred.detail.holder": "Pemegang",
   "cred.detail.issuanceStatus": "Status Penerbitan",
   "cred.detail.issued": "Diterbitkan",
-  "cred.detail.issuedDate": "Tanggal Terbit",
+  "cred.detail.issuedDate": "Tanggal terbit",
   "cred.detail.issuer": "Penerbit",
   "cred.detail.notExtracted": "Belum diekstrak",
   "cred.detail.notFound.body": "Kredensial yang Anda cari tidak ada atau telah dihapus.",
@@ -735,19 +738,19 @@
   "error_credential_review_already_revoked": "Satu atau lebih kredensial sudah dicabut.",
   "error_credential_review_blockchain_sync_failed": "Gagal menyinkronkan tinjauan kredensial ke blockchain.",
   "success_credential_competency_link": "Kompetensi kredensial berhasil ditautkan.",
-  "success_credential_metadata_resolve": "Metadata diselesaikan.",
+  "success_credential_metadata_resolve": "Data dilengkapi.",
   "success_credential_metadata_suggest": "Saran data berhasil diambil.",
-  "error_credential_approve_unresolved_metadata": "Selesaikan metadata yang tidak dikenali sebelum menyetujui.",
+  "error_credential_approve_unresolved_metadata": "Lengkapi data sebelum menyetujui.",
   "error_credential_competency_link_credential_not_found": "Kredensial tidak ditemukan.",
   "error_credential_competency_link_competency_not_found": "Satu atau lebih kompetensi tidak ditemukan.",
   "success_credential_update": "Kredensial berhasil diperbarui.",
   "error_credential_update_not_found": "Kredensial tidak ditemukan.",
   "error_credential_update_not_pending": "Hanya kredensial berstatus pending yang dapat diperbarui.",
   "error_credential_metadata_resolve_not_found": "Kredensial tidak ditemukan.",
-  "error_credential_metadata_resolve_not_pending": "Hanya kredensial berstatus pending yang dapat diselesaikan metadatanya.",
-  "error_credential_metadata_resolve_nothing_staged": "Tidak ada metadata yang belum diselesaikan.",
-  "error_credential_metadata_resolve_target_not_found": "Entri metadata yang dituju tidak ditemukan.",
-  "error_credential_metadata_resolve_target_inactive": "Entri metadata yang dituju tidak aktif.",
+  "error_credential_metadata_resolve_not_pending": "Hanya kredensial berstatus pending yang datanya dapat dilengkapi.",
+  "error_credential_metadata_resolve_nothing_staged": "Tidak ada data yang perlu dilengkapi.",
+  "error_credential_metadata_resolve_target_not_found": "Entri yang dituju tidak ditemukan.",
+  "error_credential_metadata_resolve_target_inactive": "Entri yang dituju tidak aktif.",
   "error_credential_metadata_resolve_number_duplicate": "Nomor ini sudah digunakan oleh organisasi yang dituju.",
   "not_found": {
     "code": "404",
@@ -811,6 +814,9 @@
     "trashed": "Dihapus"
   },
   "cred": {
+    "parties": {
+      "selfSubmitted": "Mengajukan sendiri"
+    },
     "list": {
       "title": "Semua Kredensial",
       "description": "Lihat dan kelola semua kredensial yang diterbitkan dan dicabut.",
@@ -876,15 +882,13 @@
       "audit": "Audit",
       "created": "Dibuat",
       "lastUpdated": "Terakhir diperbarui",
-      "editDetails": "Edit Detail",
+      "cardTitle": "Detail",
       "editOnlyPending": "Hanya kredensial berstatus pending yang dapat diedit.",
       "updateFailed": "Gagal memperbarui kredensial. Silakan coba lagi."
     },
     "competency": {
       "title": "Kompetensi",
       "empty": "Belum ada kompetensi yang diterapkan.",
-      "saveToApply": "Simpan untuk menerapkan perubahan",
-      "save": "Simpan",
       "linkFailed": "Gagal menautkan kompetensi. Silakan coba lagi."
     },
     "issue": {
@@ -892,7 +896,8 @@
       "description": "Unggah dokumen untuk menerbitkan kredensial baru.",
       "addAnother": "Tambah kredensial lain",
       "submit": "Terbitkan Kredensial",
-      "submitting": "Menerbitkan..."
+      "submitting": "Menerbitkan...",
+      "removeAriaLabel": "Hapus kredensial {{n}}"
     },
     "verify": {
       "title": "Verifikasi Kredensial",
@@ -933,7 +938,8 @@
       "error": { "title": "Gagal memuat kredensial", "body": "Silakan coba lagi nanti." }
     },
     "card": {
-      "issued": "Diterbitkan",
+      "issued": "Tanggal terbit",
+      "submitted": "Diajukan",
       "revoked": "Dicabut",
       "revokeMode": "Cabut",
       "reExtractMode": "Ekstrak Ulang",
@@ -949,7 +955,10 @@
       "selectionCapReached": "Maksimal 100 kredensial dipilih. Batalkan pilihan untuk menambah.",
       "alreadyRevoked": "Kredensial ini sudah dicabut.",
       "alreadySucceeded": "Ekstraksi sudah berhasil.",
-      "notPendingReview": "Hanya kredensial yang menunggu tinjauan yang dapat disetujui atau ditolak."
+      "notPendingReview": "Hanya kredensial yang menunggu tinjauan yang dapat disetujui atau ditolak.",
+      "detailsIncomplete": "Data belum lengkap",
+      "completeDetails": "Lengkapi data",
+      "competencyOverflow": "+{{count}}"
     },
     "status": { "active": "Aktif", "revoked": "Dicabut", "menuLabel": "Status" },
     "field": {
@@ -1061,15 +1070,12 @@
       "loadError": "Gagal memuat opsi."
     },
     "metadata": {
-      "title": "Metadata tidak dikenali",
-      "description": "Pengajuan ini menyebut metadata yang belum terdaftar. Tautkan setiap nama ke entri yang ada, atau buat baru. Kredensial tidak dapat disetujui sebelum semua nama diselesaikan.",
-      "pending": "perlu ditinjau",
-      "didYouMean": "Entri serupa yang sudah ada",
-      "noMatches": "Tidak ada entri serupa",
+      "title": "Nama belum terdaftar",
+      "pending": "menunggu tinjauan",
       "createAsTyped": "Buat \"{{name}}\"",
       "apply": "Terapkan",
-      "blocksApproval": "Selesaikan metadata yang tidak dikenali sebelum menyetujui",
-      "resolveFailed": "Gagal menyelesaikan metadata."
+      "blocksApproval": "Lengkapi data sebelum menyetujui",
+      "resolveFailed": "Gagal melengkapi data."
     }
   },
   "credType": {

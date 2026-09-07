@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +21,7 @@ import { useApproveCredentials } from "./api/useApproveCredentials";
 import { useRejectCredentials } from "./api/useRejectCredentials";
 import { CredentialRejectReasonModal } from "./components/CredentialRejectReasonModal";
 import { useStore } from "@app/store";
+import { useUserUnits } from "@shared/api/useUserUnits";
 import { Role, canAccessAny } from "@shared/auth/role";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
@@ -46,7 +47,6 @@ import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 
 import { CredentialCard } from "@shared/components/CredentialCard";
 import { CredentialSortMenu } from "@shared/components/CredentialSortMenu";
-import { CredentialLifecycleStatusBadge } from "./components/CredentialLifecycleStatusBadge";
 import { CredentialStatusMenu } from "./components/CredentialStatusMenu";
 import type {
   CredentialExtractFilter,
@@ -69,10 +69,10 @@ const REVIEW_FILTERS: Record<CredentialReviewStatus, string[]> = {
 
 const EXTRACT_FILTERS: Record<CredentialExtractFilter, string[]> = {
   any: [],
-  unextracted: ["extract_status=unextracted"],
-  pending: ["extract_status=pending"],
-  succeeded: ["extract_status=succeeded"],
-  failed: ["extract_status=failed"],
+  unextracted: ["extract_enqueued_at_"],
+  pending: ["extract_enqueued_at!_", "extracted_at_", "extract_failed_at_"],
+  succeeded: ["extracted_at!_", "extract_failed_at_"],
+  failed: ["extract_failed_at!_"],
 };
 
 const SORT_OPTIONS = [
@@ -169,7 +169,7 @@ export function CredentialList() {
   ];
 
   const pendingCountQuery = useQuery({
-    queryKey: [isHolder ? "my-credentials" : "credentials", "pending-count"],
+    queryKey: ["credentials", "pending-count"],
     queryFn: async () => {
       const endpoint = isHolder ? "/users/self/credentials" : "/credentials";
       const response = await api.get<PaginatedResponse<CredentialDTO>>(endpoint, {
@@ -191,7 +191,7 @@ export function CredentialList() {
     reset,
   } = useLoadMore<CredentialDTO>(
     [
-      isHolder ? "my-credentials" : "credentials",
+      "credentials",
       { search: debouncedSearch || undefined, sort: credSort, filters: filterArray },
     ],
     async (page, limit) => {
@@ -201,7 +201,7 @@ export function CredentialList() {
       if (debouncedSearch) q.search = debouncedSearch;
       q.sorts = [credSort];
       if (filterArray.length > 0) q.filters = filterArray;
-      q.includes = ["holder", "issuer", "revoker"];
+      q.includes = ["holder", "issuer", "revoker", "competencies", "type", "issuer_organization"];
       const endpoint = isHolder ? "/users/self/credentials" : "/credentials";
       const response = await api.get(endpoint, { params: q });
       return response.data;
@@ -217,10 +217,12 @@ export function CredentialList() {
   const reject = useRejectCredentials();
   const { confirm, dialog: confirmDialog } = useConfirm();
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const { data: units } = useUserUnits();
+  const unitNames = useMemo(() => new Map((units ?? []).map((u) => [u.id, u.name])), [units]);
 
-  const isRevokable = (cred: CredentialDTO) => cred.revoked_at === null;
-  const isReExtractable = (cred: CredentialDTO) => cred.extract_status === "failed";
-  const isPendingReview = (cred: CredentialDTO) => cred.lifecycle_status === "pending";
+  const isRevokable = (cred: CredentialDTO) => cred.status === "approved";
+  const isReExtractable = (cred: CredentialDTO) => cred.extract_state === "failed";
+  const isPendingReview = (cred: CredentialDTO) => cred.status === "pending";
 
   const eligibleRevokeIds = Array.from(selectedIds).filter((id) =>
     credentials.some((c) => c.id === id && isRevokable(c)),
@@ -579,7 +581,7 @@ export function CredentialList() {
           ) : isLoading ? (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-80 rounded-2xl" />
+                <Skeleton key={i} className="h-56 rounded-2xl" />
               ))}
             </div>
           ) : (
@@ -597,7 +599,6 @@ export function CredentialList() {
                   <CredentialCard
                     key={cred.id}
                     credential={cred}
-                    statusBadge={<CredentialLifecycleStatusBadge status={cred.lifecycle_status} />}
                     selectionMode={canManage ? bulkMode : undefined}
                     isSelected={canManage ? selectedIds.has(cred.id) : undefined}
                     onSelect={canManage ? () => toggleSelection(cred.id) : undefined}
@@ -607,6 +608,16 @@ export function CredentialList() {
                         : undefined
                     }
                     blockLinks={!canManage}
+                    canReview={canManage}
+                    canManage={canManage}
+                    onApprove={(id) => approve.mutate([id])}
+                    onReject={(rejections) => reject.mutate(rejections)}
+                    isApproving={approve.isPending}
+                    isRejecting={reject.isPending}
+                    isHolder={isHolder}
+                    holderUnitName={
+                      cred.holder?.unit_id ? unitNames.get(cred.holder.unit_id) : undefined
+                    }
                   />
                 );
               })}

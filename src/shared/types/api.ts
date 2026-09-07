@@ -37,9 +37,9 @@ export interface AuthResponseDTO extends UserDTO {
 /**
  * Mirrors backend response.Credential
  */
-export type ExtractStatus = "pending" | "succeeded" | "failed" | "unextracted";
+export type ExtractState = "pending" | "succeeded" | "failed" | "unextracted";
 
-export type CredentialLifecycleStatus = "pending" | "approved" | "rejected" | "revoked";
+export type CredentialStatus = "pending" | "approved" | "rejected" | "revoked";
 
 export interface CredentialDTO {
   id: string;
@@ -63,13 +63,15 @@ export interface CredentialDTO {
   token_id: string | null;
   file_hash: string;
   file_uri: string | null;
-  extract_status: ExtractStatus;
+  extract_state: ExtractState;
+  extract_enqueued_at: string | null;
+  extract_failed_at: string | null;
   extract_error: string | null;
   extracted_at: string | null;
   issued_at: string;
   revoked_at: string | null;
   expires_at: string | null;
-  lifecycle_status: CredentialLifecycleStatus;
+  status: CredentialStatus;
   approver_user_id: string | null;
   approved_at: string | null;
   rejecter_user_id: string | null;
@@ -80,6 +82,8 @@ export interface CredentialDTO {
   holder?: UserDTO;
   issuer?: UserDTO;
   revoker?: UserDTO;
+  type?: ReferenceRow;
+  issuer_organization?: ReferenceRow;
 }
 
 export interface CredentialVerifyDTO {

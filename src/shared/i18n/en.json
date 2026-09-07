@@ -84,6 +84,8 @@
   "user.copy.number": "Copy number",
   "user.copy.wallet": "Copy wallet address",
   "cred.copy.credentialId": "Copy credential ID",
+  "cred.copy.fileHash": "Copy file hash",
+  "cred.copy.tokenId": "Copy token ID",
   "cred.copy.holderEmail": "Copy holder email",
   "cred.copy.holderNumber": "Copy holder number",
   "cred.copy.holderPhone": "Copy holder phone",
@@ -381,13 +383,14 @@
   "cred.detail.download": "Download",
   "cred.detail.extractionFailed": "Extraction failed",
   "cred.detail.extractionStatus": "Extraction Status",
+  "cred.detail.credentialId": "Credential ID",
   "cred.detail.file": "Credential File",
   "cred.detail.fileHash": "File Hash",
   "cred.detail.fileUri": "Source File",
   "cred.detail.holder": "Holder",
   "cred.detail.issuanceStatus": "Issuance Status",
   "cred.detail.issued": "Issued",
-  "cred.detail.issuedDate": "Issued Date",
+  "cred.detail.issuedDate": "Issued date",
   "cred.detail.issuer": "Issuer",
   "cred.detail.notExtracted": "Not yet extracted",
   "cred.detail.notFound.body": "The credential you are looking for does not exist or has been removed.",
@@ -734,19 +737,19 @@
   "error_credential_review_already_revoked": "One or more credentials are already revoked.",
   "error_credential_review_blockchain_sync_failed": "Failed to sync credential review to the blockchain.",
   "success_credential_competency_link": "Credential competencies linked successfully.",
-  "success_credential_metadata_resolve": "Metadata resolved.",
+  "success_credential_metadata_resolve": "Details completed.",
   "success_credential_metadata_suggest": "Detail suggestions retrieved successfully.",
-  "error_credential_approve_unresolved_metadata": "Resolve the unrecognized metadata before approving.",
+  "error_credential_approve_unresolved_metadata": "Complete the details before approving.",
   "error_credential_competency_link_credential_not_found": "Credential not found.",
   "error_credential_competency_link_competency_not_found": "One or more competencies were not found.",
   "success_credential_update": "Credential updated successfully.",
   "error_credential_update_not_found": "Credential not found.",
   "error_credential_update_not_pending": "Only pending credentials can be updated.",
   "error_credential_metadata_resolve_not_found": "Credential not found.",
-  "error_credential_metadata_resolve_not_pending": "Only pending credentials can have their metadata resolved.",
-  "error_credential_metadata_resolve_nothing_staged": "There is no unresolved metadata to resolve.",
-  "error_credential_metadata_resolve_target_not_found": "The linked metadata entry was not found.",
-  "error_credential_metadata_resolve_target_inactive": "The linked metadata entry is inactive.",
+  "error_credential_metadata_resolve_not_pending": "Only pending credentials can have their details completed.",
+  "error_credential_metadata_resolve_nothing_staged": "There are no details left to complete.",
+  "error_credential_metadata_resolve_target_not_found": "The linked entry was not found.",
+  "error_credential_metadata_resolve_target_inactive": "The linked entry is inactive.",
   "error_credential_metadata_resolve_number_duplicate": "This number is already in use by the resolved organization.",
   "not_found": {
     "code": "404",
@@ -810,6 +813,9 @@
     "trashed": "Trashed"
   },
   "cred": {
+    "parties": {
+      "selfSubmitted": "Self-submitted"
+    },
     "list": {
       "title": "All Credentials",
       "description": "View and manage all issued and revoked credentials.",
@@ -872,15 +878,13 @@
       "audit": "Audit",
       "created": "Created",
       "lastUpdated": "Last updated",
-      "editDetails": "Edit details",
+      "cardTitle": "Details",
       "editOnlyPending": "Only pending credentials can be edited.",
       "updateFailed": "Failed to update the credential. Please try again."
     },
     "competency": {
       "title": "Competencies",
       "empty": "No competencies applied yet.",
-      "saveToApply": "Save to apply changes",
-      "save": "Save",
       "linkFailed": "Failed to link competencies. Please try again."
     },
     "issue": {
@@ -888,7 +892,8 @@
       "description": "Upload documents to issue new credentials.",
       "addAnother": "Add another credential",
       "submit": "Issue Credentials",
-      "submitting": "Issuing..."
+      "submitting": "Issuing...",
+      "removeAriaLabel": "Remove credential {{n}}"
     },
     "verify": {
       "title": "Credential Verification",
@@ -932,7 +937,8 @@
       }
     },
     "card": {
-      "issued": "Issued",
+      "issued": "Issued date",
+      "submitted": "Submitted",
       "revoked": "Revoked",
       "revokeMode": "Revoke",
       "reExtractMode": "Re-extract",
@@ -948,7 +954,10 @@
       "selectionCapReached": "Maximum of 100 credentials selected. Deselect some to add more.",
       "alreadyRevoked": "This credential is already revoked.",
       "alreadySucceeded": "Extraction has already succeeded.",
-      "notPendingReview": "Only credentials pending review can be approved or rejected."
+      "notPendingReview": "Only credentials pending review can be approved or rejected.",
+      "detailsIncomplete": "Details incomplete",
+      "completeDetails": "Complete details",
+      "competencyOverflow": "+{{count}}"
     },
     "status": { "active": "Active", "revoked": "Revoked", "menuLabel": "Status" },
     "field": {
@@ -1060,15 +1069,12 @@
       "loadError": "Failed to load options."
     },
     "metadata": {
-      "title": "Unrecognized metadata",
-      "description": "This submission names metadata that has no entry yet. Link each name to an existing entry, or create it. The credential cannot be approved until every name is resolved.",
-      "pending": "needs review",
-      "didYouMean": "Closest existing entries",
-      "noMatches": "No similar entries found",
+      "title": "Name not yet registered",
+      "pending": "pending review",
       "createAsTyped": "Create \"{{name}}\"",
       "apply": "Apply",
-      "blocksApproval": "Resolve the unrecognized metadata before approving",
-      "resolveFailed": "Could not resolve metadata."
+      "blocksApproval": "Complete the details before approving",
+      "resolveFailed": "Couldn't complete the details."
     }
   },
   "credType": {

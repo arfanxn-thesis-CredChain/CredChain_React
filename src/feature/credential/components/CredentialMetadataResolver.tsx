@@ -2,9 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, Check, Loader2, Plus } from "lucide-react";
 import { Button } from "@ui/button";
-import { Badge } from "@ui/badge";
+import { Card } from "@ui/card";
 import { Skeleton } from "@ui/skeleton";
-import { cn } from "@shared/lib/cn";
 import type { StagedNameSuggestionDTO } from "@shared/types/api";
 import { useMetadataSuggestions } from "../api/useMetadataSuggestions";
 import { useResolveMetadata } from "../api/useResolveMetadata";
@@ -32,16 +31,8 @@ function StagedCard({
   t: (k: string, o?: Record<string, unknown>) => string;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <AlertTriangle className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
-        <span className="font-semibold text-navy">{staged.submitted_name}</span>
-        <Badge tone="gray">{t("cred.metadata.pending")}</Badge>
-      </div>
-
-      <p className="mt-3 text-xs text-gray-500">
-        {staged.matches.length > 0 ? t("cred.metadata.didYouMean") : t("cred.metadata.noMatches")}
-      </p>
+    <div>
+      <span className="font-semibold text-navy">{staged.submitted_name}</span>
 
       <div className="mt-2 flex flex-wrap gap-2">
         {staged.matches.map((m) => {
@@ -127,11 +118,11 @@ export function CredentialMetadataResolver({ credentialId }: CredentialMetadataR
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="font-sans text-lg font-bold text-navy">{t("cred.metadata.title")}</h3>
-        <p className="mt-1 text-sm text-gray-500">{t("cred.metadata.description")}</p>
-      </div>
+    <Card className="space-y-4 p-6 sm:p-8">
+      <h3 className="flex items-center gap-2 font-sans text-lg font-bold text-navy">
+        <AlertTriangle className="h-5 w-5 shrink-0 text-gold" aria-hidden="true" />
+        {t("cred.metadata.title")}
+      </h3>
 
       {data.type && (
         <div className="space-y-2">
@@ -170,12 +161,12 @@ export function CredentialMetadataResolver({ credentialId }: CredentialMetadataR
         </div>
       )}
 
-      <div className={cn("flex items-center justify-end gap-3")}>
+      <div className="flex items-center justify-end gap-3">
         <Button variant="gold" onClick={apply} disabled={!hasChoice || resolve.isPending}>
           {resolve.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
           {t("cred.metadata.apply")}
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

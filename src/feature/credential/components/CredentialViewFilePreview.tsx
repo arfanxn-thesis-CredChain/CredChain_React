@@ -11,6 +11,7 @@ interface CredentialViewFilePreviewProps {
   credentialId: string;
   credentialName: string;
   hasFileUri: boolean;
+  statusSlot?: React.ReactNode;
 }
 
 const ALLOWED_IMAGE_MIME_PREFIXES = ["image/jpeg", "image/png", "image/webp"];
@@ -34,6 +35,7 @@ export function CredentialViewFilePreview({
   credentialId,
   credentialName,
   hasFileUri,
+  statusSlot,
 }: CredentialViewFilePreviewProps) {
   const { t } = useTranslation();
   const { data: blob, isLoading } = useCredentialFile(credentialId, hasFileUri);
@@ -78,19 +80,14 @@ export function CredentialViewFilePreview({
         <div className="min-w-0 flex-1">
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-5 w-28" />
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-8 w-48" />
             </div>
           ) : (
             <>
-              <p className="font-sans text-sm font-semibold text-navy">{t("cred.detail.file")}</p>
-              {size > 0 && (
-                <p className="text-xs text-gray-400">
-                  {formatFileSize(size)}
-                  {mimeType ? ` · ${mimeType}` : ""}
-                </p>
-              )}
+              <p className="truncate text-sm font-semibold text-navy">{downloadName}</p>
+              {size > 0 && <p className="text-xs text-gray-400">{formatFileSize(size)}</p>}
+              {statusSlot && <div className="mt-2">{statusSlot}</div>}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Button
                   type="button"

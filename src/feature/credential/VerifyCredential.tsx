@@ -281,7 +281,7 @@ export function VerifyCredential() {
                 <div className="border-t border-gray-100 pt-5">
                   {/* Status + Issuer metadata */}
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <CredentialStatusBadge revoked={result.credential!.revoked_at !== null} />
+                    <CredentialStatusBadge status={result.credential!.status} />
                     {meta?.issuing_organization_name && (
                       <span className="flex items-center gap-1.5 text-sm text-navy/60">
                         <Building2 className="h-4 w-4 shrink-0 text-gold/70" aria-hidden="true" />

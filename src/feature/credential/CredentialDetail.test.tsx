@@ -14,7 +14,7 @@ function pendingCredentialResponse() {
   const pending = makeCredential({
     id: "cred_01HX",
     name: "Bachelor's Degree",
-    lifecycle_status: "pending",
+    status: "pending",
     approved_at: null,
     rejected_at: null,
   });
@@ -73,7 +73,7 @@ describe("CredentialDetail", () => {
 
   it("renders the lifecycle status badge instead of the legacy Active pill", async () => {
     renderPage();
-    expect(await screen.findByText("Approved")).toBeDefined();
+    expect(await screen.findByText("Approved", { selector: "span" })).toBeDefined();
     expect(screen.queryByText("Active")).not.toBeInTheDocument();
   });
 
@@ -93,7 +93,7 @@ describe("CredentialDetail", () => {
           message: "Credential retrieved",
           data: makeCredential({
             id: "cred_01HX",
-            lifecycle_status: "rejected",
+            status: "rejected",
             approved_at: null,
             rejected_at: "2026-01-02T00:00:00Z",
           }),
@@ -102,7 +102,7 @@ describe("CredentialDetail", () => {
     );
     renderPage();
 
-    expect(await screen.findByText("Rejected")).toBeInTheDocument();
+    expect(await screen.findByText("Rejected", { selector: "span" })).toBeInTheDocument();
     expect(screen.queryByText("Active")).not.toBeInTheDocument();
   });
 
@@ -124,9 +124,12 @@ describe("CredentialDetail", () => {
     expect(screen.queryByDisplayValue("Updated Degree")).not.toBeInTheDocument();
   });
 
-  it("renders the file hash", async () => {
+  it("shows the file hash and token ID without a disclosure toggle", async () => {
     renderPage();
+
     expect(await screen.findByText(/0xabcd1234/)).toBeDefined();
+    expect(screen.getByText("123456")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Verification & trace" })).not.toBeInTheDocument();
   });
 
   it("renders the holder with full display", async () => {
@@ -139,9 +142,27 @@ describe("CredentialDetail", () => {
     expect(await screen.findByText("University Admin")).toBeDefined();
   });
 
-  it("renders the token ID", async () => {
+  it("renders resolved type and issuer organization names instead of raw IDs", async () => {
+    server.use(
+      http.get("*/api/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            name: "Bachelor's Degree",
+            type: { id: "ctype_01", name: "Bachelor's Degree Type" },
+            issuer_organization: { id: "org_01", name: "University of Indonesia" },
+          }),
+        }),
+      ),
+    );
     renderPage();
-    expect(await screen.findByText("123456")).toBeDefined();
+
+    expect(await screen.findByText("Bachelor's Degree Type")).toBeInTheDocument();
+    expect(screen.getByText("University of Indonesia")).toBeInTheDocument();
+    expect(screen.queryByText("ctype_01")).not.toBeInTheDocument();
+    expect(screen.queryByText("org_01")).not.toBeInTheDocument();
   });
 
   it("shows Approve and Reject actions for a pending credential", async () => {
@@ -170,7 +191,7 @@ describe("CredentialDetail", () => {
     await waitFor(() => expect(recordedBody).toEqual({ ids: ["cred_01HX"] }));
   });
 
-  it("opens the reject reason modal with a single pending row from the detail", async () => {
+  it("rejects a pending credential inline with a reason, no modal", async () => {
     let recordedBody: unknown;
     server.use(
       http.get("*/api/credentials/:id", () => pendingCredentialResponse()),
@@ -184,17 +205,70 @@ describe("CredentialDetail", () => {
     renderPage();
 
     await user.click(await screen.findByRole("button", { name: /reject/i }));
-    const dialog = await screen.findByRole("dialog");
-    expect(screen.getByText("Reject Credentials")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
-    await user.type(within(dialog).getByRole("textbox"), "Duplicate");
-    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
+    const input = screen.getByPlaceholderText(/explain why/i);
+    await user.type(input, "Duplicate");
+    await user.click(screen.getByRole("button", { name: "Reject" }));
 
     await waitFor(() =>
       expect(recordedBody).toEqual({
         rejections: [{ id: "cred_01HX", reason: "Duplicate" }],
       }),
     );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("blocks inline reject submission when the reason is empty", async () => {
+    server.use(http.get("*/api/credentials/:id", () => pendingCredentialResponse()));
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /reject/i }));
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+
+    expect(screen.getByText(/rejection reason is required/i)).toBeInTheDocument();
+  });
+
+  it("hides extraction status and error from a non-issuer role", async () => {
+    useStore.setState({
+      user: {
+        id: "usr_holder_test",
+        name: "Test Holder",
+        number: null,
+        unit_id: null,
+        joined_year: null,
+        email: "holder@test.com",
+        birth_date: null,
+        gender: null,
+        role: Role.HOLDER,
+        meta: null,
+        wallet_address: "0x" + "0".repeat(40),
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        deleted_at: null,
+      },
+      isAuthenticated: true,
+    });
+    server.use(
+      http.get("*/api/users/self/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            extract_state: "failed",
+            extract_error: "Unsupported file format",
+          }),
+        }),
+      ),
+    );
+
+    renderPage();
+
+    await screen.findByRole("heading", { level: 2, name: "Test Credential" });
+    expect(screen.queryByText("Failed")).not.toBeInTheDocument();
+    expect(screen.queryByText(/unsupported file format/i)).not.toBeInTheDocument();
   });
 
   it("shows the Edit button for a pending credential and saves only changed fields", async () => {
@@ -273,10 +347,23 @@ describe("CredentialDetail", () => {
     await waitFor(() => expect(recordedBody).toEqual({ ids: ["cred_01HX"] }));
   });
 
-  it("saves the competency replace-set via PUT /credentials/:id/competencies", async () => {
+  it("Edit → change competencies → Save fires both the batch update and the competency link mutation", async () => {
     let recordedUrl = "";
     let recordedBody: unknown;
     server.use(
+      http.get("*/api/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            status: "pending",
+            approved_at: null,
+            rejected_at: null,
+            competencies: [{ id: "comp_01", name: "Machine Learning", active: true }],
+          }),
+        }),
+      ),
       http.put("*/api/credentials/:id/competencies", async ({ request }) => {
         recordedUrl = request.url;
         recordedBody = await request.json();
@@ -287,16 +374,64 @@ describe("CredentialDetail", () => {
     const user = userEvent.setup();
     renderPage();
 
-    const combobox = await screen.findByRole("combobox");
-    await user.click(combobox);
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
 
-    await user.click(await screen.findByRole("menuitem", { name: /Machine Learning/ }));
+    const combobox = await screen.findByRole("combobox", { name: "Competencies" });
+    await user.click(combobox);
+    await user.click(await screen.findByRole("menuitem", { name: /Data Analysis/ }));
     await user.keyboard("{Escape}");
 
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
 
-    await waitFor(() => expect(recordedBody).toEqual({ competency_ids: ["comp_01"] }));
+    await waitFor(() =>
+      expect(recordedBody).toEqual({ competency_ids: ["comp_01", "comp_02"] }),
+    );
     expect(recordedUrl).toContain("/credentials/cred_01HX/competencies");
+  });
+
+  it("Edit → change competencies → Cancel restores the original chips, and a subsequent Save does not link", async () => {
+    let linkCalled = false;
+    server.use(
+      http.get("*/api/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            status: "pending",
+            approved_at: null,
+            rejected_at: null,
+            competencies: [{ id: "comp_01", name: "Machine Learning", active: true }],
+          }),
+        }),
+      ),
+      http.put("*/api/credentials/:id/competencies", () => {
+        linkCalled = true;
+        return HttpResponse.json({ code: 401300, message: "ok", data: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    await screen.findByText("Machine Learning");
+
+    const combobox = screen.getByRole("combobox", { name: "Competencies" });
+    await user.click(combobox);
+    await user.click(await screen.findByRole("menuitem", { name: /Data Analysis/ }));
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    expect(screen.getByText("Machine Learning")).toBeInTheDocument();
+    expect(screen.queryByText("Data Analysis")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument());
+    expect(linkCalled).toBe(false);
   });
 
   it("seeds the competency editor from the loaded credential", async () => {
@@ -307,7 +442,7 @@ describe("CredentialDetail", () => {
           message: "Credential retrieved",
           data: makeCredential({
             id: "cred_01HX",
-            lifecycle_status: "pending",
+            status: "pending",
             approved_at: null,
             rejected_at: null,
             competencies: [{ id: "comp_01", name: "Machine Learning", active: true }],
@@ -321,6 +456,36 @@ describe("CredentialDetail", () => {
     expect(await screen.findByText("Machine Learning")).toBeInTheDocument();
   });
 
+  it("renders the meta label once, not duplicated across sections", async () => {
+    renderPage();
+    await screen.findByText("Additional Information");
+    expect(screen.getAllByText("Additional Information")).toHaveLength(1);
+  });
+
+  it("renders the credential name in both the page heading and the detail row", async () => {
+    server.use(http.get("*/api/credentials/:id", () => pendingCredentialResponse()));
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByRole("heading", { level: 2, name: "Bachelor's Degree" });
+    expect(screen.getAllByText("Bachelor's Degree")).toHaveLength(2);
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByPlaceholderText("Credential name")).toHaveValue("Bachelor's Degree");
+  });
+
+  it("shows each edit-mode field label exactly once", async () => {
+    server.use(http.get("*/api/credentials/:id", () => pendingCredentialResponse()));
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+
+    expect(screen.getAllByText("Credential type")).toHaveLength(1);
+    expect(screen.getAllByText("Issuer organization")).toHaveLength(1);
+    expect(screen.getAllByText("Competencies")).toHaveLength(1);
+  });
+
   it("disables approve while metadata is unresolved", async () => {
     server.use(
       http.get("*/api/credentials/:id", () =>
@@ -329,7 +494,7 @@ describe("CredentialDetail", () => {
           message: "Credential retrieved",
           data: makeCredential({
             id: "cred_01HX",
-            lifecycle_status: "pending",
+            status: "pending",
             approved_at: null,
             rejected_at: null,
             type_id: null,
@@ -344,7 +509,7 @@ describe("CredentialDetail", () => {
           message: "ok",
           data: {
             credential_id: "cred_01HX",
-            type: null,
+            type: { submitted_name: "Micro-credential", matches: [] },
             organization: null,
             competencies: [],
           },
@@ -355,6 +520,13 @@ describe("CredentialDetail", () => {
 
     const approve = await screen.findByRole("button", { name: /approve/i });
     expect(approve).toBeDisabled();
+
+    // The blocking reason must be readable on screen, not hidden behind a
+    // hover-only `title` attribute — and the resolver alert itself must render.
+    expect(
+      await screen.findByText("Complete the details before approving"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Name not yet registered")).toBeInTheDocument();
   });
 
   it("enables approve once metadata resolves", async () => {
@@ -365,7 +537,7 @@ describe("CredentialDetail", () => {
           message: "Credential retrieved",
           data: makeCredential({
             id: "cred_01HX",
-            lifecycle_status: "pending",
+            status: "pending",
             approved_at: null,
             rejected_at: null,
             unresolved_metadata: [],
@@ -377,5 +549,42 @@ describe("CredentialDetail", () => {
 
     const approve = await screen.findByRole("button", { name: /approve/i });
     expect(approve).toBeEnabled();
+  });
+
+  it("Holder view: renders the two read-only cards with no Edit, no review actions, no resolver", async () => {
+    useStore.setState({
+      user: {
+        id: "usr_holder_test",
+        name: "Test Holder",
+        number: null,
+        unit_id: null,
+        joined_year: null,
+        email: "holder@test.com",
+        birth_date: null,
+        gender: null,
+        role: Role.HOLDER,
+        meta: null,
+        wallet_address: "0x" + "1".repeat(40),
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        deleted_at: null,
+      },
+      isAuthenticated: true,
+    });
+    server.use(http.get("*/api/users/self/credentials/:id", () => pendingCredentialResponse()));
+
+    renderPage();
+
+    // Card 1 — hero.
+    expect(await screen.findByText("Pending review")).toBeInTheDocument();
+    // Card 2 — detail, read-only, holder block folded in.
+    expect(await screen.findByRole("heading", { name: "Details" })).toBeInTheDocument();
+    expect(screen.getByText("Test Holder")).toBeInTheDocument();
+
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /approve/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reject/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revoke" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Name not yet registered")).not.toBeInTheDocument();
   });
 });
