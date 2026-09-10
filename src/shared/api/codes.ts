@@ -217,6 +217,7 @@ export const CODE_TO_MESSAGE_KEY: Record<number, string> = {
   401544: "error_credential_metadata_resolve_target_inactive",
   401545: "error_credential_metadata_resolve_number_duplicate",
   401546: "error_credential_approve_unresolved_metadata",
+  401547: "error_credential_approve_inactive_metadata",
 };
 
 export function codeToMessageKey(code?: number): string {
