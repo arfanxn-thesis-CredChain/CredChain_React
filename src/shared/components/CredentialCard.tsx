@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Calendar, CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, CircleDashed, Loader2, Tag, XCircle } from "lucide-react";
 import { cn } from "@shared/lib/cn";
 import { formatDate } from "@shared/lib/format";
 import { lifecycleDateLines, primaryDateLine } from "@shared/lib/credentialDate";
@@ -34,8 +34,10 @@ interface CredentialCardProps {
   isRejecting?: boolean;
   /** Holder sees who issued it; everyone else sees who holds it. Defaults to the issuer+ view. */
   isHolder?: boolean;
-  /** Holder-profile view: the holder is the page subject, so show who acted on the
-   *  credential instead — the issuer, or the revoker once it is revoked. */
+  /** Holder-profile view: the holder is the page subject, so hide the holder and
+   *  dynamically display who acted on the credential instead (issuer, revoker, rejecter). */
+  hideHolder?: boolean;
+  /** @deprecated Use hideHolder instead */
   showActor?: boolean;
   /** Resolved unit name for the holder, looked up by the parent from the shared units cache. */
   holderUnitName?: string;
@@ -127,6 +129,19 @@ function ActorRow({
     return <p className="text-sm text-gray-500">—</p>;
   }
 
+  if (credential.status === "rejected" && (credential.rejecter || credential.rejecter_user_id)) {
+    return (
+      <PersonRow
+        user={credential.rejecter}
+        userId={credential.rejecter_user_id ?? ""}
+        subline={credential.rejecter?.number ?? undefined}
+        blockLinks={blockLinks}
+        label={t("cred.detail.rejecter")}
+        tone="error"
+      />
+    );
+  }
+
   if (credential.holder_user_id === credential.issuer_user_id) {
     return <p className="text-sm text-gray-500">{t("cred.parties.selfSubmitted")}</p>;
   }
@@ -145,19 +160,19 @@ function ActorRow({
 function CardCounterparty({
   credential,
   isHolder,
-  showActor,
+  hideHolder,
   holderUnitName,
   blockLinks,
 }: {
   credential: CredentialDTO;
   isHolder: boolean;
-  showActor?: boolean;
+  hideHolder?: boolean;
   holderUnitName?: string;
   blockLinks?: boolean;
 }) {
   const { t } = useTranslation();
 
-  if (showActor) {
+  if (hideHolder) {
     return <ActorRow credential={credential} blockLinks={blockLinks} />;
   }
 
@@ -183,7 +198,12 @@ function CardCounterparty({
 
     return (
       <div className="space-y-2">
-        {orgElement}
+        <div className="min-w-0">
+          <EyebrowLabel as="span" className="mb-1 block">
+            {t("cred.parties.issuerOrganization")}
+          </EyebrowLabel>
+          {orgElement}
+        </div>
         {showActorRow && <ActorRow credential={credential} blockLinks={blockLinks} />}
       </div>
     );
@@ -216,6 +236,7 @@ export function CredentialCard({
   isApproving,
   isRejecting,
   isHolder,
+  hideHolder,
   showActor,
   holderUnitName,
 }: CredentialCardProps) {
@@ -366,7 +387,7 @@ export function CredentialCard({
           <CardCounterparty
             credential={credential}
             isHolder={!!isHolder}
-            showActor={showActor}
+            hideHolder={hideHolder ?? showActor}
             holderUnitName={holderUnitName}
             blockLinks={blockLinks || !!selectionMode}
           />
@@ -379,7 +400,8 @@ export function CredentialCard({
           </p>
         ) : (
           competencyNames.length > 0 && (
-            <p className="mb-2 flex items-center gap-1 text-xs text-gray-500">
+            <p className="mb-2 flex items-center gap-1.5 text-xs text-gray-500">
+              <Tag className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
               <span className="min-w-0 truncate">{competencyNames[0]}</span>
               {competencyNames.length > 1 && (
                 <span className="shrink-0">
@@ -423,82 +445,84 @@ export function CredentialCard({
         </div>
 
         {canInlineReview && (
-          <div className="mt-auto space-y-2 border-t border-gray-100 pt-4">
-            {hasUnresolvedMetadata ? (
-              <Button
-                type="button"
-                variant="gold"
-                size="sm"
-                className="w-full"
-                onClick={handleCompleteDetailsClick}
-              >
-                {t("cred.card.completeDetails")}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            ) : !rejectOpen ? (
-              <div className="flex flex-wrap gap-2">
+          <div className="mt-auto pt-4">
+            <div className="space-y-2 border-t border-gray-100 pt-4">
+              {hasUnresolvedMetadata ? (
                 <Button
                   type="button"
                   variant="gold"
                   size="sm"
-                  onClick={handleApproveClick}
-                  disabled={isApproving}
+                  className="w-full"
+                  onClick={handleCompleteDetailsClick}
                 >
-                  {isApproving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4" />
-                  )}
-                  {t("cred.detail.approve")}
+                  {t("cred.card.completeDetails")}
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={handleRejectToggle}>
-                  <XCircle className="h-4 w-4" />
-                  {t("cred.detail.reject")}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <FormField
-                  label={t("cred.reject.modal.reasonLabel")}
-                  error={reasonMissing ? "cred.reject.modal.reasonRequired" : undefined}
-                >
-                  <Input
-                    value={reason}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setReason(e.target.value);
-                      setReasonMissing(false);
-                    }}
-                    onClick={stop}
-                    maxLength={1000}
-                    placeholder={t("cred.reject.modal.reasonPlaceholder")}
-                    aria-label={t("cred.reject.modal.reasonLabel")}
-                  />
-                </FormField>
-                <div className="flex gap-2">
+              ) : !rejectOpen ? (
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="gold"
                     size="sm"
-                    onClick={handleRejectToggle}
-                    disabled={isRejecting}
+                    onClick={handleApproveClick}
+                    disabled={isApproving}
                   >
-                    {t("common.cancel")}
+                    {isApproving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    {t("cred.detail.approve")}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleRejectConfirm}
-                    disabled={isRejecting}
-                  >
-                    {isRejecting
-                      ? t("cred.reject.modal.submitting")
-                      : t("cred.reject.modal.submit")}
+                  <Button type="button" variant="outline" size="sm" onClick={handleRejectToggle}>
+                    <XCircle className="h-4 w-4" />
+                    {t("cred.detail.reject")}
                   </Button>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-2">
+                  <FormField
+                    label={t("cred.reject.modal.reasonLabel")}
+                    error={reasonMissing ? "cred.reject.modal.reasonRequired" : undefined}
+                  >
+                    <Input
+                      value={reason}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setReason(e.target.value);
+                        setReasonMissing(false);
+                      }}
+                      onClick={stop}
+                      maxLength={1000}
+                      placeholder={t("cred.reject.modal.reasonPlaceholder")}
+                      aria-label={t("cred.reject.modal.reasonLabel")}
+                    />
+                  </FormField>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRejectToggle}
+                      disabled={isRejecting}
+                    >
+                      {t("common.cancel")}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleRejectConfirm}
+                      disabled={isRejecting}
+                    >
+                      {isRejecting
+                        ? t("cred.reject.modal.submitting")
+                        : t("cred.reject.modal.submit")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

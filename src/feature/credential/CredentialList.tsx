@@ -199,7 +199,15 @@ export function CredentialList() {
       if (debouncedSearch) q.search = debouncedSearch;
       q.sorts = [credSort];
       if (filterArray.length > 0) q.filters = filterArray;
-      q.includes = ["holder", "issuer", "revoker", "competencies", "type", "issuer_organization"];
+      q.includes = [
+        "holder",
+        "issuer",
+        "revoker",
+        "rejecter",
+        "competencies",
+        "type",
+        "issuer_organization",
+      ];
       const endpoint = isHolder ? "/users/self/credentials" : "/credentials";
       const response = await api.get(endpoint, { params: q });
       return response.data;

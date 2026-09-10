@@ -164,7 +164,15 @@ export function UserDetail() {
         page,
         limit,
         sorts: [credSort],
-        includes: ["holder", "issuer", "revoker"],
+        includes: [
+          "holder",
+          "issuer",
+          "revoker",
+          "rejecter",
+          "competencies",
+          "type",
+          "issuer_organization",
+        ],
       };
       if (debouncedCredSearch) q.search = debouncedCredSearch;
       if (credFilterArray.length > 0) q.filters = credFilterArray;
@@ -681,7 +689,7 @@ export function UserDetail() {
           ) : credLoading ? (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-80 rounded-2xl" />
+                <Skeleton key={i} className="h-56 rounded-2xl" />
               ))}
             </div>
           ) : credentials.length === 0 ? (
@@ -702,7 +710,14 @@ export function UserDetail() {
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {credentials.map((cred) => (
-                <CredentialCard key={cred.id} credential={cred} showActor={!isIssuerOrAbove} />
+                <CredentialCard
+                  key={cred.id}
+                  credential={cred}
+                  hideHolder={!isIssuerOrAbove}
+                  holderUnitName={
+                    cred.holder?.unit_id ? unitsById.get(cred.holder.unit_id)?.name : undefined
+                  }
+                />
               ))}
             </div>
           )}

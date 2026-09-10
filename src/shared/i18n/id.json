@@ -398,6 +398,7 @@
   "cred.detail.reject": "Tolak",
   "cred.detail.revokedDate": "Tanggal Pencabutan",
   "cred.detail.revoker": "Pencabut",
+  "cred.detail.rejecter": "Penolak",
   "cred.detail.tokenId": "ID Token",
   "cred.detail.view": "Lihat",
   "cred.field.holder": "Pemegang",
@@ -778,7 +779,8 @@
   },
   "cred": {
     "parties": {
-      "selfSubmitted": "Mengajukan sendiri"
+      "selfSubmitted": "Mengajukan sendiri",
+      "issuerOrganization": "Organisasi Penerbit"
     },
     "list": {
       "title": "Semua Kredensial",

@@ -397,6 +397,7 @@
   "cred.detail.reject": "Reject",
   "cred.detail.revokedDate": "Revoked Date",
   "cred.detail.revoker": "Revoker",
+  "cred.detail.rejecter": "Rejecter",
   "cred.detail.tokenId": "Token ID",
   "cred.detail.view": "View",
   "cred.field.holder": "Holder",
@@ -777,7 +778,8 @@
   },
   "cred": {
     "parties": {
-      "selfSubmitted": "Self-submitted"
+      "selfSubmitted": "Self-submitted",
+      "issuerOrganization": "Issuing organization"
     },
     "list": {
       "title": "All Credentials",

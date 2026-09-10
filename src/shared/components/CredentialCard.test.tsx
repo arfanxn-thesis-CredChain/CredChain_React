@@ -364,6 +364,54 @@ describe("CredentialCard", () => {
     expect(screen.getByRole("link", { name: /charlie revoker/i })).toHaveAttribute("href", "/users/usr_r");
   });
 
+  it("shows the rejecter and hides issuer/holder when hideHolder is true on rejected credential", () => {
+    const credential = makeCredential({
+      id: "cred_rejected",
+      status: "rejected",
+      rejected_at: "2026-06-01T00:00:00Z",
+      holder_user_id: "usr_h",
+      issuer_user_id: "usr_i",
+      rejecter_user_id: "usr_rej",
+      holder: makeUser({ id: "usr_h", role: Role.HOLDER, name: "Alice Holder" }),
+      issuer: makeUser({ id: "usr_i", role: Role.ISSUER, name: "Bob Issuer" }),
+      rejecter: makeUser({ id: "usr_rej", role: Role.ISSUER, name: "Dave Rejecter", number: "98765" }),
+    });
+
+    render(<CredentialCard credential={credential} hideHolder />, { wrapper: TestProviders });
+
+    expect(screen.getByText("Dave Rejecter")).toBeInTheDocument();
+    expect(screen.getByText("Rejecter")).toBeInTheDocument();
+    expect(screen.getByText("98765")).toBeInTheDocument();
+    expect(screen.queryByText("Bob Issuer")).not.toBeInTheDocument();
+    expect(screen.queryByText("Alice Holder")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /dave rejecter/i })).toHaveAttribute("href", "/users/usr_rej");
+  });
+
+  it("shows the issuing organization eyebrow label above the organization name in holder view", () => {
+    const credential = makeCredential({
+      issuer_organization: { id: "org_test_1", name: "Acme Institute" },
+    });
+
+    render(<CredentialCard credential={credential} isHolder />, { wrapper: TestProviders });
+
+    expect(screen.getByText("Issuing organization")).toBeInTheDocument();
+    expect(screen.getByText("Acme Institute")).toBeInTheDocument();
+  });
+
+  it("renders competencies with overflow count", () => {
+    const credential = makeCredential({
+      competencies: [
+        { id: "comp_1", name: "Psikometri" },
+        { id: "comp_2", name: "Statistika" },
+      ],
+    });
+
+    render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
+
+    expect(screen.getByText("Psikometri")).toBeInTheDocument();
+    expect(screen.getByText("+1")).toBeInTheDocument();
+  });
+
   it("renders holder info when showActor is false even if issuer is present", () => {
     const credential = makeCredential({
       holder_user_id: "usr_h",

@@ -82,6 +82,7 @@ export interface CredentialDTO {
   holder?: UserDTO;
   issuer?: UserDTO;
   revoker?: UserDTO;
+  rejecter?: UserDTO;
   type?: ReferenceRow;
   issuer_organization?: ReferenceRow;
 }
