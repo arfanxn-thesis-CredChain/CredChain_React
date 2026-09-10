@@ -57,32 +57,34 @@ export function CredentialStatusMenu({
   const triggerLabel =
     activeParts.length > 0 ? activeParts.join(" · ") : t("cred.status.menuLabel");
 
-  const showPendingBadge = review === "all" && typeof pendingCount === "number" && pendingCount > 0;
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <FilterTrigger active={review !== "all" || extract !== "any"}>
           {triggerLabel}
-          {showPendingBadge && (
-            <span className="ml-1.5 rounded-full bg-gold px-1.5 text-[10px] font-bold text-navy">
-              {pendingCount}
-            </span>
-          )}
         </FilterTrigger>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel>{t("cred.review.menuLabel")}</DropdownMenuLabel>
         {REVIEW_OPTIONS.map((opt) => {
           const active = opt.key === review;
+          const showCount =
+            opt.key === "pending" && typeof pendingCount === "number" && pendingCount > 0;
           return (
             <DropdownMenuItem
               key={opt.key}
               onClick={() => onReviewChange(opt.key)}
-              className="flex cursor-pointer items-center justify-between"
+              className="flex cursor-pointer items-center justify-between gap-2"
             >
               <span className={active ? "font-bold" : ""}>{t(opt.labelKey)}</span>
-              {active && <Check className="h-4 w-4 text-gold" aria-hidden="true" />}
+              <span className="flex items-center gap-1.5">
+                {showCount && (
+                  <span className="rounded-full bg-gold px-1.5 text-[10px] font-bold text-navy">
+                    {pendingCount}
+                  </span>
+                )}
+                {active && <Check className="h-4 w-4 text-gold" aria-hidden="true" />}
+              </span>
             </DropdownMenuItem>
           );
         })}

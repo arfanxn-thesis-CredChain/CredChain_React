@@ -27,6 +27,7 @@ import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { api } from "@shared/api/client";
 import { notify } from "@shared/lib/notify";
+import { isEligibleFor, type BulkMode } from "@shared/lib/credentialEligibility";
 import type { CredentialDTO, PaginatedResponse } from "@shared/types/api";
 
 import { PageHeader } from "@shared/components/PageHeader";
@@ -87,8 +88,6 @@ const SORT_OPTIONS = [
   { key: "nameAZ", getSort: () => "name" },
   { key: "nameZA", getSort: () => "-name" },
 ];
-
-type BulkMode = "revoke" | "reextract" | "approve" | "reject" | null;
 
 function adjustSortForStatus(
   sortString: string,
@@ -173,11 +172,10 @@ export function CredentialList() {
     queryFn: async () => {
       const endpoint = isHolder ? "/users/self/credentials" : "/credentials";
       const response = await api.get<PaginatedResponse<CredentialDTO>>(endpoint, {
-        params: { limit: 1, filters: ["approved_at_", "rejected_at_"] },
+        params: { limit: 1, filters: REVIEW_FILTERS.pending },
       });
       return response.data.total;
     },
-    enabled: review === "all",
   });
 
   const {
@@ -220,21 +218,17 @@ export function CredentialList() {
   const { data: units } = useUserUnits();
   const unitNames = useMemo(() => new Map((units ?? []).map((u) => [u.id, u.name])), [units]);
 
-  const isRevokable = (cred: CredentialDTO) => cred.status === "approved";
-  const isReExtractable = (cred: CredentialDTO) => cred.extract_state === "failed";
-  const isPendingReview = (cred: CredentialDTO) => cred.status === "pending";
-
   const eligibleRevokeIds = Array.from(selectedIds).filter((id) =>
-    credentials.some((c) => c.id === id && isRevokable(c)),
+    credentials.some((c) => c.id === id && isEligibleFor(c, "revoke")),
   );
   const eligibleReExtractIds = Array.from(selectedIds).filter((id) =>
-    credentials.some((c) => c.id === id && isReExtractable(c)),
+    credentials.some((c) => c.id === id && isEligibleFor(c, "reextract")),
   );
   const eligibleApproveIds = Array.from(selectedIds).filter((id) =>
-    credentials.some((c) => c.id === id && isPendingReview(c)),
+    credentials.some((c) => c.id === id && isEligibleFor(c, "approve")),
   );
   const eligibleRejectIds = Array.from(selectedIds).filter((id) =>
-    credentials.some((c) => c.id === id && isPendingReview(c)),
+    credentials.some((c) => c.id === id && isEligibleFor(c, "reject")),
   );
 
   const rejectItems = credentials
@@ -517,7 +511,10 @@ export function CredentialList() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader title={t("cred.list.title")} description={t("cred.list.description")} />
+      <PageHeader
+        title={t(isHolder ? "cred.mine.title" : "cred.list.title")}
+        description={t(isHolder ? "cred.mine.description" : "cred.list.description")}
+      />
       {renderActions()}
 
       <Card className="p-0">
@@ -571,10 +568,16 @@ export function CredentialList() {
               title={
                 debouncedSearch
                   ? t("cred.list.empty.search.title")
-                  : t("cred.list.empty.none.title")
+                  : isHolder
+                    ? t("cred.mine.empty.title")
+                    : t("cred.list.empty.none.title")
               }
               description={
-                debouncedSearch ? t("cred.list.empty.search.body") : t("cred.list.empty.none.body")
+                debouncedSearch
+                  ? t("cred.list.empty.search.body")
+                  : isHolder
+                    ? t("cred.mine.empty.body")
+                    : t("cred.list.empty.none.body")
               }
               className="rounded-none border-0 bg-transparent shadow-none"
             />
@@ -587,14 +590,7 @@ export function CredentialList() {
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {credentials.map((cred) => {
-                const isSelectable =
-                  bulkMode === "revoke"
-                    ? isRevokable(cred)
-                    : bulkMode === "reextract"
-                      ? isReExtractable(cred)
-                      : bulkMode === "approve" || bulkMode === "reject"
-                        ? isPendingReview(cred)
-                        : false;
+                const isSelectable = isEligibleFor(cred, bulkMode);
                 return (
                   <CredentialCard
                     key={cred.id}

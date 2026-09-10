@@ -23,11 +23,7 @@ const LABEL_KEY: Record<ExtractState, string> = {
   succeeded: "",
 };
 
-export function CredentialExtractNote({
-  state,
-  error,
-  className,
-}: CredentialExtractNoteProps) {
+export function CredentialExtractNote({ state, error, className }: CredentialExtractNoteProps) {
   const { t } = useTranslation();
 
   if (state === "succeeded") {
@@ -41,7 +37,7 @@ export function CredentialExtractNote({
     <div
       className={cn(
         "flex items-center gap-1.5 text-xs",
-        isFailed ? "text-error" : "text-gray-400",
+        isFailed ? "text-error" : "text-gray-500",
         className,
       )}
     >

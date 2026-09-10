@@ -527,7 +527,7 @@ export function UserDetail() {
           </div>
           <Skeleton className="h-px w-full" />
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {Array.from({ length: 8 }).map((_, i) => (
+            {Array.from({ length: 11 }).map((_, i) => (
               <div key={i} className="space-y-1">
                 <Skeleton className="h-3 w-20" />
                 <Skeleton className="h-4 w-32" />
@@ -536,82 +536,79 @@ export function UserDetail() {
           </div>
         </Card>
       ) : (
-        <>
-          <Card className="p-6 sm:p-8">
-            {/* Header: avatar + name + badges + actions */}
-            <div className="mb-6 flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <UserAvatar user={user} size="xl" />
-                <div>
-                  <h3 className="font-display text-xl font-bold text-navy">
-                    {user.name ?? t("user.detail.unnamed")}
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">{user.email}</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <div className="flex items-center gap-2">
-                  <UserRoleBadge role={user.role} />
-                  <UserStatusBadge deletedAt={user.deleted_at} />
-                </div>
-                {(canDelete || canRestore) && (
-                  <div className="flex items-center gap-2">
-                    {canDelete && (
-                      <Button variant="destructive" size="sm" onClick={() => void handleDelete()}>
-                        <Trash2 className="h-4 w-4" />
-                        {t("user.actions.delete")}
-                      </Button>
-                    )}
-                    {canRestore && (
-                      <Button variant="outline" size="sm" onClick={() => void handleRestore()}>
-                        <RotateCcw className="h-4 w-4" />
-                        {t("user.actions.restore")}
-                      </Button>
-                    )}
-                  </div>
-                )}
+        <Card className="p-6 sm:p-8">
+          {/* Header: avatar + name + badges + actions */}
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <UserAvatar user={user} size="xl" />
+              <div>
+                <h3 className="font-display text-xl font-bold text-navy">
+                  {user.name ?? t("user.detail.unnamed")}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">{user.email}</p>
               </div>
             </div>
-
-            <hr className="my-6 border-gray-50" />
-
-            <DetailEditForm
-              title={t("user.detail.identity")}
-              fields={editFields}
-              canEdit={canEdit}
-              editDisabledReason={
-                user.deleted_at
-                  ? t("user.edit.trashed.body", { name: user.name ?? user.email })
-                  : undefined
-              }
-              onSave={handleSave}
-              onCancel={handleCancelEdit}
-              isSaving={update.isPending || roleChange.isPending}
-              className="mt-2"
-            />
-          </Card>
-
-          <Card className="p-6 sm:p-8">
-            <EyebrowLabel className="mb-4">{t("user.detail.audit")}</EyebrowLabel>
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-              <div>
-                <dt className="mb-1 flex items-center gap-1.5 text-xs font-bold tracking-wider text-gray-400 uppercase">
-                  <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t("user.detail.walletAddress")}
-                </dt>
-                <dd className="text-sm break-all text-navy">
-                  <MonoId
-                    value={user.wallet_address}
-                    mode="address"
-                    className="text-sm text-navy"
-                  />
-                  <CopyInlineButton
-                    value={user.wallet_address}
-                    ariaLabel="Copy wallet address"
-                    className="ml-1 shrink-0"
-                  />
-                </dd>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
+                <UserRoleBadge role={user.role} />
+                <UserStatusBadge deletedAt={user.deleted_at} />
               </div>
+              {(canDelete || canRestore) && (
+                <div className="flex items-center gap-2">
+                  {canDelete && (
+                    <Button variant="destructive" size="sm" onClick={() => void handleDelete()}>
+                      <Trash2 className="h-4 w-4" />
+                      {t("user.actions.delete")}
+                    </Button>
+                  )}
+                  {canRestore && (
+                    <Button variant="outline" size="sm" onClick={() => void handleRestore()}>
+                      <RotateCcw className="h-4 w-4" />
+                      {t("user.actions.restore")}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <hr className="my-6 border-gray-100" />
+
+          <DetailEditForm
+            title={t("user.detail.identity")}
+            fields={editFields}
+            canEdit={canEdit}
+            editDisabledReason={
+              user.deleted_at
+                ? t("user.edit.trashed.body", { name: user.name ?? user.email })
+                : undefined
+            }
+            onSave={handleSave}
+            onCancel={handleCancelEdit}
+            isSaving={update.isPending || roleChange.isPending}
+            className="mt-2"
+          />
+
+          <div className="mt-6 border-t border-gray-100 pt-6">
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+              <DetailRow
+                icon={Wallet}
+                label={t("user.detail.walletAddress")}
+                value={
+                  <div className="flex items-center gap-1">
+                    <MonoId
+                      value={user.wallet_address}
+                      mode="address"
+                      className="text-sm text-navy"
+                    />
+                    <CopyInlineButton
+                      value={user.wallet_address}
+                      ariaLabel={t("cred.copy.userWallet")}
+                      className="shrink-0"
+                    />
+                  </div>
+                }
+              />
               <DetailRow
                 icon={Clock}
                 label={t("user.detail.created")}
@@ -631,8 +628,8 @@ export function UserDetail() {
                 />
               )}
             </dl>
-          </Card>
-        </>
+          </div>
+        </Card>
       )}
 
       {/* Credentials section */}
@@ -655,10 +652,10 @@ export function UserDetail() {
                 inputMode="search"
                 enterKeyHint="search"
                 leadingIcon={Search}
-                placeholder={t("user.detail.credentials.searchPlaceholder")}
+                placeholder={t("cred.list.searchPlaceholder")}
                 value={credSearch}
                 onChange={(e) => handleCredSearchChange(e.target.value)}
-                aria-label={t("user.detail.credentials.searchPlaceholder")}
+                aria-label={t("cred.list.searchAriaLabel")}
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 md:ml-auto md:shrink-0">
@@ -705,7 +702,7 @@ export function UserDetail() {
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {credentials.map((cred) => (
-                <CredentialCard key={cred.id} credential={cred} />
+                <CredentialCard key={cred.id} credential={cred} showActor={!isIssuerOrAbove} />
               ))}
             </div>
           )}

@@ -162,9 +162,12 @@ describe("CredentialList", () => {
         return pageResponse(0);
       }),
     );
+    const user = userEvent.setup();
     renderList();
+    await screen.findByText("All Credentials");
 
-    expect(await screen.findByText("7")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /status/i }));
+    expect(await screen.findByRole("menuitem", { name: /pending review 7/i })).toBeInTheDocument();
   });
 
   it("emits the type_id filter when a type is selected", async () => {
@@ -392,6 +395,41 @@ describe("CredentialList", () => {
     renderList();
 
     await waitFor(() => expect(listRequestsOf(recorded).length).toBeGreaterThan(0));
+    expect(await screen.findByText("My Credentials")).toBeInTheDocument();
+    expect(screen.getByText("Your credentials, all in one place.")).toBeInTheDocument();
+  });
+
+  it("renders the holder-personalized empty state when no credentials exist", async () => {
+    useStore.setState({
+      user: {
+        id: "usr_holder_test",
+        name: "Test Holder",
+        number: null,
+        unit_id: null,
+        joined_year: null,
+        email: "holder@test.com",
+        birth_date: null,
+        gender: null,
+        role: Role.HOLDER,
+        meta: null,
+        wallet_address: "0x" + "0".repeat(40),
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        deleted_at: null,
+      },
+      isAuthenticated: true,
+    });
+    server.use(
+      http.get("*/api/users/self/credentials", () => pageResponse(0)),
+    );
+
+    renderList();
+
+    expect(await screen.findByText("My Credentials")).toBeInTheDocument();
+    expect(await screen.findByText("No credentials yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("Issued credentials linked to your wallet will appear here."),
+    ).toBeInTheDocument();
   });
 
   it("renders without crashing when lookup reference endpoints omit the data key (empty tables)", async () => {

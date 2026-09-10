@@ -330,4 +330,43 @@ describe("UserDetail (D2)", () => {
       expect(requestBody).toEqual({ ids: ["usr_5"] });
     });
   });
+
+  it("renders identity and audit information in a single unified card without separate audit heading", async () => {
+    server.use(
+      http.get("*/api/users/:id", () =>
+        HttpResponse.json({
+          code: 100200,
+          message: "OK",
+          data: makeUser({
+            id: "usr_4",
+            name: "Jane Doe",
+            wallet_address: "0x1234567890abcdef1234567890abcdef12345678",
+          }),
+        }),
+      ),
+    );
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
+    expect(screen.getByText("Wallet Address")).toBeInTheDocument();
+    expect(screen.getByText("Created")).toBeInTheDocument();
+    expect(screen.getByText("Updated")).toBeInTheDocument();
+    expect(screen.queryByText("Audit")).not.toBeInTheDocument();
+  });
+
+  it("renders the issuer instead of holder on credential cards for a holder profile", async () => {
+    server.use(
+      http.get("*/api/users/:id", () =>
+        HttpResponse.json({
+          code: 100200,
+          message: "OK",
+          data: makeUser({ id: "usr_4", name: "Jane Doe", role: Role.HOLDER }),
+        }),
+      ),
+    );
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
+    expect((await screen.findAllByText("University Admin")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Issuer").length).toBeGreaterThan(0);
+    expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
+  });
 });

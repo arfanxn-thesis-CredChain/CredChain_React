@@ -28,14 +28,18 @@ describe("CredentialStatusMenu", () => {
     expect(screen.getByRole("button", { name: /status/i })).toBeInTheDocument();
   });
 
-  it("shows the pending count in a gold badge when review is all", () => {
+  it("shows the pending count next to the Pending review option", async () => {
+    const user = userEvent.setup();
     renderMenu({ pendingCount: 7 });
-    expect(screen.getByText("7")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /status/i }));
+    expect(await screen.findByRole("menuitem", { name: /pending review 7/i })).toBeInTheDocument();
   });
 
-  it("hides the badge when a review filter is active", () => {
+  it("keeps the pending count visible while the pending filter is active", async () => {
+    const user = userEvent.setup();
     renderMenu({ review: "pending", pendingCount: 7 });
-    expect(screen.queryByText("7")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /pending review/i }));
+    expect(await screen.findByRole("menuitem", { name: /pending review 7/i })).toBeInTheDocument();
   });
 
   it("renders both groups with their labels", async () => {
@@ -44,8 +48,7 @@ describe("CredentialStatusMenu", () => {
     await user.click(screen.getByRole("button", { name: /status/i }));
     expect(await screen.findByText("Review status")).toBeInTheDocument();
     expect(screen.getByText("Extraction")).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /all/i })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /any/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("menuitem", { name: /^all$/i })).toHaveLength(2);
   });
 
   it("selecting a review option calls onReviewChange only", async () => {
