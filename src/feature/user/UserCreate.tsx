@@ -90,16 +90,17 @@ export function UserCreate() {
     [form],
   );
 
-  // Employee keeps whatever role was already picked; Student has no picker so
-  // any prior Issuer/Admin pick from a previous Employee choice must be reset.
+  // Each kind has its own default role: Student is always Holder (no picker
+  // shown), Employee defaults to Issuer since Holder is not a selectable
+  // employee role. Switching kind resets every row so a prior choice can't
+  // leak into the other flow.
   const selectKind = useCallback(
     (next: UserKind) => {
       setKind(next);
-      if (next === "student") {
-        form.getValues("users").forEach((_, index) => {
-          form.setValue(`users.${index}.role`, Role.HOLDER);
-        });
-      }
+      const role = next === "student" ? Role.HOLDER : Role.ISSUER;
+      form.getValues("users").forEach((_, index) => {
+        form.setValue(`users.${index}.role`, role);
+      });
     },
     [form],
   );
@@ -195,7 +196,12 @@ export function UserCreate() {
               <Button
                 type="button"
                 variant="dashed"
-                onClick={() => append(defaultUserStoreFormRow())}
+                onClick={() =>
+                  append({
+                    ...defaultUserStoreFormRow(),
+                    role: kind === "employee" ? Role.ISSUER : Role.HOLDER,
+                  })
+                }
                 disabled={fields.length >= 100}
               >
                 <Plus className="h-4 w-4" />

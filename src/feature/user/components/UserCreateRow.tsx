@@ -43,7 +43,6 @@ export function UserCreateRow({ index, form, kind, onRemove }: UserCreateRowProp
   const canPromoteToAdmin = canAccess(currentUser?.role, Role.SUPER_ADMIN);
 
   const roleOptions = [
-    { value: Role.HOLDER, label: t("user.edit.role.holder") },
     { value: Role.ISSUER, label: t("user.edit.role.issuer") },
     { value: Role.ADMIN, label: t("user.edit.role.admin") },
   ];
@@ -106,7 +105,16 @@ export function UserCreateRow({ index, form, kind, onRemove }: UserCreateRowProp
           />
         </FormField>
 
-        <FormField label={t("user.field.unit")} error={errors?.unit_id?.message} optional>
+        <FormField
+          label={t("user.field.unit")}
+          hint={
+            kind === "student"
+              ? t("userCreate.field.unit.hint.student")
+              : t("userCreate.field.unit.hint.employee")
+          }
+          error={errors?.unit_id?.message}
+          optional
+        >
           <UnitPicker
             value={unitId}
             onChange={(value) =>
@@ -165,7 +173,7 @@ export function UserCreateRow({ index, form, kind, onRemove }: UserCreateRowProp
             <Select
               value={role}
               onValueChange={(value) => {
-                if (value === Role.HOLDER || value === Role.ISSUER || value === Role.ADMIN) {
+                if (value === Role.ISSUER || value === Role.ADMIN) {
                   form.setValue(`users.${index}.role`, value, {
                     shouldValidate: true,
                   });

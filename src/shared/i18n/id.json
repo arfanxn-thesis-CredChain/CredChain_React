@@ -239,6 +239,8 @@
   "userCreate.field.phone.placeholder": "+6281234567890",
   "userCreate.field.phone.hint": "Gunakan format internasional, contoh +6281234567890",
   "userCreate.field.unit.placeholder": "Pilih unit",
+  "userCreate.field.unit.hint.student": "Program studi atau departemen tempat siswa terdaftar.",
+  "userCreate.field.unit.hint.employee": "Fakultas, departemen, atau unit kerja.",
   "userCreate.field.joinedYear.placeholder": "2024",
   "userCreate.field.number.placeholder": "EMP-12345",
   "userCreate.field.number.placeholder.student": "22100001",
@@ -1289,6 +1291,7 @@
   "userImport.validation.genderInvalid": "Jenis kelamin \"{{value}}\" tidak dikenali. Gunakan male atau female.",
   "userImport.validation.roleInvalid": "Peran \"{{value}}\" tidak dikenali. Gunakan holder, issuer, atau admin.",
   "userImport.validation.roleNotHolder": "Siswa harus berperan Holder. Nilai yang ditemukan: \"{{value}}\".",
+  "userImport.validation.roleHolderNotEmployee": "Karyawan tidak dapat berperan Holder. Nilai yang ditemukan: \"{{value}}\".",
   "userImport.validation.rowLabel": "Baris",
   "userImport.validation.field": "Field",
   "userImport.validation.error": "Kesalahan"

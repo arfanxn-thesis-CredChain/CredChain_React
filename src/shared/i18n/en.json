@@ -239,6 +239,8 @@
   "userCreate.field.phone.placeholder": "+6281234567890",
   "userCreate.field.phone.hint": "Use international format, e.g. +6281234567890",
   "userCreate.field.unit.placeholder": "Select unit",
+  "userCreate.field.unit.hint.student": "Study program or department the student belongs to.",
+  "userCreate.field.unit.hint.employee": "Faculty, department, or work unit.",
   "userCreate.field.joinedYear.placeholder": "2024",
   "userCreate.field.number.placeholder": "EMP-12345",
   "userCreate.field.number.placeholder.student": "22100001",
@@ -1288,6 +1290,7 @@
   "userImport.validation.genderInvalid": "Gender \"{{value}}\" is not recognised. Use male or female.",
   "userImport.validation.roleInvalid": "Role \"{{value}}\" is not recognised. Use holder, issuer, or admin.",
   "userImport.validation.roleNotHolder": "Students must be Holder. Got \"{{value}}\".",
+  "userImport.validation.roleHolderNotEmployee": "Employees cannot be Holder. Got \"{{value}}\".",
   "userImport.validation.rowLabel": "Row",
   "userImport.validation.field": "Field",
   "userImport.validation.error": "Error"

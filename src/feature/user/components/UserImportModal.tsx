@@ -96,7 +96,7 @@ export function templateRows(units: HolderUnitDTO[], kind: UserKind): string[][]
     ];
   }
   return [
-    ["Alice Johnson", "alice@example.com", unitA, "2024", "EMP-001", "1995-03-15", "female", "holder"],
+    ["Alice Johnson", "alice@example.com", unitA, "2024", "EMP-001", "1995-03-15", "female", "issuer"],
     ["Bob Smith", "bob@example.com", unitB, "2023", "EMP-002", "1990-07-22", "male", "issuer"],
   ];
 }
@@ -178,7 +178,7 @@ export function UserImportModal({ open, onClose, onImport, kind }: UserImportMod
         birth_date: undefined,
         gender: undefined,
         meta_entries: [],
-        role: "holder",
+        role: kind === "employee" ? "issuer" : "holder",
       };
 
       for (const header of headers) {
@@ -213,6 +213,15 @@ export function UserImportModal({ open, onClose, onImport, kind }: UserImportMod
                 row: rowNumber,
                 field: "role",
                 error: t("userImport.validation.roleNotHolder", { value: val }),
+              });
+            } else if (kind === "employee" && lower === "holder") {
+              // Employees and students are separate flows now; a Holder cell
+              // in an employee import is a real conflict, not something to
+              // silently overwrite.
+              errors.push({
+                row: rowNumber,
+                field: "role",
+                error: t("userImport.validation.roleHolderNotEmployee", { value: val }),
               });
             } else {
               mapped.role = lower;
