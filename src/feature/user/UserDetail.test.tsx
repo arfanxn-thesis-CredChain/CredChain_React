@@ -366,7 +366,8 @@ describe("UserDetail (D2)", () => {
     renderPage();
     await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
     expect((await screen.findAllByText("University Admin")).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Issuer").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Issued by").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Issuer")).not.toBeInTheDocument();
     expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
   });
 });

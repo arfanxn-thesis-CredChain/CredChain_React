@@ -310,10 +310,11 @@ describe("CredentialCard", () => {
     expect(screen.getByText(/pending review/i)).toBeInTheDocument();
   });
 
-  it("shows the issuer and hides holder when showActor is true on active credential", () => {
+  it("shows the audit row and hides holder when showActor is true on active credential", () => {
     const credential = makeCredential({
       holder_user_id: "usr_h",
       issuer_user_id: "usr_i",
+      submitter_user_id: "usr_i",
       holder: makeUser({ id: "usr_h", role: Role.HOLDER, name: "Alice Holder" }),
       issuer: makeUser({ id: "usr_i", role: Role.ISSUER, name: "Bob Issuer", number: "12345" }),
     });
@@ -321,25 +322,28 @@ describe("CredentialCard", () => {
     render(<CredentialCard credential={credential} showActor />, { wrapper: TestProviders });
 
     expect(screen.getByText("Bob Issuer")).toBeInTheDocument();
-    expect(screen.getByText("Issuer")).toBeInTheDocument();
+    expect(screen.getByText("Issued by")).toBeInTheDocument();
     expect(screen.getByText("12345")).toBeInTheDocument();
     expect(screen.queryByText("Alice Holder")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /bob issuer/i })).toHaveAttribute("href", "/users/usr_i");
   });
 
-  it("shows the self-submitted label when showActor is true and credential has no separate issuer", () => {
+  it("shows Approved by when approved credential was submitted by holder", () => {
     const credential = makeCredential({
       holder_user_id: "usr_self",
-      issuer_user_id: "usr_self",
+      submitter_user_id: "usr_self",
+      issuer_user_id: "usr_officer",
       holder: makeUser({ id: "usr_self", role: Role.HOLDER, name: "Alice Self" }),
-      issuer: makeUser({ id: "usr_self", role: Role.HOLDER, name: "Alice Self" }),
+      issuer: makeUser({ id: "usr_officer", role: Role.ISSUER, name: "Officer Bob" }),
     });
 
     render(<CredentialCard credential={credential} showActor />, { wrapper: TestProviders });
 
-    expect(screen.getByText("Self-submitted")).toBeInTheDocument();
+    expect(screen.getByText("Approved by")).toBeInTheDocument();
+    expect(screen.getByText("Officer Bob")).toBeInTheDocument();
     expect(screen.queryByText("Alice Self")).not.toBeInTheDocument();
     expect(screen.queryByText("Issuer")).not.toBeInTheDocument();
+    expect(screen.queryByText("Self-submitted")).not.toBeInTheDocument();
   });
 
   it("shows the revoker and hides issuer/holder when showActor is true on revoked credential", () => {
@@ -358,7 +362,7 @@ describe("CredentialCard", () => {
     render(<CredentialCard credential={credential} showActor />, { wrapper: TestProviders });
 
     expect(screen.getByText("Charlie Revoker")).toBeInTheDocument();
-    expect(screen.getByText("Revoker")).toBeInTheDocument();
+    expect(screen.getByText("Revoked by")).toBeInTheDocument();
     expect(screen.queryByText("Bob Issuer")).not.toBeInTheDocument();
     expect(screen.queryByText("Alice Holder")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /charlie revoker/i })).toHaveAttribute("href", "/users/usr_r");
@@ -380,7 +384,7 @@ describe("CredentialCard", () => {
     render(<CredentialCard credential={credential} hideHolder />, { wrapper: TestProviders });
 
     expect(screen.getByText("Dave Rejecter")).toBeInTheDocument();
-    expect(screen.getByText("Rejecter")).toBeInTheDocument();
+    expect(screen.getByText("Rejected by")).toBeInTheDocument();
     expect(screen.getByText("98765")).toBeInTheDocument();
     expect(screen.queryByText("Bob Issuer")).not.toBeInTheDocument();
     expect(screen.queryByText("Alice Holder")).not.toBeInTheDocument();
@@ -403,19 +407,22 @@ describe("CredentialCard", () => {
       competencies: [
         { id: "comp_1", name: "Psikometri" },
         { id: "comp_2", name: "Statistika" },
+        { id: "comp_3", name: "Metodologi" },
       ],
     });
 
     render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
 
     expect(screen.getByText("Psikometri")).toBeInTheDocument();
+    expect(screen.getByText("Statistika")).toBeInTheDocument();
     expect(screen.getByText("+1")).toBeInTheDocument();
   });
 
-  it("renders holder info when showActor is false even if issuer is present", () => {
+  it("renders holder info and audit strip when showActor is false and issuer is present", () => {
     const credential = makeCredential({
       holder_user_id: "usr_h",
       issuer_user_id: "usr_i",
+      submitter_user_id: "usr_i",
       holder: makeUser({ id: "usr_h", role: Role.HOLDER, name: "Alice Holder" }),
       issuer: makeUser({ id: "usr_i", role: Role.ISSUER, name: "Bob Issuer" }),
     });
@@ -423,7 +430,7 @@ describe("CredentialCard", () => {
     render(<CredentialCard credential={credential} showActor={false} />, { wrapper: TestProviders });
 
     expect(screen.getByText("Alice Holder")).toBeInTheDocument();
-    expect(screen.queryByText("Bob Issuer")).not.toBeInTheDocument();
+    expect(screen.getByText("Bob Issuer")).toBeInTheDocument();
     expect(screen.queryByText("Issuer")).not.toBeInTheDocument();
   });
 
@@ -474,7 +481,7 @@ describe("CredentialCard", () => {
       wrapper: TestProviders,
     });
 
-    const card = screen.getByRole("link", { name: /active/i });
+    const card = screen.getByRole("link", { name: /approved/i });
     expect(card.className).toContain("cursor-not-allowed");
   });
 
@@ -596,7 +603,6 @@ describe("CredentialCard", () => {
 
     const compEl = screen.getByText("Data Analysis");
     expect(compEl).toBeInTheDocument();
-    expect(compEl.className).toContain("min-w-0");
     expect(compEl.className).toContain("truncate");
   });
 
@@ -617,7 +623,7 @@ describe("CredentialCard", () => {
     });
     render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
 
-    const pill = screen.getByText(/approved/i);
+    const pill = screen.getByText(/^approved$/i);
     const headerRow = pill.closest("div.mb-3");
     expect(headerRow?.className).toContain("flex-wrap");
   });
@@ -675,10 +681,11 @@ describe("CredentialCard", () => {
   });
 
   describe("holder counterparty view", () => {
-    it("renders org name and issuer person row when credential was issued via issuance", () => {
+    it("renders org name and issuer person row in audit strip when credential was issued via issuance", () => {
       const credential = makeCredential({
         holder_user_id: "usr_h",
         issuer_user_id: "usr_i",
+        submitter_user_id: "usr_i",
         issuer_organization: { id: "org_1", name: "MIT University" },
         issuer: makeUser({ id: "usr_i", role: Role.ISSUER, name: "Prof Bob", number: "INS-99" }),
       });
@@ -687,22 +694,26 @@ describe("CredentialCard", () => {
 
       expect(screen.getByText("MIT University")).toBeInTheDocument();
       expect(screen.getByText("Prof Bob")).toBeInTheDocument();
-      expect(screen.getByText("Issuer")).toBeInTheDocument();
+      expect(screen.getByText("Issued by")).toBeInTheDocument();
       expect(screen.getByText("INS-99")).toBeInTheDocument();
+      expect(screen.queryByText("Issuer")).not.toBeInTheDocument();
     });
 
-    it("renders org name only (no issuer row) when self-submitted and active", () => {
+    it("renders Approved by in audit strip when approved submission viewed by holder", () => {
       const credential = makeCredential({
         holder_user_id: "usr_h",
-        issuer_user_id: "usr_h",
+        submitter_user_id: "usr_h",
+        issuer_user_id: "usr_officer",
         issuer_organization: { id: "org_1", name: "MIT University" },
         holder: makeUser({ id: "usr_h", role: Role.HOLDER, name: "Alice Holder" }),
-        issuer: makeUser({ id: "usr_h", role: Role.HOLDER, name: "Alice Holder" }),
+        issuer: makeUser({ id: "usr_officer", role: Role.ISSUER, name: "Officer Bob" }),
       });
 
       render(<CredentialCard credential={credential} isHolder />, { wrapper: TestProviders });
 
       expect(screen.getByText("MIT University")).toBeInTheDocument();
+      expect(screen.getByText("Officer Bob")).toBeInTheDocument();
+      expect(screen.getByText("Approved by")).toBeInTheDocument();
       expect(screen.queryByText("Issuer")).not.toBeInTheDocument();
       expect(screen.queryByText("Self-submitted")).not.toBeInTheDocument();
     });
@@ -724,7 +735,7 @@ describe("CredentialCard", () => {
 
       expect(screen.getByText("MIT University")).toBeInTheDocument();
       expect(screen.getByText("Dean Charlie")).toBeInTheDocument();
-      expect(screen.getByText("Revoker")).toBeInTheDocument();
+      expect(screen.getByText("Revoked by")).toBeInTheDocument();
       expect(screen.getByText("ADM-1")).toBeInTheDocument();
       expect(screen.queryByText("Prof Bob")).not.toBeInTheDocument();
     });
@@ -738,7 +749,7 @@ describe("CredentialCard", () => {
         wrapper: TestProviders,
       });
 
-      const card = screen.getByRole("link", { name: /active/i });
+      const card = screen.getByRole("link", { name: /pending review/i });
       expect(card.className).toContain("opacity-50");
       expect(card.className).toContain("cursor-not-allowed");
 
@@ -755,7 +766,7 @@ describe("CredentialCard", () => {
         wrapper: TestProviders,
       });
 
-      const card = screen.getByRole("link", { name: /active/i });
+      const card = screen.getByRole("link", { name: /approved/i });
       expect(card.className).not.toContain("opacity-50");
       expect(card.className).not.toContain("cursor-not-allowed");
 
@@ -772,10 +783,155 @@ describe("CredentialCard", () => {
         { wrapper: TestProviders },
       );
 
-      const card = screen.getByRole("link", { name: /active/i });
+      const card = screen.getByRole("link", { name: /approved/i });
       expect(card.className).toContain("opacity-50");
       expect(card.className).toContain("cursor-not-allowed");
       expect(screen.getByRole("button", { name: /select credential/i })).toBeDisabled();
+    });
+  });
+
+  describe("taxonomy and visual indicators", () => {
+    it("renders staged type name with pending indicator and resolved type plain", () => {
+      const stagedCred = makeCredential({
+        type: undefined,
+        submitted_type_name: "Staged Workshop",
+      });
+      const { rerender } = render(<CredentialCard credential={stagedCred} />, { wrapper: TestProviders });
+
+      expect(screen.getByText(/Staged Workshop/)).toBeInTheDocument();
+      expect(screen.getByText(/pending review/i)).toBeInTheDocument();
+
+      const resolvedCred = makeCredential({
+        type: { id: "type_1", name: "Resolved Degree" },
+        submitted_type_name: "Staged Workshop",
+      });
+      rerender(<CredentialCard credential={resolvedCred} />);
+
+      expect(screen.getByText("Resolved Degree")).toBeInTheDocument();
+      expect(screen.queryByText(/Staged Workshop/)).not.toBeInTheDocument();
+    });
+
+    it("renders resolved and staged competencies with distinct tones and overflow at 3+", () => {
+      const credential = makeCredential({
+        competencies: [{ id: "comp_1", name: "Resolved Python" }],
+        submitted_competencies: [
+          { name: "Staged Rust", resolved_id: null },
+          { name: "Staged Go", resolved_id: null },
+        ],
+      });
+
+      render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
+
+      const resolvedEl = screen.getByText("Resolved Python");
+      expect(resolvedEl).toBeInTheDocument();
+      expect(resolvedEl.className).toContain("text-navy");
+
+      const stagedEl = screen.getByText("Staged Rust");
+      expect(stagedEl).toBeInTheDocument();
+      expect(stagedEl.className).toContain("text-gray-600");
+
+      expect(screen.getByText("+1")).toBeInTheDocument();
+      expect(screen.queryByText("Staged Go")).not.toBeInTheDocument();
+    });
+
+    it("applies semantic surface colors: revoked is gray, rejected is red", () => {
+      const revokedCred = makeCredential({
+        status: "revoked",
+        revoked_at: "2026-06-01T00:00:00Z",
+      });
+      const { rerender } = render(<CredentialCard credential={revokedCred} />, { wrapper: TestProviders });
+
+      const revokedCard = screen.getByRole("link", { name: /revoked/i });
+      expect(revokedCard.className).toContain("bg-gray-50");
+      expect(revokedCard.className).toContain("border-gray-200");
+
+      const rejectedCred = makeCredential({
+        status: "rejected",
+        rejected_at: "2026-06-01T00:00:00Z",
+      });
+      rerender(<CredentialCard credential={rejectedCred} />);
+
+      const rejectedCard = screen.getByRole("link", { name: /rejected/i });
+      expect(rejectedCard.className).toContain("bg-error/5");
+      expect(rejectedCard.className).toContain("border-error/20");
+    });
+
+    it("announces truthful aria-labels reflecting each status", () => {
+      const statuses = [
+        { status: "pending", name: /pending review/i },
+        { status: "approved", name: /approved/i },
+        { status: "rejected", name: /rejected/i },
+        { status: "revoked", name: /revoked/i },
+      ] as const;
+
+      for (const { status, name } of statuses) {
+        const cred = makeCredential({ status });
+        const { unmount } = render(<CredentialCard credential={cred} />, { wrapper: TestProviders });
+        expect(screen.getByRole("link", { name })).toBeInTheDocument();
+        unmount();
+      }
+    });
+
+    it("renders issuing organization in non-holder view as well", () => {
+      const credential = makeCredential({
+        issuer_organization: { id: "org_1", name: "Global Certification Board" },
+      });
+
+      render(<CredentialCard credential={credential} isHolder={false} />, { wrapper: TestProviders });
+
+      expect(screen.getByText("Issuing organization")).toBeInTheDocument();
+      expect(screen.getByText("Global Certification Board")).toBeInTheDocument();
+    });
+
+    it("does not display the retired Issuer role label in any status", () => {
+      const pendingCred = makeCredential({ status: "pending" });
+      const approvedCred = makeCredential({ status: "approved" });
+      const rejectedCred = makeCredential({ status: "rejected" });
+      const revokedCred = makeCredential({ status: "revoked" });
+
+      for (const cred of [pendingCred, approvedCred, rejectedCred, revokedCred]) {
+        const { unmount } = render(<CredentialCard credential={cred} showActor />, { wrapper: TestProviders });
+        expect(screen.queryByText(/^issuer$/i)).not.toBeInTheDocument();
+        unmount();
+      }
+    });
+
+    it("renders no audit strip when credential is pending", () => {
+      const credential = makeCredential({
+        status: "pending",
+        approved_at: null,
+      });
+
+      render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
+
+      expect(screen.queryByText("Approved by")).not.toBeInTheDocument();
+      expect(screen.queryByText("Issued by")).not.toBeInTheDocument();
+      expect(screen.queryByText("Rejected by")).not.toBeInTheDocument();
+      expect(screen.queryByText("Revoked by")).not.toBeInTheDocument();
+    });
+
+    it("splits approved audit strip by origin: Approved by for submissions, Issued by for direct issuance", () => {
+      const submissionCred = makeCredential({
+        status: "approved",
+        holder_user_id: "usr_alice",
+        submitter_user_id: "usr_alice",
+        issuer: makeUser({ id: "usr_staff", name: "Staff Reviewer" }),
+      });
+      const { rerender } = render(<CredentialCard credential={submissionCred} />, { wrapper: TestProviders });
+
+      expect(screen.getByText("Approved by")).toBeInTheDocument();
+      expect(screen.queryByText("Issued by")).not.toBeInTheDocument();
+
+      const directCred = makeCredential({
+        status: "approved",
+        holder_user_id: "usr_alice",
+        submitter_user_id: "usr_staff",
+        issuer: makeUser({ id: "usr_staff", name: "Staff Reviewer" }),
+      });
+      rerender(<CredentialCard credential={directCred} />);
+
+      expect(screen.getByText("Issued by")).toBeInTheDocument();
+      expect(screen.queryByText("Approved by")).not.toBeInTheDocument();
     });
   });
 });

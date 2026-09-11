@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { XOctagon } from "lucide-react";
-import { StatusPill } from "@shared/components/StatusPill";
+import { Badge } from "@ui/badge";
 
 interface UserStatusBadgeProps {
   deletedAt: string | null;
@@ -12,8 +12,8 @@ export function UserStatusBadge({ deletedAt }: UserStatusBadgeProps) {
   if (!deletedAt) return null;
 
   return (
-    <StatusPill tone="error" icon={XOctagon}>
+    <Badge tone="error" icon={XOctagon}>
       {t("user.status.trashed")}
-    </StatusPill>
+    </Badge>
   );
 }

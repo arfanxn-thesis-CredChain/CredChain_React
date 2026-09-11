@@ -347,18 +347,30 @@ export function VerifyCredential() {
                     </div>
                   )}
 
-                  {/* Organization ID — building icon */}
-                  {result.credential!.issuer_organization_id && (
+                  {/* Organization — building icon */}
+                  {(result.credential!.issuer_organization?.name ||
+                    result.credential!.issuer_organization_id) && (
                     <div className="mt-1.5 flex items-center gap-2 text-xs">
                       <Building2 className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
-                      <span className="shrink-0 truncate font-mono text-gray-500">
-                        {truncateId(result.credential!.issuer_organization_id)}
+                      <span className="shrink-0 text-gray-500 font-medium">
+                        {t("cred.parties.issuerOrganization")}:
                       </span>
-                      <CopyInlineButton
-                        value={result.credential!.issuer_organization_id}
-                        ariaLabel={t("cred.verify.orgId")}
-                        className="shrink-0"
-                      />
+                      {result.credential!.issuer_organization?.name ? (
+                        <span className="truncate font-semibold text-navy">
+                          {result.credential!.issuer_organization.name}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 truncate font-mono text-gray-500">
+                          {truncateId(result.credential!.issuer_organization_id!)}
+                        </span>
+                      )}
+                      {result.credential!.issuer_organization_id && (
+                        <CopyInlineButton
+                          value={result.credential!.issuer_organization_id}
+                          ariaLabel={t("cred.verify.orgId")}
+                          className="shrink-0"
+                        />
+                      )}
                     </div>
                   )}
 

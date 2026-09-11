@@ -21,6 +21,7 @@ import { PageHeader } from "@shared/components/PageHeader";
 import { BackLink } from "@shared/components/BackLink";
 import { EmptyState } from "@shared/components/EmptyState";
 import { DetailEditForm, type DetailField } from "@shared/components/DetailEditForm";
+import { StagedValue } from "@shared/components/StagedValue";
 import { MetaDisplay } from "@shared/components/MetaDisplay";
 import { MetaEditor } from "@shared/components/MetaEditor";
 import { MonoId } from "@shared/components/MonoId";
@@ -191,14 +192,12 @@ export function CredentialDetail() {
         {
           key: "type_id",
           label: t("cred.submit.field.type"),
-          readValue: cred.type?.name ? (
-            <span>{cred.type.name}</span>
-          ) : cred.type_id ? (
-            <MonoId value={cred.type_id} mode="id" />
-          ) : (
-            <span className="text-gray-500">
-              {cred.submitted_type_name} · {t("cred.metadata.pending")}
-            </span>
+          readValue: (
+            <StagedValue
+              resolved={cred.type?.name}
+              staged={cred.submitted_type_name}
+              fallback={cred.type_id ? <MonoId value={cred.type_id} mode="id" /> : undefined}
+            />
           ),
           editControl: (
             <SearchableCreateSelect
@@ -215,14 +214,16 @@ export function CredentialDetail() {
         {
           key: "issuer_organization_id",
           label: t("cred.submit.field.issuerOrganization"),
-          readValue: cred.issuer_organization?.name ? (
-            <span>{cred.issuer_organization.name}</span>
-          ) : cred.issuer_organization_id ? (
-            <MonoId value={cred.issuer_organization_id} mode="id" />
-          ) : (
-            <span className="text-gray-500">
-              {cred.submitted_issuer_organization_name} · {t("cred.metadata.pending")}
-            </span>
+          readValue: (
+            <StagedValue
+              resolved={cred.issuer_organization?.name}
+              staged={cred.submitted_issuer_organization_name}
+              fallback={
+                cred.issuer_organization_id ? (
+                  <MonoId value={cred.issuer_organization_id} mode="id" />
+                ) : undefined
+              }
+            />
           ),
           editControl: (
             <SearchableCreateSelect

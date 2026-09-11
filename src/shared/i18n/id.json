@@ -778,6 +778,12 @@
     "trashed": "Dihapus"
   },
   "cred": {
+    "audit": {
+      "approvedBy": "Disetujui oleh",
+      "issuedBy": "Diterbitkan oleh",
+      "rejectedBy": "Ditolak oleh",
+      "revokedBy": "Dicabut oleh"
+    },
     "parties": {
       "selfSubmitted": "Mengajukan sendiri",
       "issuerOrganization": "Organisasi Penerbit"

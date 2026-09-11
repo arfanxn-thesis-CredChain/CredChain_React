@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@shared/lib/cn";
 
 const badgeVariants = cva(
@@ -18,9 +19,19 @@ const badgeVariants = cva(
   },
 );
 
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
+export type StatusTone = "navy" | "gold" | "error" | "green" | "gray";
 
-export function Badge({ className, tone, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ tone }), className)} {...props} />;
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof badgeVariants> {
+  icon?: LucideIcon;
+}
+
+export function Badge({ className, tone, icon: Icon, children, ...props }: BadgeProps) {
+  return (
+    <span className={cn(badgeVariants({ tone }), className)} {...props}>
+      {Icon && <Icon className="mr-1 h-3 w-3 shrink-0" aria-hidden="true" />}
+      {children}
+    </span>
+  );
 }

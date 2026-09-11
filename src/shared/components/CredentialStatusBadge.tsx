@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useTranslation } from "react-i18next";
 import { Ban, CheckCircle2, Clock, XCircle, type LucideIcon } from "lucide-react";
-import { StatusPill, type StatusTone } from "@shared/components/StatusPill";
+import { Badge, type StatusTone } from "@ui/badge";
 import type { CredentialStatus } from "@shared/types/api";
 
 const TONE_MAP: Record<CredentialStatus, StatusTone> = {
@@ -17,11 +18,18 @@ const ICON_MAP: Record<CredentialStatus, LucideIcon> = {
   revoked: Ban,
 };
 
-const LABEL_KEY: Record<CredentialStatus, string> = {
+export const LABEL_KEY: Record<CredentialStatus, string> = {
   pending: "cred.lifecycle.pending",
   approved: "cred.lifecycle.approved",
   rejected: "cred.lifecycle.rejected",
   revoked: "cred.lifecycle.revoked",
+};
+
+export const STATUS_SURFACE: Record<CredentialStatus, string> = {
+  pending: "border-gray-100 hover:border-gold/50 hover:shadow-md",
+  approved: "border-gray-100 hover:border-gold/50 hover:shadow-md",
+  rejected: "border-error/20 bg-error/5",
+  revoked: "border-gray-200 bg-gray-50",
 };
 
 export function CredentialStatusBadge({
@@ -33,8 +41,8 @@ export function CredentialStatusBadge({
 }) {
   const { t } = useTranslation();
   return (
-    <StatusPill tone={TONE_MAP[status]} icon={ICON_MAP[status]} className={className}>
+    <Badge tone={TONE_MAP[status]} icon={ICON_MAP[status]} className={className}>
       {t(LABEL_KEY[status])}
-    </StatusPill>
+    </Badge>
   );
 }

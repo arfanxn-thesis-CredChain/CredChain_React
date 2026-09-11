@@ -140,7 +140,7 @@ interface RecentSectionProps {
 }
 
 const toneBlock = {
-  gold: "bg-gold/10 text-gold",
+  gold: "bg-gold/10 text-gold-text",
   error: "bg-error/10 text-error",
   navy: "bg-navy/10 text-navy",
   green: "bg-green-100 text-green-700",

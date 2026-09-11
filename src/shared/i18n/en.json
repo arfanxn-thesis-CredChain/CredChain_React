@@ -777,6 +777,12 @@
     "trashed": "Trashed"
   },
   "cred": {
+    "audit": {
+      "approvedBy": "Approved by",
+      "issuedBy": "Issued by",
+      "rejectedBy": "Rejected by",
+      "revokedBy": "Revoked by"
+    },
     "parties": {
       "selfSubmitted": "Self-submitted",
       "issuerOrganization": "Issuing organization"
