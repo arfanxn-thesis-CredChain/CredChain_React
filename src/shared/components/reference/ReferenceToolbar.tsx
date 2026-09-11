@@ -2,11 +2,11 @@ import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { RoleGate } from "@shared/auth/guards";
 import { Role } from "@shared/auth/role";
-import { ResourceAdminCreateForm } from "@shared/components/admin/ResourceAdminCreateForm";
+import { ReferenceCreateForm } from "@shared/components/reference/ReferenceCreateForm";
 import type { ReferenceResource, ReferenceRow } from "@shared/types/api";
 import { Input } from "@ui/input";
 
-interface ResourceAdminToolbarProps {
+export interface ReferenceToolbarProps {
   resource: ReferenceResource;
   rows: ReferenceRow[];
   createLabel: string;
@@ -16,20 +16,19 @@ interface ResourceAdminToolbarProps {
 }
 
 /**
- * Search box plus the admin-only create row, shared by the three reference
- * admin pages.
+ * Search box plus the admin-only quick-create row, shared by the three reference
+ * management pages.
  *
- * Only the create form is role-gated: search is a read affordance, and gating
- * the whole strip (as the pages used to) hid it from everyone but admins.
+ * Only the create form is role-gated: search is a read affordance, available to all.
  */
-export function ResourceAdminToolbar({
+export function ReferenceToolbar({
   resource,
   rows,
   createLabel,
   searchValue,
   onSearchChange,
   searchPlaceholder,
-}: ResourceAdminToolbarProps) {
+}: ReferenceToolbarProps) {
   const { t } = useTranslation();
   const placeholder = searchPlaceholder ?? t("admin.searchPlaceholder");
 
@@ -51,7 +50,7 @@ export function ResourceAdminToolbar({
         />
       </div>
       <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
-        <ResourceAdminCreateForm resource={resource} rows={rows} submitLabel={createLabel} />
+        <ReferenceCreateForm resource={resource} rows={rows} submitLabel={createLabel} />
       </RoleGate>
     </div>
   );

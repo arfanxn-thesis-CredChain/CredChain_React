@@ -170,4 +170,58 @@ describe("IssuerOrganizationsPage", () => {
       expect(mockNotify.error).toHaveBeenCalledWith("error_issuer_organization_destroy_in_use");
     });
   });
+
+  it("supports inline editing to update issuer organization name", async () => {
+    let putBody: unknown;
+    server.use(
+      http.get("*/api/issuer-organizations", () => paginated(organizations)),
+      http.put("*/api/issuer-organizations/:id", async ({ request }) => {
+        putBody = await request.json();
+        return HttpResponse.json({
+          code: 400902,
+          message: "ok",
+          data: { id: "iorg_01", name: "National University", active: true },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("University of Indonesia");
+    await user.click(screen.getAllByRole("button", { name: "Issuer organization actions" })[0]);
+    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+
+    const input = screen.getByRole("textbox", { name: "Edit" });
+    expect(input).toHaveValue("University of Indonesia");
+    expect(screen.getAllByRole("button", { name: "Issuer organization actions" })).toHaveLength(1);
+
+    await user.clear(input);
+    await user.type(input, "National University");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(putBody).toEqual({ name: "National University", active: true });
+    });
+  });
+
+  it("cancels inline editing when clicking cancel", async () => {
+    server.use(http.get("*/api/issuer-organizations", () => paginated(organizations)));
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("University of Indonesia");
+    await user.click(screen.getAllByRole("button", { name: "Issuer organization actions" })[0]);
+    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+
+    const input = screen.getByRole("textbox", { name: "Edit" });
+    await user.clear(input);
+    await user.type(input, "Changed Name");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("textbox", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.getByText("University of Indonesia")).toBeInTheDocument();
+  });
 });

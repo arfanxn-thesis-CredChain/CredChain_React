@@ -142,4 +142,60 @@ describe("CredentialTypesPage", () => {
       expect(mockNotify.error).toHaveBeenCalledWith("error_credential_type_destroy_in_use");
     });
   });
+
+  it("supports inline editing to update credential type name", async () => {
+    let putBody: unknown;
+    server.use(
+      http.get("*/api/credential-types", () => paginated(types)),
+      http.put("*/api/credential-types/:id", async ({ request }) => {
+        putBody = await request.json();
+        return HttpResponse.json({
+          code: 400802,
+          message: "ok",
+          data: { id: "ctype_01", name: "Master's Degree", active: true },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Bachelor's Degree");
+    await user.click(screen.getAllByRole("button", { name: "Credential type actions" })[0]);
+    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+
+    // Inline edit replaces the text with input and Save/Cancel buttons; actions for this row are hidden
+    const input = screen.getByRole("textbox", { name: "Edit" });
+    expect(input).toHaveValue("Bachelor's Degree");
+    // Only the second row still has action menu
+    expect(screen.getAllByRole("button", { name: "Credential type actions" })).toHaveLength(1);
+
+    await user.clear(input);
+    await user.type(input, "Master's Degree");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(putBody).toEqual({ name: "Master's Degree", active: true });
+    });
+  });
+
+  it("cancels inline editing when clicking cancel", async () => {
+    server.use(http.get("*/api/credential-types", () => paginated(types)));
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Bachelor's Degree");
+    await user.click(screen.getAllByRole("button", { name: "Credential type actions" })[0]);
+    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+
+    const input = screen.getByRole("textbox", { name: "Edit" });
+    await user.clear(input);
+    await user.type(input, "Changed Name");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("textbox", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.getByText("Bachelor's Degree")).toBeInTheDocument();
+  });
 });

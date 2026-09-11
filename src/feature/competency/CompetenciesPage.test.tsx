@@ -145,4 +145,58 @@ describe("CompetenciesPage", () => {
 
     await waitFor(() => expect(recordedBody).toEqual({ name: "Data Analysis", active: true }));
   });
+
+  it("supports inline editing to update competency name", async () => {
+    let putBody: unknown;
+    server.use(
+      http.get("*/api/competencies", () => paginated(competencies)),
+      http.put("*/api/competencies/:id", async ({ request }) => {
+        putBody = await request.json();
+        return HttpResponse.json({
+          code: 401002,
+          message: "ok",
+          data: { id: "comp_01", name: "Deep Learning", active: true },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Machine Learning");
+    await user.click(screen.getAllByRole("button", { name: "Competency actions" })[0]);
+    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+
+    const input = screen.getByRole("textbox", { name: "Edit" });
+    expect(input).toHaveValue("Machine Learning");
+    expect(screen.getAllByRole("button", { name: "Competency actions" })).toHaveLength(1);
+
+    await user.clear(input);
+    await user.type(input, "Deep Learning");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => {
+      expect(putBody).toEqual({ name: "Deep Learning", active: true });
+    });
+  });
+
+  it("cancels inline editing when clicking cancel", async () => {
+    server.use(http.get("*/api/competencies", () => paginated(competencies)));
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Machine Learning");
+    await user.click(screen.getAllByRole("button", { name: "Competency actions" })[0]);
+    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+
+    const input = screen.getByRole("textbox", { name: "Edit" });
+    await user.clear(input);
+    await user.type(input, "Changed Name");
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("textbox", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.getByText("Machine Learning")).toBeInTheDocument();
+  });
 });

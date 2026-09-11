@@ -5,13 +5,13 @@ import { InlineCreateRow } from "@shared/components/InlineCreateRow";
 import { notify } from "@shared/lib/notify";
 import type { ReferenceResource, ReferenceRow } from "@shared/types/api";
 
-const ADMIN_RESOURCE_KEY: Record<ReferenceResource, string> = {
+const RESOURCE_KEY: Record<ReferenceResource, string> = {
   "credential-types": "credType",
   "credential-issuer-organizations": "issuerOrg",
   competencies: "competency",
 };
 
-interface ResourceAdminCreateFormProps {
+export interface ReferenceCreateFormProps {
   resource: ReferenceResource;
   rows: ReferenceRow[];
   placeholder?: string;
@@ -24,15 +24,15 @@ interface ResourceAdminCreateFormProps {
  * duplicate name (same success code), so we compare the returned row id
  * against the current list snapshot to tell "created" from "already exists".
  */
-export function ResourceAdminCreateForm({
+export function ReferenceCreateForm({
   resource,
   rows,
   placeholder,
   submitLabel,
-}: ResourceAdminCreateFormProps) {
+}: ReferenceCreateFormProps) {
   const { t } = useTranslation();
   const upsert = useUpsertReference(resource);
-  const block = ADMIN_RESOURCE_KEY[resource];
+  const block = RESOURCE_KEY[resource];
   const [open, setOpen] = useState(false);
 
   return (
@@ -51,9 +51,6 @@ export function ResourceAdminCreateForm({
           },
         })
       }
-      // The resource-specific label names the trigger ("Add type"); the submit
-      // is the generic "Add", as in the unit tree. Reusing one string for both
-      // leaves two same-named buttons in the a11y tree during the open frame.
       triggerLabel={submitLabel ?? t("admin.createAction")}
       placeholder={placeholder ?? t(`admin.${block}.createPlaceholder`)}
       inputAriaLabel={t(`admin.${block}.createLabel`)}

@@ -3,26 +3,30 @@ import { useTranslation } from "react-i18next";
 import { Layers, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useCredentialTypes } from "./api/useCredentialTypes";
 import { useDestroyCredentialType, useUpdateCredentialType } from "./api/useMutateCredentialTypes";
+import { isApiError } from "@shared/api/envelope";
+import { ActiveSwitch } from "@shared/components/ActiveSwitch";
 import { BackLink } from "@shared/components/BackLink";
+import { InlineRenameForm } from "@shared/components/InlineRenameForm";
 import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 import { PageHeader } from "@shared/components/PageHeader";
-import { ActiveSwitch, ResourceAdminEditForm } from "@shared/components/admin/ResourceAdminEditForm";
-import { ResourceAdminTable } from "@shared/components/admin/ResourceAdminTable";
-import { ResourceAdminToolbar } from "@shared/components/admin/ResourceAdminToolbar";
+import { ReferenceTable } from "@shared/components/reference/ReferenceTable";
+import { ReferenceToolbar } from "@shared/components/reference/ReferenceToolbar";
 import { useDebouncedSearchParam } from "@shared/hooks/useSearchParam";
 import { RoleGate } from "@shared/auth/guards";
 import { Role } from "@shared/auth/role";
+import { cn } from "@shared/lib/cn";
 import type { ReferenceRow } from "@shared/types/api";
 import { Button } from "@ui/button";
 import { Card } from "@ui/card";
 import { useConfirm } from "@ui/confirm-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@ui/dropdown-menu";
+
+const ADMIN_ROLES = [Role.ADMIN, Role.SUPER_ADMIN];
 
 export function CredentialTypesPage() {
   const { t } = useTranslation();
@@ -31,12 +35,50 @@ export function CredentialTypesPage() {
   const update = useUpdateCredentialType();
   const destroy = useDestroyCredentialType();
   const { confirm, dialog } = useConfirm();
-  const [editing, setEditing] = useState<ReferenceRow | null>(null);
+
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   const rows = list.items;
 
+  const setRowError = (id: string, key: string) => {
+    setRowErrors((prev) => ({ ...prev, [id]: key }));
+  };
+
+  const clearRowError = (id: string) => {
+    setRowErrors((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const submitRename = (row: ReferenceRow, name: string) => {
+    update.mutate(
+      { id: row.id, name, active: row.active !== false },
+      {
+        onSuccess: () => {
+          setRenamingId(null);
+          clearRowError(row.id);
+        },
+        onError: (error) => {
+          setRowError(row.id, isApiError(error) ? error.messageKey : "admin.credType.actionError");
+        },
+      },
+    );
+  };
+
   const handleToggleActive = (row: ReferenceRow) => {
-    update.mutate({ id: row.id, name: row.name, active: row.active === false ? true : false });
+    update.mutate(
+      { id: row.id, name: row.name, active: row.active === false ? true : false },
+      {
+        onSuccess: () => clearRowError(row.id),
+        onError: (error) => {
+          setRowError(row.id, isApiError(error) ? error.messageKey : "admin.credType.actionError");
+        },
+      },
+    );
   };
 
   const handleDestroy = async (row: ReferenceRow) => {
@@ -47,7 +89,13 @@ export function CredentialTypesPage() {
       cancelLabel: t("common.cancel"),
       tone: "destructive",
     });
-    if (ok) destroy.mutate(row.id);
+    if (ok) {
+      destroy.mutate(row.id, {
+        onError: (error) => {
+          setRowError(row.id, isApiError(error) ? error.messageKey : "admin.credType.actionError");
+        },
+      });
+    }
   };
 
   return (
@@ -56,7 +104,7 @@ export function CredentialTypesPage() {
       <PageHeader title={t("credType.title")} description={t("credType.description")} />
 
       <Card className="p-0">
-        <ResourceAdminToolbar
+        <ReferenceToolbar
           resource="credential-types"
           rows={rows}
           createLabel={t("credType.createAction")}
@@ -64,7 +112,7 @@ export function CredentialTypesPage() {
           onSearchChange={setInput}
         />
 
-        <ResourceAdminTable
+        <ReferenceTable
           rows={rows}
           isLoading={list.isLoading}
           isError={list.isError}
@@ -75,36 +123,75 @@ export function CredentialTypesPage() {
           emptyIcon={Layers}
           emptyTitle={t("credType.empty.title")}
           emptyDescription={t("credType.empty.description")}
-          renderActive={(row) => (
-            <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
-              <ActiveSwitch
-                checked={row.active !== false}
-                label={t("credType.activeToggle", { name: row.name })}
-                onCheckedChange={() => handleToggleActive(row)}
+          renderName={(row) =>
+            renamingId === row.id ? (
+              <InlineRenameForm
+                initialValue={row.name}
+                isPending={update.isPending}
+                error={rowErrors[row.id]}
+                onSubmit={(name) => submitRename(row, name)}
+                onCancel={() => {
+                  setRenamingId(null);
+                  clearRowError(row.id);
+                }}
               />
-            </RoleGate>
-          )}
-          actions={(row) => (
-            <RoleGate allowed={[Role.ADMIN, Role.SUPER_ADMIN]}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label={t("credType.actionsMenu")}>
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setEditing(row)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    {t("common.edit")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem destructive onClick={() => void handleDestroy(row)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    {t("credType.destroy.menu")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </RoleGate>
-          )}
+            ) : (
+              <div>
+                <span
+                  className={cn(
+                    "text-sm font-medium text-navy",
+                    row.active === false && "line-through opacity-60",
+                  )}
+                >
+                  {row.name}
+                </span>
+                {rowErrors[row.id] && (
+                  <p role="alert" className="mt-1 text-xs text-error">
+                    {t(rowErrors[row.id])}
+                  </p>
+                )}
+              </div>
+            )
+          }
+          renderActive={(row) =>
+            renamingId === row.id ? null : (
+              <RoleGate allowed={ADMIN_ROLES}>
+                <ActiveSwitch
+                  checked={row.active !== false}
+                  label={t("credType.activeToggle", { name: row.name })}
+                  onCheckedChange={() => handleToggleActive(row)}
+                />
+              </RoleGate>
+            )
+          }
+          actions={(row) =>
+            renamingId === row.id ? null : (
+              <RoleGate allowed={ADMIN_ROLES}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label={t("credType.actionsMenu")}>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        clearRowError(row.id);
+                        setRenamingId(row.id);
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {t("common.edit")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem destructive onClick={() => void handleDestroy(row)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {t("credType.destroy.menu")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </RoleGate>
+            )
+          }
         />
 
         {rows.length > 0 && (
@@ -117,38 +204,6 @@ export function CredentialTypesPage() {
           />
         )}
       </Card>
-
-      <Dialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null);
-        }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("credType.editTitle")}</DialogTitle>
-          </DialogHeader>
-          {editing && (
-            <ResourceAdminEditForm
-              name={editing.name}
-              active={editing.active !== false}
-              showActive
-              nameLabel={t("credType.column.name")}
-              activeLabel={t("credType.column.active")}
-              isPending={update.isPending}
-              onSubmit={(values) => {
-                update.mutate({
-                  id: editing.id,
-                  name: values.name,
-                  active: values.active,
-                });
-                setEditing(null);
-              }}
-              onCancel={() => setEditing(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
       {dialog}
     </div>
   );

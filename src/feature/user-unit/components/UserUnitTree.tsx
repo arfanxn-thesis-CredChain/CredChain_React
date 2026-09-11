@@ -27,7 +27,7 @@ import {
 } from "@dnd-kit/core";
 import { isApiError } from "@shared/api/envelope";
 import { EmptyState } from "@shared/components/EmptyState";
-import { ActiveSwitch } from "@shared/components/admin/ResourceAdminEditForm";
+import { ActiveSwitch } from "@shared/components/ActiveSwitch";
 import { InlineCreateRow } from "@shared/components/InlineCreateRow";
 import { RoleGate } from "@shared/auth/guards";
 import { Role } from "@shared/auth/role";

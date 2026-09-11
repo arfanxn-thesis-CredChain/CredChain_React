@@ -6,7 +6,7 @@ import type { ReferenceRow } from "@shared/types/api";
 import { Skeleton } from "@ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ui/table";
 
-interface ResourceAdminTableProps {
+export interface ReferenceTableProps {
   rows: ReferenceRow[];
   isLoading?: boolean;
   isError?: boolean;
@@ -19,11 +19,12 @@ interface ResourceAdminTableProps {
   /** True when a search term is active — swaps "nothing here yet" for "no results". */
   searchActive?: boolean;
   errorText?: string;
+  renderName?: (row: ReferenceRow) => ReactNode;
   renderActive?: (row: ReferenceRow) => ReactNode;
   actions?: (row: ReferenceRow) => ReactNode;
 }
 
-export function ResourceAdminTable({
+export function ReferenceTable({
   rows,
   isLoading = false,
   isError = false,
@@ -35,9 +36,10 @@ export function ResourceAdminTable({
   emptyIcon: EmptyIcon,
   searchActive = false,
   errorText,
+  renderName,
   renderActive,
   actions,
-}: ResourceAdminTableProps) {
+}: ReferenceTableProps) {
   const { t } = useTranslation();
   const hasActive = Boolean(activeLabel && renderActive);
   const hasActions = Boolean(actionsLabel && actions);
@@ -93,7 +95,11 @@ export function ResourceAdminTable({
             : rows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell>
-                    <span className="text-sm font-medium text-navy">{row.name}</span>
+                    {renderName ? (
+                      renderName(row)
+                    ) : (
+                      <span className="text-sm font-medium text-navy">{row.name}</span>
+                    )}
                   </TableCell>
                   {hasActive && <TableCell>{renderActive?.(row)}</TableCell>}
                   {hasActions && <TableCell className="text-right">{actions?.(row)}</TableCell>}
