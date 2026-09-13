@@ -96,6 +96,10 @@
   "cred.copy.revokerEmail": "Salin email pembatal",
   "cred.copy.revokerNumber": "Salin nomor pembatal",
   "cred.copy.revokerWallet": "Salin dompet pembatal",
+  "cred.copy.rejecterEmail": "Salin email penolak",
+  "cred.copy.rejecterNumber": "Salin nomor penolak",
+  "cred.copy.rejecterWallet": "Salin dompet penolak",
+  "cred.copy.rejecterPhone": "Salin telepon penolak",
   "cred.copy.userEmail": "Salin email pengguna",
   "cred.copy.userNumber": "Salin nomor pengguna",
   "cred.copy.userPhone": "Salin telepon pengguna",
@@ -756,6 +760,8 @@
     "credentialSectionIssued": "Kredensial Diterbitkan",
     "credentialSectionHeld": "Kredensial Dimiliki",
     "credentials": {
+      "searchPlaceholder": "Cari kredensial...",
+      "searchAriaLabel": "Cari kredensial",
       "empty": {
         "title": "Belum ada kredensial",
         "body": "Pengguna ini belum memiliki kredensial."

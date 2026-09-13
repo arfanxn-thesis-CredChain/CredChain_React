@@ -660,10 +660,10 @@ export function UserDetail() {
                 inputMode="search"
                 enterKeyHint="search"
                 leadingIcon={Search}
-                placeholder={t("cred.list.searchPlaceholder")}
+                placeholder={t("user.detail.credentials.searchPlaceholder")}
                 value={credSearch}
                 onChange={(e) => handleCredSearchChange(e.target.value)}
-                aria-label={t("cred.list.searchAriaLabel")}
+                aria-label={t("user.detail.credentials.searchAriaLabel")}
               />
             </div>
             <div className="flex flex-wrap items-center gap-2 md:ml-auto md:shrink-0">

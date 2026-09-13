@@ -96,6 +96,10 @@
   "cred.copy.revokerEmail": "Copy revoker email",
   "cred.copy.revokerNumber": "Copy revoker number",
   "cred.copy.revokerWallet": "Copy revoker wallet",
+  "cred.copy.rejecterEmail": "Copy rejecter email",
+  "cred.copy.rejecterNumber": "Copy rejecter number",
+  "cred.copy.rejecterWallet": "Copy rejecter wallet",
+  "cred.copy.rejecterPhone": "Copy rejecter phone",
   "cred.copy.userEmail": "Copy user email",
   "cred.copy.userNumber": "Copy user number",
   "cred.copy.userPhone": "Copy user phone",
@@ -755,6 +759,8 @@
     "credentialSectionIssued": "Issued Credentials",
     "credentialSectionHeld": "Held Credentials",
     "credentials": {
+      "searchPlaceholder": "Search credentials...",
+      "searchAriaLabel": "Search credentials",
       "empty": {
         "title": "No credentials",
         "body": "This user has no credentials yet."
