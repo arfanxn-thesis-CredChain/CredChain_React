@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Building2, Pencil, Trash2 } from "lucide-react";
 import { useIssuerOrganizations } from "./api/useIssuerOrganizations";
 import {
   useDestroyIssuerOrganization,
@@ -22,12 +22,6 @@ import type { ReferenceRow } from "@shared/types/api";
 import { Button } from "@ui/button";
 import { Card } from "@ui/card";
 import { useConfirm } from "@ui/confirm-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@ui/dropdown-menu";
 
 const ADMIN_ROLES = [Role.ADMIN, Role.SUPER_ADMIN];
 
@@ -121,7 +115,6 @@ export function IssuerOrganizationsPage() {
           isError={list.isError}
           searchActive={search.length > 0}
           nameLabel={t("issuerOrg.column.name")}
-          activeLabel={t("issuerOrg.column.active")}
           actionsLabel={t("issuerOrg.actionsMenu")}
           emptyIcon={Building2}
           emptyTitle={t("issuerOrg.empty.title")}
@@ -156,42 +149,38 @@ export function IssuerOrganizationsPage() {
               </div>
             )
           }
-          renderActive={(row) =>
-            renamingId === row.id ? null : (
-              <RoleGate allowed={ADMIN_ROLES}>
-                <ActiveSwitch
-                  checked={row.active !== false}
-                  label={t("issuerOrg.activeToggle", { name: row.name })}
-                  onCheckedChange={() => handleToggleActive(row)}
-                />
-              </RoleGate>
-            )
-          }
           actions={(row) =>
             renamingId === row.id ? null : (
               <RoleGate allowed={ADMIN_ROLES}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label={t("issuerOrg.actionsMenu")}>
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        clearRowError(row.id);
-                        setRenamingId(row.id);
-                      }}
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      {t("common.edit")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem destructive onClick={() => void handleDestroy(row)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      {t("issuerOrg.destroy.menu")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex shrink-0 items-center justify-end gap-0.5">
+                  <ActiveSwitch
+                    checked={row.active !== false}
+                    label={t("issuerOrg.activeToggle", { name: row.name })}
+                    onCheckedChange={() => handleToggleActive(row)}
+                  />
+                  <span className="mx-1 h-4 w-px bg-gray-200" aria-hidden="true" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("common.edit")}
+                    onClick={() => {
+                      clearRowError(row.id);
+                      setRenamingId(row.id);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("issuerOrg.destroy.menu")}
+                    onClick={() => void handleDestroy(row)}
+                  >
+                    <Trash2 className="h-4 w-4 text-error" />
+                  </Button>
+                </div>
               </RoleGate>
             )
           }

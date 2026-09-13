@@ -45,7 +45,9 @@ export function ReferenceTable({
   const hasActions = Boolean(actionsLabel && actions);
 
   if (isError) {
-    return <div className="p-12 text-center text-sm text-error">{errorText ?? t("admin.loadError")}</div>;
+    return (
+      <div className="p-12 text-center text-sm text-error">{errorText ?? t("admin.loadError")}</div>
+    );
   }
 
   if (rows.length === 0 && !isLoading) {
@@ -87,7 +89,7 @@ export function ReferenceTable({
                   )}
                   {hasActions && (
                     <TableCell>
-                      <Skeleton className="ml-auto h-4 w-16" />
+                      <Skeleton className="ml-auto h-8 w-28 rounded-lg" />
                     </TableCell>
                   )}
                 </TableRow>

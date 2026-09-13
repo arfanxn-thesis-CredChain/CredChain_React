@@ -65,7 +65,9 @@ describe("IssuerOrganizationsPage", () => {
 
     renderPage();
 
-    expect(await screen.findByRole("heading", { name: "Issuer Organizations" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Issuer Organizations" }),
+    ).toBeInTheDocument();
     expect(await screen.findByText("University of Indonesia")).toBeInTheDocument();
     expect(await screen.findByText("Tech Academy")).toBeInTheDocument();
   });
@@ -110,8 +112,7 @@ describe("IssuerOrganizationsPage", () => {
     renderPage();
 
     await screen.findByText("University of Indonesia");
-    await user.click(screen.getAllByRole("button", { name: "Issuer organization actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
 
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).toHaveTextContent("Delete University of Indonesia?");
@@ -161,8 +162,7 @@ describe("IssuerOrganizationsPage", () => {
     renderPage();
 
     await screen.findByText("University of Indonesia");
-    await user.click(screen.getAllByRole("button", { name: "Issuer organization actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
     await screen.findByRole("alertdialog");
     await user.click(screen.getByRole("button", { name: "Delete" }));
 
@@ -189,12 +189,11 @@ describe("IssuerOrganizationsPage", () => {
     renderPage();
 
     await screen.findByText("University of Indonesia");
-    await user.click(screen.getAllByRole("button", { name: "Issuer organization actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
 
     const input = screen.getByRole("textbox", { name: "Edit" });
     expect(input).toHaveValue("University of Indonesia");
-    expect(screen.getAllByRole("button", { name: "Issuer organization actions" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(1);
 
     await user.clear(input);
     await user.type(input, "National University");
@@ -212,8 +211,7 @@ describe("IssuerOrganizationsPage", () => {
     renderPage();
 
     await screen.findByText("University of Indonesia");
-    await user.click(screen.getAllByRole("button", { name: "Issuer organization actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
 
     const input = screen.getByRole("textbox", { name: "Edit" });
     await user.clear(input);

@@ -16,9 +16,9 @@ describe("StagedValue", () => {
   });
 
   it("renders staged name with pending indicator when resolved is missing", () => {
-    render(<StagedValue staged="Custom Degree" />, { wrapper: TestProviders });
-    expect(screen.getByText(/Custom Degree/)).toBeInTheDocument();
-    expect(screen.getByText(/pending review/i)).toBeInTheDocument();
+    const { container } = render(<StagedValue staged="Custom Degree" />, { wrapper: TestProviders });
+    expect(screen.getByText("Custom Degree")).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeInTheDocument();
   });
 
   it("renders custom fallback when neither resolved nor staged is present", () => {

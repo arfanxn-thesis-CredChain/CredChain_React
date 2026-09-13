@@ -110,15 +110,17 @@ describe("CredentialTypesPage", () => {
     renderPage();
 
     await screen.findByText("Bachelor's Degree");
-    await user.click(screen.getAllByRole("button", { name: "Credential type actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
 
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).toHaveTextContent("Delete Bachelor's Degree?");
     await user.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
-      expect(recorded[0]).toEqual({ method: "DELETE", url: expect.stringContaining("/api/credential-types/ctype_01") as unknown as string });
+      expect(recorded[0]).toEqual({
+        method: "DELETE",
+        url: expect.stringContaining("/api/credential-types/ctype_01") as unknown as string,
+      });
     });
   });
 
@@ -161,14 +163,13 @@ describe("CredentialTypesPage", () => {
     renderPage();
 
     await screen.findByText("Bachelor's Degree");
-    await user.click(screen.getAllByRole("button", { name: "Credential type actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
 
     // Inline edit replaces the text with input and Save/Cancel buttons; actions for this row are hidden
     const input = screen.getByRole("textbox", { name: "Edit" });
     expect(input).toHaveValue("Bachelor's Degree");
-    // Only the second row still has action menu
-    expect(screen.getAllByRole("button", { name: "Credential type actions" })).toHaveLength(1);
+    // Only the second row still has action buttons
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(1);
 
     await user.clear(input);
     await user.type(input, "Master's Degree");
@@ -186,8 +187,7 @@ describe("CredentialTypesPage", () => {
     renderPage();
 
     await screen.findByText("Bachelor's Degree");
-    await user.click(screen.getAllByRole("button", { name: "Credential type actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
 
     const input = screen.getByRole("textbox", { name: "Edit" });
     await user.clear(input);

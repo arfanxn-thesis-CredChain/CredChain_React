@@ -110,8 +110,7 @@ describe("CompetenciesPage", () => {
     renderPage();
 
     await screen.findByText("Machine Learning");
-    await user.click(screen.getAllByRole("button", { name: "Competency actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
 
     const dialog = await screen.findByRole("alertdialog");
     expect(dialog).toHaveTextContent("Delete Machine Learning?");
@@ -164,12 +163,11 @@ describe("CompetenciesPage", () => {
     renderPage();
 
     await screen.findByText("Machine Learning");
-    await user.click(screen.getAllByRole("button", { name: "Competency actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
 
     const input = screen.getByRole("textbox", { name: "Edit" });
     expect(input).toHaveValue("Machine Learning");
-    expect(screen.getAllByRole("button", { name: "Competency actions" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(1);
 
     await user.clear(input);
     await user.type(input, "Deep Learning");
@@ -187,8 +185,7 @@ describe("CompetenciesPage", () => {
     renderPage();
 
     await screen.findByText("Machine Learning");
-    await user.click(screen.getAllByRole("button", { name: "Competency actions" })[0]);
-    await user.click(await screen.findByRole("menuitem", { name: "Edit" }));
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[0]);
 
     const input = screen.getByRole("textbox", { name: "Edit" });
     await user.clear(input);
