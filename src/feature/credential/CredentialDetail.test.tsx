@@ -587,4 +587,48 @@ describe("CredentialDetail", () => {
     expect(screen.queryByRole("button", { name: "Revoke" })).not.toBeInTheDocument();
     expect(screen.queryByText("Name not yet registered")).not.toBeInTheDocument();
   });
+
+  it("renders rejection reason and rejecter contact block for a rejected credential", async () => {
+    server.use(
+      http.get("*/api/credentials/:id", () =>
+        HttpResponse.json({
+          code: 400100,
+          message: "Credential retrieved",
+          data: makeCredential({
+            id: "cred_01HX",
+            status: "rejected",
+            approved_at: null,
+            rejected_at: "2026-06-01T00:00:00Z",
+            rejection_reason: "Document signature does not match institution records",
+            rejecter_user_id: "usr_rejecter_test",
+            rejecter: {
+              id: "usr_rejecter_test",
+              name: "Dean Reviewer",
+              role: Role.ADMIN,
+              email: "dean@test.com",
+              number: "ADM-999",
+              unit_id: null,
+              joined_year: null,
+              birth_date: null,
+              gender: null,
+              meta: null,
+              wallet_address: "0x" + "2".repeat(40),
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              deleted_at: null,
+            },
+          }),
+        }),
+      ),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText("Rejection reason")).toBeInTheDocument();
+    expect(
+      screen.getByText("Document signature does not match institution records"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Dean Reviewer")).toBeInTheDocument();
+    expect(screen.getByText("ADM-999")).toBeInTheDocument();
+  });
 });

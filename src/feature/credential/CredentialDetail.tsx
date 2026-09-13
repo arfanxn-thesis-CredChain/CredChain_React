@@ -62,6 +62,7 @@ export function CredentialDetail() {
     "holder",
     "issuer",
     "revoker",
+    "rejecter",
     "competencies",
     "type",
     "issuer_organization",
@@ -377,6 +378,19 @@ export function CredentialDetail() {
                     user={cred.revoker}
                     fallbackId={cred.revoker_user_id ?? ""}
                     copyPrefix="revoker"
+                    labelType="full"
+                    layout="grid"
+                    tone="error"
+                    blockLinks={!canManage}
+                  />
+                </div>
+              )}
+              {cred.status === "rejected" && cred.rejecter && (
+                <div className="pt-5">
+                  <UserContactBlock
+                    user={cred.rejecter}
+                    fallbackId={cred.rejecter_user_id ?? ""}
+                    copyPrefix="rejecter"
                     labelType="full"
                     layout="grid"
                     tone="error"

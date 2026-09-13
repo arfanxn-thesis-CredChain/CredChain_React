@@ -91,6 +91,16 @@ export function CredentialHeroCard({
         statusBadges
       )}
 
+      {cred.status === "rejected" && cred.rejection_reason && (
+        <div className="flex gap-3 rounded-xl border border-error/20 bg-error/5 p-4 text-sm text-error">
+          <XCircle className="h-5 w-5 shrink-0 text-error" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{t("cred.reject.modal.reasonLabel")}</p>
+            <p className="mt-1 whitespace-pre-wrap">{cred.rejection_reason}</p>
+          </div>
+        </div>
+      )}
+
       {canManage && (
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-6">
           {isPendingReview && hasUnresolvedMetadata && (

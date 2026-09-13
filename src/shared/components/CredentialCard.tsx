@@ -161,26 +161,35 @@ function AuditStrip({
     const label = t("cred.audit.rejectedBy");
     const userId = credential.rejecter_user_id;
 
-    if (!userId && !credential.rejecter) {
-      return (
+    const personContent =
+      !userId && !credential.rejecter ? (
         <div className="min-w-0">
           <EyebrowLabel as="span" className="mb-1 block text-error">
             {label}
           </EyebrowLabel>
           <p className="text-sm text-gray-500">—</p>
         </div>
+      ) : (
+        <PersonRow
+          user={credential.rejecter}
+          userId={userId ?? ""}
+          subline={credential.rejecter?.number ?? undefined}
+          blockLinks={blockLinks}
+          label={label}
+          tone="error"
+        />
       );
-    }
 
     return (
-      <PersonRow
-        user={credential.rejecter}
-        userId={userId ?? ""}
-        subline={credential.rejecter?.number ?? undefined}
-        blockLinks={blockLinks}
-        label={label}
-        tone="error"
-      />
+      <div className="space-y-2">
+        {personContent}
+        {credential.rejection_reason && (
+          <div className="rounded-md bg-error/10 p-2.5 text-xs text-error">
+            <span className="font-semibold">{t("cred.reject.modal.reasonLabel")}: </span>
+            <span className="line-clamp-2">{credential.rejection_reason}</span>
+          </div>
+        )}
+      </div>
     );
   }
 

@@ -23,7 +23,7 @@ import type { UserDTO } from "@shared/types/api";
 interface UserContactBlockProps {
   user?: UserDTO;
   fallbackId: string;
-  copyPrefix: "holder" | "issuer" | "revoker" | "user";
+  copyPrefix: "holder" | "issuer" | "revoker" | "rejecter" | "user";
   labelType: "full" | "compact";
   tone?: "default" | "error";
   blockLinks?: boolean;

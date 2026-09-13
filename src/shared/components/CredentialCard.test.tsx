@@ -301,13 +301,15 @@ describe("CredentialCard", () => {
       submitted_issuer_organization_name: "Acme Institute",
     });
 
-    render(<CredentialCard credential={credential} isHolder />, { wrapper: TestProviders });
+    const { container } = render(<CredentialCard credential={credential} isHolder />, {
+      wrapper: TestProviders,
+    });
 
     const stagedEl = screen.getByText(/Acme Institute/);
     expect(stagedEl).toBeInTheDocument();
     expect(stagedEl.className).toContain("min-w-0");
-    expect(stagedEl.className).toContain("truncate");
-    expect(screen.getByText(/pending review/i)).toBeInTheDocument();
+    expect(stagedEl.className).toContain("break-words");
+    expect(container.querySelector("svg.lucide-circle-dashed")).toBeInTheDocument();
   });
 
   it("shows the audit row and hides holder when showActor is true on active credential", () => {
@@ -796,10 +798,12 @@ describe("CredentialCard", () => {
         type: undefined,
         submitted_type_name: "Staged Workshop",
       });
-      const { rerender } = render(<CredentialCard credential={stagedCred} />, { wrapper: TestProviders });
+      const { rerender, container } = render(<CredentialCard credential={stagedCred} />, {
+        wrapper: TestProviders,
+      });
 
       expect(screen.getByText(/Staged Workshop/)).toBeInTheDocument();
-      expect(screen.getByText(/pending review/i)).toBeInTheDocument();
+      expect(container.querySelector("svg.lucide-circle-dashed")).toBeInTheDocument();
 
       const resolvedCred = makeCredential({
         type: { id: "type_1", name: "Resolved Degree" },
@@ -932,6 +936,20 @@ describe("CredentialCard", () => {
 
       expect(screen.getByText("Issued by")).toBeInTheDocument();
       expect(screen.queryByText("Approved by")).not.toBeInTheDocument();
+    });
+
+    it("displays rejection reason when status is rejected and reason is present", () => {
+      const credential = makeCredential({
+        status: "rejected",
+        rejected_at: "2026-06-01T00:00:00Z",
+        rejection_reason: "Document signature is invalid",
+        rejecter: makeUser({ id: "usr_rej", name: "Reviewer Admin" }),
+      });
+
+      render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
+
+      expect(screen.getByText("Rejection reason:")).toBeInTheDocument();
+      expect(screen.getByText("Document signature is invalid")).toBeInTheDocument();
     });
   });
 });
