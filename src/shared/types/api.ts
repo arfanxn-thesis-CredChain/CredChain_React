@@ -45,7 +45,7 @@ export interface CredentialDTO {
   id: string;
   holder_user_id: string;
   submitter_user_id: string;
-  issuer_user_id: string;
+  issuer_user_id: string | null;
   submitted_issuer_organization_name: string | null;
   issuer_organization_id: string | null;
   submitted_type_name: string | null;
@@ -72,7 +72,6 @@ export interface CredentialDTO {
   revoked_at: string | null;
   expires_at: string | null;
   status: CredentialStatus;
-  approver_user_id: string | null;
   approved_at: string | null;
   rejecter_user_id: string | null;
   rejected_at: string | null;

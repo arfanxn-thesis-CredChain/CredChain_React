@@ -402,7 +402,7 @@ export function VerifyCredential() {
                   )}
 
                   {/* Issuer (name + role badge only) */}
-                  {canViewCredential && (
+                  {canViewCredential && result.credential!.issuer_user_id && (
                     <div className="mb-3 border-t border-gray-100 pt-3">
                       <UserContactBlock
                         labelType="compact"

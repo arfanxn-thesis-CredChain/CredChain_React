@@ -355,12 +355,12 @@ export function CredentialDetail() {
                   layout="grid"
                   blockLinks={!canManage}
                 >
-                  {cred.holder_user_id === cred.issuer_user_id && (
+                  {cred.holder_user_id === cred.submitter_user_id && (
                     <p className="text-xs text-gray-500">{t("cred.parties.selfSubmitted")}</p>
                   )}
                 </UserContactBlock>
               </div>
-              {cred.holder_user_id !== cred.issuer_user_id && (
+              {cred.issuer_user_id && (
                 <div className="py-5">
                   <UserContactBlock
                     user={cred.issuer}

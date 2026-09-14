@@ -133,7 +133,7 @@ function AuditStrip({
   if (credential.status === "approved") {
     const wasSubmittedByHolder = credential.submitter_user_id === credential.holder_user_id;
     const label = wasSubmittedByHolder ? t("cred.audit.approvedBy") : t("cred.audit.issuedBy");
-    const userId = credential.approver_user_id ?? credential.issuer_user_id;
+    const userId = credential.issuer_user_id;
 
     if (!userId && !credential.issuer) {
       return (
