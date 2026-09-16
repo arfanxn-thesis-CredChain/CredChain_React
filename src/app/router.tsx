@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate, useParams } from "react-router-dom";
 import { PublicLayout } from "@shared/components/layout/PublicLayout";
 import { OverviewLayout } from "@shared/components/layout/OverviewLayout";
 import { AdaptiveLayout } from "@shared/components/layout/AdaptiveLayout";
@@ -38,6 +38,11 @@ function lazyRoute<T extends Record<string, React.ComponentType>>(
       return { Component: Wrapped, ErrorBoundary: RouteErrorBoundary };
     },
   };
+}
+
+function CredentialDetailRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={id ? `/credentials?credential_id=${id}` : "/credentials"} replace />;
 }
 
 export const router = createBrowserRouter([
@@ -91,7 +96,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "/credentials/:id",
-            ...lazyRoute(() => import("@feature/credential/CredentialDetail"), "CredentialDetail"),
+            element: <CredentialDetailRedirect />,
           },
           {
             path: "/credentials/submit",

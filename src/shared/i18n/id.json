@@ -405,6 +405,7 @@
   "cred.detail.rejecter": "Penolak",
   "cred.detail.tokenId": "ID Token",
   "cred.detail.view": "Lihat",
+  "cred.detail.holder": "Pemegang",
   "cred.field.holder": "Pemegang",
   "cred.field.selectHolder": "Pilih pemegang...",
   "cred.field.holderSearch": "Cari pemegang...",

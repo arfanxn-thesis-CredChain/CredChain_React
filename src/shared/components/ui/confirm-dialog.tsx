@@ -1,6 +1,5 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
-import { cn } from "@shared/lib/cn";
 import { Button, type ButtonProps } from "./button";
 import {
   Dialog,
@@ -41,7 +40,7 @@ export function ConfirmDialog({
         if (!next) onCancel();
       }}
     >
-      <DialogContent role="alertdialog" className={cn("max-w-md")}>
+      <DialogContent role="alertdialog">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

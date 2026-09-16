@@ -20,6 +20,7 @@ import { useReExtractCredentials } from "./api/useReExtractCredentials";
 import { useApproveCredentials } from "./api/useApproveCredentials";
 import { useRejectCredentials } from "./api/useRejectCredentials";
 import { CredentialRejectReasonModal } from "./components/CredentialRejectReasonModal";
+import { CredentialDetailModal } from "./CredentialDetailModal";
 import { useStore } from "@app/store";
 import { useUserUnits } from "@shared/api/useUserUnits";
 import { Role, canAccessAny } from "@shared/auth/role";
@@ -141,6 +142,23 @@ export function CredentialList() {
   const orgId = searchParams.get("org_id");
   const competencyId = searchParams.get("competency_id");
   const unitId = searchParams.get("unit_id");
+  const credentialIdParam = searchParams.get("credential_id");
+
+  const handleOpenDetail = (id: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("credential_id", id);
+      return next;
+    });
+  };
+
+  const handleCloseDetail = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("credential_id");
+      return next;
+    });
+  };
 
   const searchParam = searchParams.get("search") ?? "";
   const [search, setSearch] = useState(searchParam);
@@ -622,6 +640,7 @@ export function CredentialList() {
                     holderUnitName={
                       cred.holder?.unit_id ? unitNames.get(cred.holder.unit_id) : undefined
                     }
+                    onOpenDetail={handleOpenDetail}
                   />
                 );
               })}
@@ -648,6 +667,14 @@ export function CredentialList() {
         items={rejectItems}
         onSubmit={handleRejectSubmit}
         isSubmitting={reject.isPending}
+      />
+
+      <CredentialDetailModal
+        credentialId={credentialIdParam}
+        open={Boolean(credentialIdParam)}
+        onOpenChange={(open) => {
+          if (!open) handleCloseDetail();
+        }}
       />
     </div>
   );

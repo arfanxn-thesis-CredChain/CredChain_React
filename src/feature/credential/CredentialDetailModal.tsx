@@ -1,25 +1,20 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle } from "lucide-react";
-import { useCredential } from "./api/useCredential";
-import { useReExtractCredentials } from "./api/useReExtractCredentials";
-import { useApproveCredentials } from "./api/useApproveCredentials";
-import { useRejectCredentials } from "./api/useRejectCredentials";
-import { useRevokeCredentials } from "./api/useRevokeCredentials";
-import { useUpdateCredentials, type CredentialUpdateItem } from "./api/useUpdateCredentials";
-import { useLinkCompetencies } from "./api/useLinkCompetencies";
-import { CredentialMetadataResolver } from "./components/CredentialMetadataResolver";
-import { CredentialHeroCard } from "./components/CredentialHeroCard";
-import { CredentialSystemFacts } from "./components/CredentialSystemFacts";
-import { credentialEditRowSchema, type CredentialEditRowInput } from "./schemas/credential";
-import { useStore } from "@app/store";
-import { Role, canAccessAny } from "@shared/auth/role";
-import { PageHeader } from "@shared/components/PageHeader";
-import { BackLink } from "@shared/components/BackLink";
+import { AlertCircle, XCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@ui/dialog";
+import { Input } from "@ui/input";
+import { Badge } from "@ui/badge";
+import { Skeleton } from "@ui/skeleton";
 import { EmptyState } from "@shared/components/EmptyState";
+import { EyebrowLabel } from "@shared/components/EyebrowLabel";
 import { DetailEditForm, type DetailField } from "@shared/components/DetailEditForm";
 import { StagedValue } from "@shared/components/StagedValue";
 import { MetaDisplay } from "@shared/components/MetaDisplay";
@@ -27,15 +22,27 @@ import { MetaEditor } from "@shared/components/MetaEditor";
 import { MonoId } from "@shared/components/MonoId";
 import { UserContactBlock } from "@shared/components/UserContactBlock";
 import { SearchableCreateSelect } from "@shared/components/SearchableCreateSelect";
-import { Card } from "@ui/card";
-import { DecorBlob } from "@shared/components/DecorBlob";
-import { Input } from "@ui/input";
-import { Badge } from "@ui/badge";
-import { Skeleton } from "@ui/skeleton";
-import { useConfirm } from "@ui/confirm-dialog";
+import { CredentialStatusBadge } from "@shared/components/CredentialStatusBadge";
+import { CredentialExtractNote } from "@shared/components/CredentialExtractNote";
+import { useStore } from "@app/store";
+import { Role, canAccessAny } from "@shared/auth/role";
 import { formatDate } from "@shared/lib/format";
 import { mergeMeta, metaEqual, splitMeta } from "@shared/lib/meta";
 import type { CredentialDTO } from "@shared/types/api";
+
+import { useCredential } from "./api/useCredential";
+import { useUpdateCredentials, type CredentialUpdateItem } from "./api/useUpdateCredentials";
+import { useLinkCompetencies } from "./api/useLinkCompetencies";
+import { credentialEditRowSchema, type CredentialEditRowInput } from "./schemas/credential";
+import { CredentialMetadataResolver } from "./components/CredentialMetadataResolver";
+import { CredentialSystemFacts } from "./components/CredentialSystemFacts";
+import { CredentialViewFilePreview } from "./components/CredentialViewFilePreview";
+
+interface CredentialDetailModalProps {
+  credentialId: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
 function buildCredentialEditDefaults(cred: CredentialDTO): CredentialEditRowInput {
   return {
@@ -49,16 +56,21 @@ function buildCredentialEditDefaults(cred: CredentialDTO): CredentialEditRowInpu
   };
 }
 
-export function CredentialDetail() {
+export function CredentialDetailModal({
+  credentialId,
+  open,
+  onOpenChange,
+}: CredentialDetailModalProps) {
   const { t } = useTranslation();
-  const { id } = useParams<{ id: string }>();
   const currentUser = useStore((s) => s.user);
   const canManage = canAccessAny(currentUser?.role, [Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN]);
+
+  const activeId = open && credentialId ? credentialId : "";
   const {
     data: cred,
     isLoading,
     isError,
-  } = useCredential(id ?? "", [
+  } = useCredential(activeId, [
     "holder",
     "issuer",
     "revoker",
@@ -67,16 +79,9 @@ export function CredentialDetail() {
     "type",
     "issuer_organization",
   ]);
-  const reExtract = useReExtractCredentials();
-  const approve = useApproveCredentials();
-  const reject = useRejectCredentials();
-  const revoke = useRevokeCredentials();
+
   const update = useUpdateCredentials();
   const link = useLinkCompetencies();
-  const { confirm, dialog } = useConfirm();
-  // Seeded from the loaded credential, not []. The competency editor folded
-  // into the Detail card's edit mode is a replace-set: an empty seed makes
-  // Save delete every existing link.
   const [competencyIds, setCompetencyIds] = useState<string[]>([]);
   const form = useForm<CredentialEditRowInput>({
     resolver: zodResolver(credentialEditRowSchema),
@@ -89,7 +94,6 @@ export function CredentialDetail() {
     }
   }, [cred, form]);
 
-  const revoked = cred?.status === "revoked";
   const isPendingReview = cred?.status === "pending";
   const hasUnresolvedMetadata = (cred?.unresolved_metadata?.length ?? 0) > 0;
 
@@ -98,6 +102,7 @@ export function CredentialDetail() {
     const valid = await form.trigger();
     if (!valid) return false;
     const values = form.getValues();
+
     const item: CredentialUpdateItem = { id: cred.id };
 
     const nextName = values.name ?? "";
@@ -137,32 +142,6 @@ export function CredentialDetail() {
     form.reset(buildCredentialEditDefaults(cred));
     setCompetencyIds((cred.competencies ?? []).map((c) => c.id));
   };
-
-  const handleRevoke = async () => {
-    if (!cred) return;
-    const ok = await confirm({
-      title: t("cred.revoke.confirmTitle", { count: 1 }),
-      description: t("cred.revoke.confirmBody"),
-      confirmLabel: t("cred.revoke.confirmAction"),
-      cancelLabel: t("common.cancel"),
-      tone: "destructive",
-    });
-    if (ok) revoke.mutate([cred.id]);
-  };
-
-  if (isError) {
-    return (
-      <div className="mx-auto max-w-4xl space-y-6">
-        <BackLink />
-        <PageHeader title={t("cred.detail.title")} />
-        <EmptyState
-          icon={AlertCircle}
-          title={t("cred.detail.notFound.title")}
-          description={t("cred.detail.notFound.body")}
-        />
-      </div>
-    );
-  }
 
   const editFields: DetailField[] = cred
     ? [
@@ -292,61 +271,99 @@ export function CredentialDetail() {
       ]
     : [];
 
+  const statusBadges = cred ? (
+    <div className="flex flex-wrap items-center gap-3">
+      <CredentialStatusBadge status={cred.status} />
+      {canManage && (
+        <CredentialExtractNote
+          state={cred.extract_state}
+          error={cred.extract_error}
+        />
+      )}
+    </div>
+  ) : null;
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <BackLink />
-      <PageHeader title={cred?.name ?? t("cred.detail.title")} />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl sm:max-w-5xl p-6 sm:p-8">
+        <DialogHeader className="mb-4 pr-10">
+          <DialogTitle className="font-display text-xl font-bold tracking-tight text-navy">
+            {cred?.name ?? t("cred.detail.title")}
+          </DialogTitle>
+          <DialogDescription className="sr-only">{t("cred.detail.cardTitle")}</DialogDescription>
+        </DialogHeader>
 
-      {isLoading || !cred ? (
-        <>
-          <Card className="space-y-4 p-6 sm:p-8">
-            <Skeleton className="h-[92px] w-full" />
-          </Card>
-          <Card className="space-y-4 p-6 sm:p-8">
-            <Skeleton className="h-6 w-1/3" />
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-20 w-full" />
-          </Card>
-        </>
-      ) : (
-        <>
-          {/* Card 1: Artifact — file, validity, review actions */}
-          <Card className="relative overflow-hidden p-6 shadow-lg ring-1 shadow-gold/20 ring-gold/10 sm:p-8">
-            <DecorBlob tone="gold" position="top-right" size="lg" />
-            <CredentialHeroCard
-              credential={cred}
-              canManage={canManage}
-              isReExtracting={reExtract.isPending}
-              isApproving={approve.isPending}
-              isRevoking={revoke.isPending}
-              isRejecting={reject.isPending}
-              onReExtract={() => reExtract.mutate([cred.id])}
-              onApprove={() => approve.mutate([cred.id])}
-              onReject={(rejections) => reject.mutate(rejections)}
-              onRevoke={() => void handleRevoke()}
-            />
-          </Card>
+        {isLoading ? (
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-5">
+              <Skeleton className="h-[92px] w-full" />
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-1/3" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </div>
+        ) : isError || !cred ? (
+          <EmptyState
+            icon={AlertCircle}
+            title={t("cred.detail.notFound.title")}
+            description={t("cred.detail.notFound.body")}
+          />
+        ) : (
+          <div className="space-y-6">
+            {/* 1. File Artifact & Status Section */}
+            <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-5">
+              {cred.file_uri != null ? (
+                <CredentialViewFilePreview
+                  credentialId={cred.id}
+                  credentialName={cred.name}
+                  hasFileUri={true}
+                  statusSlot={statusBadges}
+                />
+              ) : (
+                <div className="space-y-3">
+                  <h3 className="font-sans text-lg font-bold text-navy">{cred.name}</h3>
+                  {statusBadges}
+                </div>
+              )}
+            </div>
 
-          {/* Blocking alert: staged names must resolve before approval */}
-          {canManage && isPendingReview && hasUnresolvedMetadata && (
-            <CredentialMetadataResolver credentialId={cred.id} />
-          )}
+            {/* Rejection notice banner */}
+            {cred.status === "rejected" && cred.rejection_reason && (
+              <div className="flex gap-3 rounded-xl border border-error/20 bg-error/5 p-4 text-sm text-error">
+                <XCircle className="h-5 w-5 shrink-0 text-error" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{t("cred.reject.modal.reasonLabel")}</p>
+                  <p className="mt-1 whitespace-pre-wrap">{cred.rejection_reason}</p>
+                </div>
+              </div>
+            )}
 
-          {/* Card 2: Data — facts, competencies, people, and (Issuer+) the single edit surface */}
-          <Card className="p-6 sm:p-8">
+            {/* Unresolved staged metadata resolver */}
+            {canManage && isPendingReview && hasUnresolvedMetadata && (
+              <CredentialMetadataResolver credentialId={cred.id} />
+            )}
+
+            {/* 2. Detail Section with Read / Edit toggle */}
             <DetailEditForm
               title={t("cred.detail.cardTitle")}
               fields={editFields}
               canEdit={canManage && isPendingReview}
-              editDisabledReason={canManage ? t("cred.detail.editOnlyPending") : undefined}
+              editDisabledReason={canManage && !isPendingReview ? t("cred.detail.editOnlyPending") : undefined}
               onSave={handleSave}
               onCancel={handleCancel}
               isSaving={update.isPending || link.isPending}
             />
 
-            <div className="mt-6 divide-y divide-gray-100 border-t border-gray-100 pt-6">
-              <div className="pb-5">
+            {/* 3. Users Section (Holder, Issuer/Approver, Rejecter, Revoker) */}
+            <div className="space-y-6 border-t border-gray-100 pt-6">
+              {/* Holder */}
+              <div className="space-y-2">
+                <EyebrowLabel as="span" className="block text-navy">
+                  {t("cred.detail.holder")}
+                </EyebrowLabel>
                 <UserContactBlock
                   user={cred.holder}
                   fallbackId={cred.holder_user_id}
@@ -360,8 +377,15 @@ export function CredentialDetail() {
                   )}
                 </UserContactBlock>
               </div>
+
+              {/* Issuer / Approver */}
               {cred.issuer_user_id && (
-                <div className="py-5">
+                <div className="space-y-2">
+                  <EyebrowLabel as="span" className="block text-navy">
+                    {cred.submitter_user_id === cred.holder_user_id
+                      ? t("cred.audit.approvedBy")
+                      : t("cred.audit.issuedBy")}
+                  </EyebrowLabel>
                   <UserContactBlock
                     user={cred.issuer}
                     fallbackId={cred.issuer_user_id}
@@ -372,21 +396,13 @@ export function CredentialDetail() {
                   />
                 </div>
               )}
-              {revoked && cred.revoker && (
-                <div className="pt-5">
-                  <UserContactBlock
-                    user={cred.revoker}
-                    fallbackId={cred.revoker_user_id ?? ""}
-                    copyPrefix="revoker"
-                    labelType="full"
-                    layout="grid"
-                    tone="error"
-                    blockLinks={!canManage}
-                  />
-                </div>
-              )}
-              {cred.status === "rejected" && cred.rejecter && (
-                <div className="pt-5">
+
+              {/* Rejecter */}
+              {cred.status === "rejected" && (cred.rejecter || cred.rejecter_user_id) && (
+                <div className="space-y-2">
+                  <EyebrowLabel as="span" className="block text-error">
+                    {t("cred.audit.rejectedBy")}
+                  </EyebrowLabel>
                   <UserContactBlock
                     user={cred.rejecter}
                     fallbackId={cred.rejecter_user_id ?? ""}
@@ -398,14 +414,31 @@ export function CredentialDetail() {
                   />
                 </div>
               )}
+
+              {/* Revoker */}
+              {cred.status === "revoked" && (cred.revoker || cred.revoker_user_id) && (
+                <div className="space-y-2">
+                  <EyebrowLabel as="span" className="block text-error">
+                    {t("cred.audit.revokedBy")}
+                  </EyebrowLabel>
+                  <UserContactBlock
+                    user={cred.revoker}
+                    fallbackId={cred.revoker_user_id ?? ""}
+                    copyPrefix="revoker"
+                    labelType="full"
+                    layout="grid"
+                    tone="error"
+                    blockLinks={!canManage}
+                  />
+                </div>
+              )}
             </div>
 
+            {/* 4. Bottom System Facts (ID, Hash, Dates) */}
             <CredentialSystemFacts credential={cred} />
-          </Card>
-        </>
-      )}
-
-      {cred && dialog}
-    </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

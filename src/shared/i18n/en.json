@@ -404,6 +404,7 @@
   "cred.detail.rejecter": "Rejecter",
   "cred.detail.tokenId": "Token ID",
   "cred.detail.view": "View",
+  "cred.detail.holder": "Holder",
   "cred.field.holder": "Holder",
   "cred.field.selectHolder": "Select holder...",
   "cred.field.holderSearch": "Search holders...",

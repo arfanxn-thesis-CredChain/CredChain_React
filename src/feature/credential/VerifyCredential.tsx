@@ -456,7 +456,7 @@ export function VerifyCredential() {
               <div className="mt-5 flex gap-3">
                 {canViewCredential && (
                   <Button asChild variant="primary" className="flex-1">
-                    <Link to={`/credentials/${result.credential!.id}`}>
+                    <Link to={`/credentials?credential_id=${result.credential!.id}`}>
                       {t("cred.verify.viewCredential")}
                     </Link>
                   </Button>

@@ -194,7 +194,7 @@ function CredentialRow({
       ? relativeTime(cred.revoked_at, t)
       : relativeTime(cred.issued_at, t);
 
-  const handleClick = () => navigate(`/credentials/${cred.id}`);
+  const handleClick = () => navigate(`/credentials?credential_id=${cred.id}`);
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();

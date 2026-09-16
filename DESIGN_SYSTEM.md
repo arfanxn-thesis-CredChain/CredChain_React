@@ -1133,6 +1133,15 @@ The `<CopyrightFooter />` shared component (`@shared/components/CopyrightFooter.
 
 All containers center via `mx-auto`.
 
+#### 8.2.1 Modal Widths (Strict Two-Tier System)
+
+Modals strictly enforce a two-tier width system to eliminate awkward middle sizes and ensure layout consistency across the app:
+
+| Tier | Tailwind | Pixel Width | Use Case & Components |
+| ---- | -------- | ----------- | --------------------- |
+| **Standard / Action** | `max-w-lg` | 512px | Default base size in `@ui/dialog.tsx`. Used for forms and confirmation alerts: `ConfirmDialog`, `CredentialRejectReasonModal`. |
+| **Wide / Content** | `max-w-5xl` | 1024px | Complex, data-dense modals with multi-column forms or rich previews: `CredentialDetailModal`, `CredentialFileModal`, `UserImportModal`. |
+
 ### 8.3 Vertical Rhythm
 
 | Class       | Use                           |

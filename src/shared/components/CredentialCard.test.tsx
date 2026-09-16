@@ -45,7 +45,7 @@ describe("CredentialCard", () => {
     render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
 
     await user.click(screen.getByText("Test Credential"));
-    expect(navigateMock).toHaveBeenCalledWith("/credentials/cred_test_1");
+    expect(navigateMock).toHaveBeenCalledWith("/credentials?credential_id=cred_test_1");
   });
 
   it("links holder name to user detail", () => {
@@ -556,7 +556,7 @@ describe("CredentialCard", () => {
     render(<CredentialCard credential={credential} canReview />, { wrapper: TestProviders });
 
     await user.click(screen.getByRole("button", { name: /complete details/i }));
-    expect(navigateMock).toHaveBeenCalledWith("/credentials/cred_pending");
+    expect(navigateMock).toHaveBeenCalledWith("/credentials?credential_id=cred_pending");
   });
 
   it("calls onApprove with the credential id", async () => {

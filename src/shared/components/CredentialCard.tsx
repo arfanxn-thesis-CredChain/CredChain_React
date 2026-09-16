@@ -54,6 +54,8 @@ interface CredentialCardProps {
   showActor?: boolean;
   /** Resolved unit name for the holder, looked up by the parent from the shared units cache. */
   holderUnitName?: string;
+  /** Optional handler to open modal/detail. If not provided, navigates to /credentials?credential_id=ID. */
+  onOpenDetail?: (id: string) => void;
 }
 
 const INTERACTIVE_SELECTORS = "a,button,[role='button'],input,textarea,select";
@@ -240,6 +242,7 @@ export function CredentialCard({
   hideHolder,
   showActor,
   holderUnitName,
+  onOpenDetail,
 }: CredentialCardProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -291,9 +294,17 @@ export function CredentialCard({
     onReject?.([{ id: credential.id, reason: reason.trim() }]);
   };
 
+  const openDetail = () => {
+    if (onOpenDetail) {
+      onOpenDetail(credential.id);
+    } else {
+      navigate(`/credentials?credential_id=${credential.id}`);
+    }
+  };
+
   const handleCompleteDetailsClick = (e: React.MouseEvent) => {
     stop(e);
-    navigate(`/credentials/${credential.id}`);
+    openDetail();
   };
 
   const isSelectable = isEligibleFor(credential, selectionMode ?? null);
@@ -319,7 +330,7 @@ export function CredentialCard({
       }
       return;
     }
-    navigate(`/credentials/${credential.id}`);
+    openDetail();
   };
 
   const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -329,7 +340,7 @@ export function CredentialCard({
       if (isSelectable && !selectDisabled) onSelect?.();
       return;
     }
-    navigate(`/credentials/${credential.id}`);
+    openDetail();
   };
 
   return (

@@ -55,9 +55,9 @@ export function UserContactBlock({
   const nameWeight = labelType === "full" ? "font-bold" : "font-semibold";
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex w-full items-start gap-3">
       <UserAvatar user={user ?? null} size="sm" className="mt-0.5 shrink-0" />
-      <div className="flex min-w-0 flex-col space-y-1">
+      <div className="flex min-w-0 flex-1 flex-col space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           {blockLinks ? (
             <span
@@ -91,9 +91,9 @@ export function UserContactBlock({
         {labelType === "full" && (
           <div
             className={cn(
-              "gap-y-0.5 text-xs text-gray-500",
+              "gap-y-1 text-xs text-gray-500",
               layout === "grid"
-                ? "grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-3"
+                ? "grid grid-cols-1 gap-x-8 sm:grid-cols-2 lg:grid-cols-3"
                 : "flex flex-col",
             )}
           >
