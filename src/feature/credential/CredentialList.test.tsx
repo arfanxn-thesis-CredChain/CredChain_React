@@ -419,9 +419,7 @@ describe("CredentialList", () => {
       },
       isAuthenticated: true,
     });
-    server.use(
-      http.get("*/api/users/self/credentials", () => pageResponse(0)),
-    );
+    server.use(http.get("*/api/users/self/credentials", () => pageResponse(0)));
 
     renderList();
 
@@ -452,5 +450,93 @@ describe("CredentialList", () => {
     renderList();
     expect(await screen.findByText("All Credentials")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /status/i })).toBeInTheDocument();
+  });
+
+  it("applies pending review filter when clicking approve action button and reverts on cancel", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /^approve$/i }));
+
+    await waitFor(() => {
+      const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
+      expect(filters).toContain("approved_at_");
+      expect(filters).toContain("rejected_at_");
+    });
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    await waitFor(() => {
+      const lastRequest = listRequestsOf(recorded).at(-1);
+      const filters = lastRequest ? lastRequest.searchParams.getAll("filters") : [];
+      expect(filters).not.toContain("approved_at_");
+      expect(filters).not.toContain("rejected_at_");
+    });
+  });
+
+  it("applies approved review filter when clicking revoke action button and reverts on cancel", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /^revoke$/i }));
+
+    await waitFor(() => {
+      const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
+      expect(filters).toContain("approved_at!_");
+      expect(filters).toContain("revoked_at_");
+    });
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    await waitFor(() => {
+      const lastRequest = listRequestsOf(recorded).at(-1);
+      const filters = lastRequest ? lastRequest.searchParams.getAll("filters") : [];
+      expect(filters).not.toContain("approved_at!_");
+      expect(filters).not.toContain("revoked_at_");
+    });
+  });
+
+  it("applies failed extraction filter when clicking re-extract action button and reverts on cancel", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /^re-extract$/i }));
+
+    await waitFor(() => {
+      const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
+      expect(filters).toContain("extract_failed_at!_");
+    });
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    await waitFor(() => {
+      const lastRequest = listRequestsOf(recorded).at(-1);
+      const filters = lastRequest ? lastRequest.searchParams.getAll("filters") : [];
+      expect(filters).not.toContain("extract_failed_at!_");
+    });
   });
 });

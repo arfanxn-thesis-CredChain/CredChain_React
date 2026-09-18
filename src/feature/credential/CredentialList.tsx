@@ -64,7 +64,7 @@ const MAX_SELECTION = 100;
 const REVIEW_FILTERS: Record<CredentialReviewStatus, string[]> = {
   all: [],
   pending: ["approved_at_", "rejected_at_"],
-  approved: ["approved_at!_"],
+  approved: ["approved_at!_", "revoked_at_"],
   rejected: ["rejected_at!_"],
   revoked: ["revoked_at!_"],
 };
@@ -131,6 +131,7 @@ export function CredentialList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState<BulkMode>(null);
+  const [prevSearchParams, setPrevSearchParams] = useState<URLSearchParams | null>(null);
 
   const reviewParam = searchParams.get("review");
   const extractParam = searchParams.get("extract");
@@ -206,10 +207,7 @@ export function CredentialList() {
     loadMore,
     reset,
   } = useLoadMore<CredentialDTO>(
-    [
-      "credentials",
-      { search: debouncedSearch || undefined, sort: credSort, filters: filterArray },
-    ],
+    ["credentials", { search: debouncedSearch || undefined, sort: credSort, filters: filterArray }],
     async (page, limit) => {
       const q: Record<string, unknown> = {};
       q.page = page;
@@ -261,14 +259,87 @@ export function CredentialList() {
     .filter((c) => eligibleRejectIds.includes(c.id))
     .map((c) => ({ id: c.id, name: c.name }));
 
+  const handleReviewChange = (value: CredentialReviewStatus) => {
+    if (value === review) return;
+    const newSort = adjustSortForStatus(credSort, review, value);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "all") next.delete("review");
+      else next.set("review", value);
+      if (newSort === SORT_OPTIONS[0].getSort(value)) next.delete("sort");
+      else next.set("sort", newSort);
+      return next;
+    });
+    reset();
+  };
+
+  const handleExtractChange = (value: CredentialExtractFilter) => {
+    if (value === extract) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "any") next.delete("extract");
+      else next.set("extract", value);
+      return next;
+    });
+    reset();
+  };
+
+  const handleFilterChange = (param: string) => (value: string | null) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value) next.set(param, value);
+      else next.delete(param);
+      return next;
+    });
+    reset();
+  };
+
+  const handleSortChange = (sortString: string) => {
+    if (sortString === credSort) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const defaultSort = SORT_OPTIONS[0].getSort(review);
+      if (sortString === defaultSort) next.delete("sort");
+      else next.set("sort", sortString);
+      return next;
+    });
+    reset();
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    searchTypedRef.current = value;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (!value) next.delete("search");
+      else next.set("search", value);
+      return next;
+    });
+    reset();
+  };
+
   const enterMode = (mode: BulkMode) => {
+    setPrevSearchParams(new URLSearchParams(searchParams));
     setBulkMode(mode);
     setSelectedIds(new Set());
+
+    if (mode === "approve" || mode === "reject") {
+      handleReviewChange("pending");
+    } else if (mode === "revoke") {
+      handleReviewChange("approved");
+    } else if (mode === "reextract") {
+      handleExtractChange("failed");
+    }
   };
 
   const exitMode = () => {
     setBulkMode(null);
     setSelectedIds(new Set());
+    if (prevSearchParams) {
+      setSearchParams(prevSearchParams);
+      setPrevSearchParams(null);
+      reset();
+    }
   };
 
   const toggleSelection = (id: string) => {
@@ -474,65 +545,6 @@ export function CredentialList() {
         </Button>
       </div>
     );
-  };
-
-  const handleReviewChange = (value: CredentialReviewStatus) => {
-    if (value === review) return;
-    const newSort = adjustSortForStatus(credSort, review, value);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value === "all") next.delete("review");
-      else next.set("review", value);
-      if (newSort === SORT_OPTIONS[0].getSort(value)) next.delete("sort");
-      else next.set("sort", newSort);
-      return next;
-    });
-    reset();
-  };
-
-  const handleExtractChange = (value: CredentialExtractFilter) => {
-    if (value === extract) return;
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value === "any") next.delete("extract");
-      else next.set("extract", value);
-      return next;
-    });
-    reset();
-  };
-
-  const handleFilterChange = (param: string) => (value: string | null) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) next.set(param, value);
-      else next.delete(param);
-      return next;
-    });
-    reset();
-  };
-
-  const handleSortChange = (sortString: string) => {
-    if (sortString === credSort) return;
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      const defaultSort = SORT_OPTIONS[0].getSort(review);
-      if (sortString === defaultSort) next.delete("sort");
-      else next.set("sort", sortString);
-      return next;
-    });
-    reset();
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    searchTypedRef.current = value;
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (!value) next.delete("search");
-      else next.set("search", value);
-      return next;
-    });
-    reset();
   };
 
   return (
