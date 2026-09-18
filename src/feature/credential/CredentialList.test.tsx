@@ -301,10 +301,11 @@ describe("CredentialList", () => {
     renderList();
 
     await user.click(await screen.findByRole("button", { name: /^approve$/i }));
-    await user.click(await screen.findByText("Pending Diploma"));
-
-    const selectButtons = screen.getAllByRole("button", { name: /select credential/i });
+    const selectButtons = await screen.findAllByRole("button", { name: /select credential/i });
     expect(selectButtons.filter((b) => !(b as HTMLButtonElement).disabled)).toHaveLength(1);
+
+    const enabledButton = selectButtons.find((b) => !(b as HTMLButtonElement).disabled)!;
+    await user.click(enabledButton);
 
     const approveSelected = await screen.findByRole("button", { name: /approve \(1\)/i });
     await user.click(approveSelected);
@@ -348,7 +349,8 @@ describe("CredentialList", () => {
     renderList();
 
     await user.click(await screen.findByRole("button", { name: /^reject$/i }));
-    await user.click(await screen.findByText("Pending Diploma"));
+    const selectButton = await screen.findByRole("button", { name: /select credential/i });
+    await user.click(selectButton);
     await user.click(await screen.findByRole("button", { name: /reject \(1\)/i }));
 
     const dialog = await screen.findByRole("dialog");
@@ -538,5 +540,27 @@ describe("CredentialList", () => {
       const filters = lastRequest ? lastRequest.searchParams.getAll("filters") : [];
       expect(filters).not.toContain("extract_failed_at!_");
     });
+  });
+
+  it("opens credential detail modal when credential title is clicked in bulk mode", async () => {
+    const pending = pendingCredential({ id: "cred_pending_1", name: "Pending Diploma" });
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("limit") === "1") return pageResponse(0);
+        return credentialsResponse([pending]);
+      }),
+      http.get("*/api/credentials/cred_pending_1", () => {
+        return HttpResponse.json({ code: 400100, message: "ok", data: pending });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderList();
+
+    await user.click(await screen.findByRole("button", { name: /^approve$/i }));
+    await user.click(await screen.findByRole("button", { name: "Pending Diploma" }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 });

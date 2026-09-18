@@ -431,7 +431,21 @@ export function CredentialCard({
             isRevoked ? "text-gray-500" : "text-navy",
           )}
         >
-          {credential.name}
+          {selectionMode ? (
+            <button
+              type="button"
+              className="text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openDetail();
+              }}
+            >
+              {credential.name}
+            </button>
+          ) : (
+            credential.name
+          )}
         </h3>
 
         <div className="mb-3 min-w-0">

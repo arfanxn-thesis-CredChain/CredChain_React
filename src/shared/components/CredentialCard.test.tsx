@@ -141,13 +141,28 @@ describe("CredentialCard", () => {
     });
     const onSelect = vi.fn();
 
+    const { container } = render(
+      <CredentialCard credential={credential} selectionMode="approve" onSelect={onSelect} />,
+      { wrapper: TestProviders },
+    );
+
+    await user.click(container.firstChild as HTMLElement);
+    expect(onSelect).toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("opens credential detail when credential name is clicked in selection mode", async () => {
+    const user = userEvent.setup();
+    const credential = makeCredential({ status: "pending" });
+    const onSelect = vi.fn();
+
     render(<CredentialCard credential={credential} selectionMode="approve" onSelect={onSelect} />, {
       wrapper: TestProviders,
     });
 
-    await user.click(screen.getByText("Test Credential"));
-    expect(onSelect).toHaveBeenCalled();
-    expect(navigateMock).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Test Credential" }));
+    expect(navigateMock).toHaveBeenCalledWith("/credentials?credential_id=cred_test_1");
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it("calls onSelect when checkbox is clicked", async () => {
@@ -441,11 +456,12 @@ describe("CredentialCard", () => {
     const credential = makeCredential();
     const onSelect = vi.fn();
 
-    render(<CredentialCard credential={credential} selectionMode="revoke" onSelect={onSelect} />, {
-      wrapper: TestProviders,
-    });
+    const { container } = render(
+      <CredentialCard credential={credential} selectionMode="revoke" onSelect={onSelect} />,
+      { wrapper: TestProviders },
+    );
 
-    await user.click(screen.getByText("Test Credential"));
+    await user.click(container.firstChild as HTMLElement);
     expect(onSelect).toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
   });
@@ -455,12 +471,12 @@ describe("CredentialCard", () => {
     const credential = makeCredential({ extract_state: "failed" });
     const onSelect = vi.fn();
 
-    render(
+    const { container } = render(
       <CredentialCard credential={credential} selectionMode="reextract" onSelect={onSelect} />,
       { wrapper: TestProviders },
     );
 
-    await user.click(screen.getByText("Test Credential"));
+    await user.click(container.firstChild as HTMLElement);
     expect(onSelect).toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
   });
@@ -469,11 +485,12 @@ describe("CredentialCard", () => {
     const user = userEvent.setup();
     const credential = makeCredential({ revoked_at: "2026-06-01T00:00:00Z" });
 
-    render(<CredentialCard credential={credential} selectionMode="revoke" />, {
-      wrapper: TestProviders,
-    });
+    const { container } = render(
+      <CredentialCard credential={credential} selectionMode="revoke" />,
+      { wrapper: TestProviders },
+    );
 
-    await user.click(screen.getByText("Test Credential"));
+    await user.click(container.firstChild as HTMLElement);
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
