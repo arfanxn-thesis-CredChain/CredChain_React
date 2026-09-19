@@ -257,7 +257,18 @@ export function CredentialList() {
 
   const rejectItems = credentials
     .filter((c) => eligibleRejectIds.includes(c.id))
-    .map((c) => ({ id: c.id, name: c.name }));
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      holder: c.holder,
+      holderNumber: c.holder?.number,
+      holderUnitName: c.holder?.unit_id ? unitNames.get(c.holder.unit_id) : undefined,
+      typeName: c.type?.name,
+      submittedTypeName: c.submitted_type_name,
+      orgName: c.issuer_organization?.name,
+      submittedOrgName: c.submitted_issuer_organization_name,
+      submittedAt: c.created_at,
+    }));
 
   const handleReviewChange = (value: CredentialReviewStatus) => {
     if (value === review) return;
@@ -679,6 +690,7 @@ export function CredentialList() {
         items={rejectItems}
         onSubmit={handleRejectSubmit}
         isSubmitting={reject.isPending}
+        onOpenDetail={handleOpenDetail}
       />
 
       <CredentialDetailModal

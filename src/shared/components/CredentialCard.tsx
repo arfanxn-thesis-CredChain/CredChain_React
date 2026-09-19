@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import {
-  ArrowRight,
-  Calendar,
-  CheckCircle2,
-  CircleDashed,
-  Loader2,
-  XCircle,
-} from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
 import { cn } from "@shared/lib/cn";
 import { formatDate } from "@shared/lib/format";
 import { lifecycleDateLines } from "@shared/lib/credentialDate";
@@ -17,17 +10,13 @@ import { Card } from "@ui/card";
 import { Button } from "@ui/button";
 import { Badge } from "@ui/badge";
 import { FormField } from "@ui/form-field";
-import { Input } from "@ui/input";
+import { Textarea } from "@ui/textarea";
 import { notify } from "@shared/lib/notify";
 import { UserAvatar } from "@shared/components/UserAvatar";
 import { EyebrowLabel } from "@shared/components/EyebrowLabel";
 import { StagedValue } from "@shared/components/StagedValue";
 import type { CredentialDTO, UserDTO } from "@shared/types/api";
-import {
-  CredentialStatusBadge,
-  LABEL_KEY,
-  STATUS_SURFACE,
-} from "./CredentialStatusBadge";
+import { CredentialStatusBadge, LABEL_KEY, STATUS_SURFACE } from "./CredentialStatusBadge";
 import { CredentialExtractNote } from "./CredentialExtractNote";
 
 interface CredentialCardProps {
@@ -60,7 +49,7 @@ interface CredentialCardProps {
 
 const INTERACTIVE_SELECTORS = "a,button,[role='button'],input,textarea,select";
 
-function PersonRow({
+export function PersonRow({
   user,
   userId,
   subline,
@@ -81,10 +70,7 @@ function PersonRow({
   return (
     <div className="min-w-0">
       {label && (
-        <EyebrowLabel
-          as="span"
-          className={cn("mb-1 block", tone === "error" && "text-error")}
-        >
+        <EyebrowLabel as="span" className={cn("mb-1 block", tone === "error" && "text-error")}>
           {label}
         </EyebrowLabel>
       )}
@@ -423,7 +409,7 @@ export function CredentialCard({
           {selectionMode ? (
             <button
               type="button"
-              className="text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded"
+              className="rounded text-left hover:underline focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -441,10 +427,7 @@ export function CredentialCard({
           <EyebrowLabel as="span" className="mb-1 block">
             {t("cred.submit.field.type")}
           </EyebrowLabel>
-          <StagedValue
-            resolved={credential.type?.name}
-            staged={credential.submitted_type_name}
-          />
+          <StagedValue resolved={credential.type?.name} staged={credential.submitted_type_name} />
         </div>
 
         <div className="mb-3 min-w-0">
@@ -464,8 +447,7 @@ export function CredentialCard({
               user={credential.holder}
               userId={credential.holder_user_id}
               subline={
-                [credential.holder?.number, holderUnitName].filter(Boolean).join(" · ") ||
-                undefined
+                [credential.holder?.number, holderUnitName].filter(Boolean).join(" · ") || undefined
               }
               blockLinks={blockLinks || !credential.holder_user_id}
               label={t("cred.detail.holder")}
@@ -508,13 +490,17 @@ export function CredentialCard({
         {/* Audit Band / Actions Footer */}
         {showFooter && (
           <div className="mt-auto pt-4">
-            <div className="space-y-3 border-t border-gray-100 pt-3">
-              {showAuditStrip && (
-                <AuditStrip
-                  credential={credential}
-                  blockLinks={blockLinks || !credential.issuer_user_id}
-                />
+            <div
+              className={cn(
+                "space-y-3 border-t pt-3",
+                credential.status === "rejected"
+                  ? "border-error/20"
+                  : credential.status === "revoked"
+                    ? "border-gray-200"
+                    : "border-gray-100",
               )}
+            >
+              {showAuditStrip && <AuditStrip credential={credential} blockLinks={blockLinks} />}
 
               {canInlineReview && (
                 <div>
@@ -561,7 +547,7 @@ export function CredentialCard({
                         label={t("cred.reject.modal.reasonLabel")}
                         error={reasonMissing ? "cred.reject.modal.reasonRequired" : undefined}
                       >
-                        <Input
+                        <Textarea
                           value={reason}
                           onChange={(e) => {
                             e.stopPropagation();

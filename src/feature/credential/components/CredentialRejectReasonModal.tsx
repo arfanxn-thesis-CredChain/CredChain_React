@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Copy } from "lucide-react";
+import { Calendar, Copy } from "lucide-react";
 import { Button } from "@ui/button";
 import {
   Dialog,
@@ -11,11 +11,24 @@ import {
   DialogTitle,
 } from "@ui/dialog";
 import { FormField } from "@ui/form-field";
-import { Input } from "@ui/input";
+import { Textarea } from "@ui/textarea";
+import { PersonRow } from "@shared/components/CredentialCard";
+import { EyebrowLabel } from "@shared/components/EyebrowLabel";
+import { StagedValue } from "@shared/components/StagedValue";
+import { formatDate } from "@shared/lib/format";
+import type { UserDTO } from "@shared/types/api";
 
 export interface CredentialRejectItem {
   id: string;
   name: string;
+  holder?: UserDTO | null;
+  holderNumber?: string | null;
+  holderUnitName?: string | null;
+  typeName?: string | null;
+  submittedTypeName?: string | null;
+  orgName?: string | null;
+  submittedOrgName?: string | null;
+  submittedAt?: string | null;
 }
 
 export interface CredentialRejectReasonModalProps {
@@ -24,6 +37,7 @@ export interface CredentialRejectReasonModalProps {
   items: CredentialRejectItem[];
   onSubmit: (rejections: { id: string; reason: string }[]) => void;
   isSubmitting?: boolean;
+  onOpenDetail?: (id: string) => void;
 }
 
 const MAX_REASON_LENGTH = 1000;
@@ -34,8 +48,9 @@ export function CredentialRejectReasonModal({
   items,
   onSubmit,
   isSubmitting = false,
+  onOpenDetail,
 }: CredentialRejectReasonModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [attempted, setAttempted] = useState(false);
 
@@ -90,7 +105,7 @@ export function CredentialRejectReasonModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-5xl sm:max-w-5xl p-6 sm:p-8">
         <DialogHeader>
           <DialogTitle>{t("cred.reject.modal.title")}</DialogTitle>
           <DialogDescription>{t("cred.reject.modal.description")}</DialogDescription>
@@ -111,16 +126,103 @@ export function CredentialRejectReasonModal({
           )}
 
           {items.map((item) => (
-            <FormField key={item.id} label={item.name} error={errorFor(item.id)}>
-              <Input
-                value={reasonFor(item.id)}
-                onChange={(e) => setReason(item.id, e.target.value)}
-                maxLength={MAX_REASON_LENGTH}
-                placeholder={t("cred.reject.modal.reasonPlaceholder")}
-                aria-label={t("cred.reject.modal.reasonLabel")}
-                aria-invalid={Boolean(errorFor(item.id))}
-              />
-            </FormField>
+            <div
+              key={item.id}
+              className="space-y-3 rounded-2xl border border-gray-100 p-4"
+            >
+              <button
+                type="button"
+                className="text-left font-sans text-base font-bold text-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded wrap-break-word"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenDetail?.(item.id);
+                }}
+              >
+                {item.name}
+              </button>
+
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+                {/* Row 1, Col 1: HOLDER */}
+                <div className="min-w-0">
+                  {item.holder ? (
+                    <PersonRow
+                      user={item.holder}
+                      userId={item.holder.id}
+                      subline={
+                        [item.holderNumber, item.holderUnitName]
+                          .filter(Boolean)
+                          .join(" · ") || undefined
+                      }
+                      blockLinks={true}
+                      label={t("cred.detail.holder")}
+                    />
+                  ) : (
+                    <div>
+                      <EyebrowLabel as="span" className="mb-1 block">
+                        {t("cred.detail.holder")}
+                      </EyebrowLabel>
+                      <p className="text-sm text-gray-500">—</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Row 1, Col 2: TYPE */}
+                <div className="min-w-0">
+                  <EyebrowLabel as="span" className="mb-1 block">
+                    {t("cred.submit.field.type")}
+                  </EyebrowLabel>
+                  <StagedValue
+                    resolved={item.typeName}
+                    staged={item.submittedTypeName}
+                  />
+                </div>
+
+                {/* Row 2, Col 1: SUBMITTED */}
+                <div className="min-w-0">
+                  <EyebrowLabel as="span" className="mb-1 block">
+                    {t("cred.card.submitted")}
+                  </EyebrowLabel>
+                  {item.submittedAt ? (
+                    <div className="flex items-center gap-1.5 text-sm font-semibold text-navy">
+                      <Calendar
+                        className="h-3.5 w-3.5 shrink-0 text-gray-400"
+                        aria-hidden="true"
+                      />
+                      <span>{formatDate(item.submittedAt, i18n.language)}</span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">—</p>
+                  )}
+                </div>
+
+                {/* Row 2, Col 2: ORGANIZATION */}
+                <div className="min-w-0">
+                  <EyebrowLabel as="span" className="mb-1 block">
+                    {t("cred.parties.issuerOrganization")}
+                  </EyebrowLabel>
+                  <StagedValue
+                    resolved={item.orgName}
+                    staged={item.submittedOrgName}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <FormField
+                  label={t("cred.reject.modal.reasonLabel")}
+                  error={errorFor(item.id)}
+                >
+                  <Textarea
+                    value={reasonFor(item.id)}
+                    onChange={(e) => setReason(item.id, e.target.value)}
+                    maxLength={MAX_REASON_LENGTH}
+                    placeholder={t("cred.reject.modal.reasonPlaceholder")}
+                    aria-label={t("cred.reject.modal.reasonLabel")}
+                    aria-invalid={Boolean(errorFor(item.id))}
+                  />
+                </FormField>
+              </div>
+            </div>
           ))}
         </div>
 

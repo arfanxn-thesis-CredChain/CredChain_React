@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { i18n } from "@shared/i18n/config";
+import { Role } from "@shared/auth/role";
+import { makeUser } from "@/test/fixtures";
 import { CredentialRejectReasonModal } from "./CredentialRejectReasonModal";
 
 const items = [
@@ -106,5 +108,29 @@ describe("CredentialRejectReasonModal", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("renders holder, type, organization, and submission date metadata", () => {
+    renderModal({
+      items: [
+        {
+          id: "cred_1",
+          name: "Bachelor's Degree",
+          holder: makeUser({ id: "user_1", name: "Budi Santoso", email: "budi@example.com", role: Role.HOLDER }),
+          holderNumber: "123456",
+          holderUnitName: "Unit IT",
+          typeName: "Degree",
+          orgName: "Universitas Indonesia",
+          submittedAt: "2025-10-12T00:00:00Z",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Bachelor's Degree")).toBeInTheDocument();
+    expect(screen.getByText("Budi Santoso")).toBeInTheDocument();
+    expect(screen.getByText("123456 · Unit IT")).toBeInTheDocument();
+    expect(screen.getByText("Degree")).toBeInTheDocument();
+    expect(screen.getByText("Universitas Indonesia")).toBeInTheDocument();
+    expect(screen.getByText(/Oct 12, 2025/)).toBeInTheDocument();
   });
 });
