@@ -13,17 +13,20 @@ export interface LifecycleDateLine {
  * the system event date instead — when it was submitted, approved, rejected,
  * or (for revoked) both approved and revoked.
  */
-export function lifecycleDateLines(c: Pick<CredentialDTO, "status" | "created_at" | "approved_at" | "rejected_at" | "revoked_at">): LifecycleDateLine[] {
+export function lifecycleDateLines(c: Pick<CredentialDTO, "status" | "created_at" | "approved_at" | "rejected_at" | "revoked_at" | "submitter_user_id" | "holder_user_id">): LifecycleDateLine[] {
+  const isSubmission = Boolean(c.submitter_user_id && c.submitter_user_id === c.holder_user_id);
+  const approvedLabel = isSubmission ? "cred.lifecycle.approved" : "cred.card.registered";
+
   switch (c.status) {
     case "pending":
       return [{ labelKey: "cred.card.submitted", timestamp: c.created_at }];
     case "approved":
-      return [{ labelKey: "cred.lifecycle.approved", timestamp: c.approved_at }];
+      return [{ labelKey: approvedLabel, timestamp: c.approved_at }];
     case "rejected":
       return [{ labelKey: "cred.lifecycle.rejected", timestamp: c.rejected_at }];
     case "revoked":
       return [
-        { labelKey: "cred.lifecycle.approved", timestamp: c.approved_at },
+        { labelKey: approvedLabel, timestamp: c.approved_at },
         { labelKey: "cred.card.revoked", timestamp: c.revoked_at, tone: "error" },
       ];
   }
@@ -45,6 +48,6 @@ export function primaryDateLine(
     return { labelKey: "cred.card.submitted", timestamp: c.created_at };
   }
   return isHolder
-    ? { labelKey: "cred.card.issued", timestamp: c.issued_at }
+    ? { labelKey: "cred.detail.issuedDate", timestamp: c.issued_at }
     : { labelKey: "cred.card.submitted", timestamp: c.created_at };
 }

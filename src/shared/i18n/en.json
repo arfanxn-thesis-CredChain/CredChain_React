@@ -757,7 +757,7 @@
       "title": "User not found",
       "body": "This user does not exist or has been removed."
     },
-    "credentialSectionIssued": "Issued Credentials",
+    "credentialSectionIssued": "Registered Credentials",
     "credentialSectionHeld": "Held Credentials",
     "credentials": {
       "searchPlaceholder": "Search credentials...",
@@ -786,7 +786,7 @@
   "cred": {
     "audit": {
       "approvedBy": "Approved by",
-      "issuedBy": "Issued by",
+      "registeredBy": "Registered by",
       "rejectedBy": "Rejected by",
       "revokedBy": "Revoked by"
     },
@@ -803,7 +803,7 @@
       "count_other": "{{count}} Credentials",
       "error": "Failed to load credentials. Please try again.",
       "empty": {
-        "none": { "title": "No credentials yet", "body": "Issued credentials will appear here." },
+        "none": { "title": "No credentials yet", "body": "Registered credentials will appear here." },
         "search": {
           "title": "No credentials match your search",
           "body": "Try a different search term."
@@ -844,7 +844,7 @@
         "body": "This credential does not exist or has been removed."
       },
       "status": "Status",
-      "issued": "Issued",
+      "issued": "Registered",
       "expires": "Expires",
       "publicVerify": "Public verification",
       "subjectAuthority": "Subject & Authority",
@@ -907,7 +907,7 @@
       "count_other": "{{count}} Credentials",
       "empty": {
         "title": "No credentials yet",
-        "body": "Issued credentials linked to your wallet will appear here."
+        "body": "Registered credentials linked to your wallet will appear here."
       },
       "error": {
         "title": "Couldn't load your credentials",
@@ -915,7 +915,7 @@
       }
     },
     "card": {
-      "issued": "Issued date",
+      "registered": "Registered",
       "submitted": "Submitted",
       "revoked": "Revoked",
       "revokeMode": "Revoke",
@@ -1209,7 +1209,7 @@
   "overview.counts.trashed": "Trashed",
   "overview.superAdminAlwaysOne": "Always 1",
   "overview.recents": "Recent Activity",
-  "overview.recents.activeCredentials": "Recently Issued",
+  "overview.recents.activeCredentials": "Recently Registered",
   "overview.recents.revokedCredentials": "Recently Revoked",
   "overview.recents.storedUsers": "New User",
   "overview.recents.empty": "No recent activity",

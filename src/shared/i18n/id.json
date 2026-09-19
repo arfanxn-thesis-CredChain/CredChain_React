@@ -758,7 +758,7 @@
       "title": "Pengguna tidak ditemukan",
       "body": "Pengguna ini tidak ada atau telah dihapus."
     },
-    "credentialSectionIssued": "Kredensial Diterbitkan",
+    "credentialSectionIssued": "Kredensial Didaftarkan",
     "credentialSectionHeld": "Kredensial Dimiliki",
     "credentials": {
       "searchPlaceholder": "Cari kredensial...",
@@ -787,7 +787,7 @@
   "cred": {
     "audit": {
       "approvedBy": "Disetujui oleh",
-      "issuedBy": "Diterbitkan oleh",
+      "registeredBy": "Didaftarkan oleh",
       "rejectedBy": "Ditolak oleh",
       "revokedBy": "Dicabut oleh"
     },
@@ -848,7 +848,7 @@
         "body": "Kredensial ini tidak ada atau telah dihapus."
       },
       "status": "Status",
-      "issued": "Diterbitkan",
+      "issued": "Didaftarkan",
       "expires": "Berakhir",
       "publicVerify": "Verifikasi publik",
       "subjectAuthority": "Subjek & Otoritas",
@@ -916,7 +916,7 @@
       "error": { "title": "Gagal memuat kredensial", "body": "Silakan coba lagi nanti." }
     },
     "card": {
-      "issued": "Tanggal terbit",
+      "registered": "Didaftarkan",
       "submitted": "Diajukan",
       "revoked": "Dicabut",
       "revokeMode": "Cabut",
@@ -1210,7 +1210,7 @@
   "overview.counts.trashed": "Terhapus",
   "overview.superAdminAlwaysOne": "Selalu 1",
   "overview.recents": "Aktivitas Terbaru",
-  "overview.recents.activeCredentials": "Baru Diterbitkan",
+  "overview.recents.activeCredentials": "Baru Didaftarkan",
   "overview.recents.revokedCredentials": "Baru Dicabut",
   "overview.recents.storedUsers": "Pengguna Baru",
   "overview.recents.empty": "Tidak ada aktivitas",

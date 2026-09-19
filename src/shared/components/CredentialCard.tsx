@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@shared/lib/cn";
 import { formatDate } from "@shared/lib/format";
-import { lifecycleDateLines, primaryDateLine } from "@shared/lib/credentialDate";
+import { lifecycleDateLines } from "@shared/lib/credentialDate";
 import { isEligibleFor, type BulkMode } from "@shared/lib/credentialEligibility";
 import { Card } from "@ui/card";
 import { Button } from "@ui/button";
@@ -134,7 +134,7 @@ function AuditStrip({
 
   if (credential.status === "approved") {
     const wasSubmittedByHolder = credential.submitter_user_id === credential.holder_user_id;
-    const label = wasSubmittedByHolder ? t("cred.audit.approvedBy") : t("cred.audit.issuedBy");
+    const label = wasSubmittedByHolder ? t("cred.audit.approvedBy") : t("cred.audit.registeredBy");
     const userId = credential.issuer_user_id;
 
     if (!userId && !credential.issuer) {
@@ -260,8 +260,6 @@ export function CredentialCard({
       .map((c) => ({ name: c.name, staged: true })),
   ];
   const showCompetencies = (canInlineReview && hasUnresolvedMetadata) || competencies.length > 0;
-  const showLifecycleDates = credential.status === "revoked" || credential.status === "rejected";
-  const dateLine = primaryDateLine(credential, !!isHolder);
 
   const hideHolderEffective = hideHolder ?? showActor;
   const showHolder = !isHolder && !hideHolderEffective;
@@ -381,37 +379,28 @@ export function CredentialCard({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <CredentialStatusBadge status={credential.status} />
           <div className="text-xs text-gray-500">
-            {showLifecycleDates ? (
-              <div className="space-y-0.5">
-                {lifecycleDateLines(credential).map((line) => (
-                  <div
-                    key={line.labelKey}
+            <div className="space-y-0.5">
+              {lifecycleDateLines(credential).map((line) => (
+                <div
+                  key={line.labelKey}
+                  className={cn(
+                    "flex items-center gap-1.5",
+                    line.tone === "error" ? "text-error" : "",
+                  )}
+                >
+                  <Calendar
                     className={cn(
-                      "flex items-center gap-1.5",
-                      line.tone === "error" ? "text-error" : "",
+                      "h-3.5 w-3.5 shrink-0",
+                      line.tone === "error" ? "" : "text-gray-400",
                     )}
-                  >
-                    <Calendar
-                      className={cn(
-                        "h-3.5 w-3.5 shrink-0",
-                        line.tone === "error" ? "" : "text-gray-400",
-                      )}
-                      aria-hidden="true"
-                    />
-                    <span>
-                      {t(line.labelKey)} {formatDate(line.timestamp, i18n.language)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
-                <span>
-                  {t(dateLine.labelKey)} {formatDate(dateLine.timestamp, i18n.language)}
-                </span>
-              </div>
-            )}
+                    aria-hidden="true"
+                  />
+                  <span>
+                    {t(line.labelKey)} {formatDate(line.timestamp, i18n.language)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

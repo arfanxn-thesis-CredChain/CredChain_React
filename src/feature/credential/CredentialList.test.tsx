@@ -428,7 +428,7 @@ describe("CredentialList", () => {
     expect(await screen.findByText("My Credentials")).toBeInTheDocument();
     expect(await screen.findByText("No credentials yet")).toBeInTheDocument();
     expect(
-      screen.getByText("Issued credentials linked to your wallet will appear here."),
+      screen.getByText("Registered credentials linked to your wallet will appear here."),
     ).toBeInTheDocument();
   });
 

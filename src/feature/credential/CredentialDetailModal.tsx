@@ -384,7 +384,7 @@ export function CredentialDetailModal({
                   <EyebrowLabel as="span" className="block text-navy">
                     {cred.submitter_user_id === cred.holder_user_id
                       ? t("cred.audit.approvedBy")
-                      : t("cred.audit.issuedBy")}
+                      : t("cred.audit.registeredBy")}
                   </EyebrowLabel>
                   <UserContactBlock
                     user={cred.issuer}

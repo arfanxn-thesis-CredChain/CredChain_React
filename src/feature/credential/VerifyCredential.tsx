@@ -431,7 +431,7 @@ export function VerifyCredential() {
                   {/* Issued Date */}
                   <div className="flex items-center gap-1.5 border-t border-gray-100 pt-3 text-xs text-gray-500">
                     <Calendar className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
-                    {t("cred.card.issued")} {formatDate(result.credential!.issued_at)}
+                    {t("cred.detail.issuedDate")} {formatDate(result.credential!.issued_at)}
                   </div>
 
                   {/* Unchecked-number disclaimer */}

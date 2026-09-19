@@ -97,7 +97,7 @@ describe("Overview", () => {
     renderOverview();
     await waitFor(() => {
       expect(screen.getByText("Recent Activity")).toBeDefined();
-      expect(screen.getByText("Recently Issued")).toBeDefined();
+      expect(screen.getByText("Recently Registered")).toBeDefined();
     });
   });
 
@@ -158,7 +158,7 @@ describe("Overview", () => {
     useStore.setState({ user: makeUser({ role: Role.ISSUER }) });
     renderOverview();
     await waitFor(() => {
-      expect(screen.getAllByText("Recently Issued").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Recently Registered").length).toBeGreaterThanOrEqual(1);
     });
     expect(screen.queryAllByText("Recently Revoked").length).toBe(0);
     expect(screen.queryAllByText("New User").length).toBe(0);

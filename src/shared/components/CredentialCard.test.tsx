@@ -207,9 +207,10 @@ describe("CredentialCard", () => {
     expect(screen.getByText(/Feb 3, 2026/)).toBeInTheDocument();
   });
 
-  it("shows issued date for a holder viewing their own approved credential", () => {
+  it("shows approved date for an approved submission credential", () => {
     const credential = makeCredential({
-      issued_at: "2026-03-04T00:00:00Z",
+      status: "approved",
+      approved_at: "2026-03-04T00:00:00Z",
     });
 
     render(<CredentialCard credential={credential} isHolder />, { wrapper: TestProviders });
@@ -217,7 +218,7 @@ describe("CredentialCard", () => {
     expect(screen.getByText(/Mar 4, 2026/)).toBeInTheDocument();
   });
 
-  it("shows submitted date, not issued date, for a holder viewing their own pending credential", () => {
+  it("shows submitted date, not registered date, for a holder viewing their own pending credential", () => {
     const credential = makeCredential({
       status: "pending",
       approved_at: null,
@@ -339,7 +340,7 @@ describe("CredentialCard", () => {
     render(<CredentialCard credential={credential} showActor />, { wrapper: TestProviders });
 
     expect(screen.getByText("Bob Issuer")).toBeInTheDocument();
-    expect(screen.getByText("Issued by")).toBeInTheDocument();
+    expect(screen.getByText("Registered by")).toBeInTheDocument();
     expect(screen.getByText("12345")).toBeInTheDocument();
     expect(screen.queryByText("Alice Holder")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /bob issuer/i })).toHaveAttribute("href", "/users/usr_i");
@@ -713,7 +714,7 @@ describe("CredentialCard", () => {
 
       expect(screen.getByText("MIT University")).toBeInTheDocument();
       expect(screen.getByText("Prof Bob")).toBeInTheDocument();
-      expect(screen.getByText("Issued by")).toBeInTheDocument();
+      expect(screen.getByText("Registered by")).toBeInTheDocument();
       expect(screen.getByText("INS-99")).toBeInTheDocument();
       expect(screen.queryByText("Issuer")).not.toBeInTheDocument();
     });
@@ -926,12 +927,12 @@ describe("CredentialCard", () => {
       render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
 
       expect(screen.queryByText("Approved by")).not.toBeInTheDocument();
-      expect(screen.queryByText("Issued by")).not.toBeInTheDocument();
+      expect(screen.queryByText("Registered by")).not.toBeInTheDocument();
       expect(screen.queryByText("Rejected by")).not.toBeInTheDocument();
       expect(screen.queryByText("Revoked by")).not.toBeInTheDocument();
     });
 
-    it("splits approved audit strip by origin: Approved by for submissions, Issued by for direct issuance", () => {
+    it("splits approved audit strip by origin: Approved by for submissions, Registered by for direct registration", () => {
       const submissionCred = makeCredential({
         status: "approved",
         holder_user_id: "usr_alice",
@@ -941,7 +942,7 @@ describe("CredentialCard", () => {
       const { rerender } = render(<CredentialCard credential={submissionCred} />, { wrapper: TestProviders });
 
       expect(screen.getByText("Approved by")).toBeInTheDocument();
-      expect(screen.queryByText("Issued by")).not.toBeInTheDocument();
+      expect(screen.queryByText("Registered by")).not.toBeInTheDocument();
 
       const directCred = makeCredential({
         status: "approved",
@@ -951,7 +952,7 @@ describe("CredentialCard", () => {
       });
       rerender(<CredentialCard credential={directCred} />);
 
-      expect(screen.getByText("Issued by")).toBeInTheDocument();
+      expect(screen.getByText("Registered by")).toBeInTheDocument();
       expect(screen.queryByText("Approved by")).not.toBeInTheDocument();
     });
 
