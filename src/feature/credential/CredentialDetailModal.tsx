@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, XCircle } from "lucide-react";
+import { AlertCircle, CircleDashed, XCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -238,17 +238,44 @@ export function CredentialDetailModal({
         {
           key: "competencies",
           label: t("cred.competency.title"),
-          readValue: (cred.competencies?.length ?? 0) > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {(cred.competencies ?? []).map((c) => (
-                <Badge key={c.id} tone="gold">
-                  {c.name}
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <span className="text-gray-500">{t("common.notSet")}</span>
-          ),
+          readValue: (() => {
+            const list = [
+              ...(cred.competencies ?? []).map((c) => ({ name: c.name, staged: false })),
+              ...(cred.submitted_competencies ?? [])
+                .filter((c) => c.resolved_id === null)
+                .map((c) => ({ name: c.name, staged: true })),
+            ];
+
+            if (list.length === 0 && cred.meta) {
+              const raw = cred.meta.competencies || cred.meta.competency;
+              if (Array.isArray(raw)) {
+                raw.forEach((c) => {
+                  if (typeof c === "string" && c.trim()) list.push({ name: c.trim(), staged: true });
+                });
+              } else if (typeof raw === "string" && raw.trim()) {
+                list.push({ name: raw.trim(), staged: true });
+              }
+            }
+
+            if (list.length === 0) {
+              return <span className="text-gray-500">{t("common.notSet")}</span>;
+            }
+
+            return (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {list.map((c, idx) => (
+                  <Badge
+                    key={`${c.name}-${idx}`}
+                    tone={c.staged ? "gray" : "gold"}
+                    icon={c.staged ? CircleDashed : undefined}
+                    className="max-w-full truncate"
+                  >
+                    {c.name}
+                  </Badge>
+                ))}
+              </div>
+            );
+          })(),
           editControl: (
             <SearchableCreateSelect
               multiple
@@ -271,9 +298,13 @@ export function CredentialDetailModal({
       ]
     : [];
 
+  const isSubmission = Boolean(
+    cred?.submitter_user_id && cred.submitter_user_id === cred.holder_user_id,
+  );
+
   const statusBadges = cred ? (
     <div className="flex flex-wrap items-center gap-3">
-      <CredentialStatusBadge status={cred.status} />
+      <CredentialStatusBadge status={cred.status} isSubmission={isSubmission} />
       {canManage && (
         <CredentialExtractNote
           state={cred.extract_state}

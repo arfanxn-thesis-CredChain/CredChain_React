@@ -264,6 +264,18 @@ describe("CredentialCard", () => {
     expect(screen.getByText("Approved")).toBeInTheDocument();
   });
 
+    it("renders the Registered badge and aria-label for direct-issued credential", () => {
+    const directCred = makeCredential({
+      status: "approved",
+      submitter_user_id: "usr_test_2",
+      holder_user_id: "usr_test_1",
+    });
+    render(<CredentialCard credential={directCred} />, { wrapper: TestProviders });
+
+    expect(screen.getByText("Registered")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /registered/i })).toBeInTheDocument();
+  });
+
   it("renders the Pending review badge for pending credential", () => {
     const credential = makeCredential({ status: "pending" });
     render(<CredentialCard credential={credential} />, {
@@ -670,7 +682,7 @@ describe("CredentialCard", () => {
     });
   });
 
-  it("shows the details-incomplete indicator instead of competencies when metadata is unresolved", () => {
+  it("renders competencies directly even when metadata is unresolved", () => {
     const credential = makeCredential({
       status: "pending",
       approved_at: null,
@@ -680,8 +692,8 @@ describe("CredentialCard", () => {
 
     render(<CredentialCard credential={credential} canReview />, { wrapper: TestProviders });
 
-    expect(screen.getByText("Details incomplete")).toBeInTheDocument();
-    expect(screen.queryByText("Data Analysis")).not.toBeInTheDocument();
+    expect(screen.queryByText("Details incomplete")).not.toBeInTheDocument();
+    expect(screen.getByText("Data Analysis")).toBeInTheDocument();
   });
 
   it("blocks reject submission when the reason is empty", async () => {
@@ -831,6 +843,31 @@ describe("CredentialCard", () => {
 
       expect(screen.getByText("Resolved Degree")).toBeInTheDocument();
       expect(screen.queryByText(/Staged Workshop/)).not.toBeInTheDocument();
+    });
+
+        it("renders raw competencies from meta when stored as an array of strings", () => {
+      const credential = makeCredential({
+        competencies: [],
+        submitted_competencies: [],
+        meta: { competencies: ["Machine Learning", "Cloud Computing"] },
+      });
+
+      render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
+
+      expect(screen.getByText("Machine Learning")).toBeInTheDocument();
+      expect(screen.getByText("Cloud Computing")).toBeInTheDocument();
+    });
+
+    it("renders raw competencies from meta when stored as a single string", () => {
+      const credential = makeCredential({
+        competencies: [],
+        submitted_competencies: [],
+        meta: { competency: "Cybersecurity" },
+      });
+
+      render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
+
+      expect(screen.getByText("Cybersecurity")).toBeInTheDocument();
     });
 
     it("renders resolved and staged competencies with distinct tones and overflow at 3+", () => {

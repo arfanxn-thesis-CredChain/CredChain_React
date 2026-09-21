@@ -68,7 +68,13 @@ export function CredentialHeroCard({
 
   const statusBadges = (
     <div className="flex flex-wrap items-center gap-3">
-      <CredentialStatusBadge status={cred.status} />
+      const isSubmission = Boolean(
+    cred.submitter_user_id && cred.submitter_user_id === cred.holder_user_id,
+  );
+
+  const statusBadges = (
+    <div className="flex flex-wrap items-center gap-3">
+      <CredentialStatusBadge status={cred.status} isSubmission={isSubmission} />
       {canManage && (
         <CredentialExtractNote
           state={cred.extract_state}

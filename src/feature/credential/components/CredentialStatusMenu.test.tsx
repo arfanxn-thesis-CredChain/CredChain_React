@@ -80,6 +80,6 @@ describe("CredentialStatusMenu", () => {
 
   it("shows only the active label when a single dimension is active", () => {
     renderMenu({ review: "approved" });
-    expect(screen.getByRole("button", { name: /^approved$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^approved & registered$/i })).toBeInTheDocument();
   });
 });

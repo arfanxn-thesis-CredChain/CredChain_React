@@ -16,7 +16,11 @@ import { UserAvatar } from "@shared/components/UserAvatar";
 import { EyebrowLabel } from "@shared/components/EyebrowLabel";
 import { StagedValue } from "@shared/components/StagedValue";
 import type { CredentialDTO, UserDTO } from "@shared/types/api";
-import { CredentialStatusBadge, LABEL_KEY, STATUS_SURFACE } from "./CredentialStatusBadge";
+import {
+  CredentialStatusBadge,
+  getCredentialStatusLabelKey,
+  STATUS_SURFACE,
+} from "./CredentialStatusBadge";
 import { CredentialExtractNote } from "./CredentialExtractNote";
 
 interface CredentialCardProps {
@@ -245,7 +249,17 @@ export function CredentialCard({
       .filter((c) => c.resolved_id === null)
       .map((c) => ({ name: c.name, staged: true })),
   ];
-  const showCompetencies = (canInlineReview && hasUnresolvedMetadata) || competencies.length > 0;
+  if (competencies.length === 0 && credential.meta) {
+    const raw = credential.meta.competencies || credential.meta.competency;
+    if (Array.isArray(raw)) {
+      raw.forEach((c) => {
+        if (typeof c === "string" && c.trim()) competencies.push({ name: c.trim(), staged: true });
+      });
+    } else if (typeof raw === "string" && raw.trim()) {
+      competencies.push({ name: raw.trim(), staged: true });
+    }
+  }
+  const showCompetencies = competencies.length > 0;
 
   const hideHolderEffective = hideHolder ?? showActor;
   const showHolder = !isHolder && !hideHolderEffective;
@@ -291,6 +305,9 @@ export function CredentialCard({
     openDetail();
   };
 
+  const isSubmission = Boolean(
+    credential.submitter_user_id && credential.submitter_user_id === credential.holder_user_id,
+  );
   const isSelectable = isEligibleFor(credential, selectionMode ?? null);
   const selectBlocked = !!selectionMode && (!isSelectable || !!selectDisabled);
 
@@ -338,7 +355,7 @@ export function CredentialCard({
         selectBlocked && "cursor-not-allowed opacity-50",
         STATUS_SURFACE[credential.status],
       )}
-      aria-label={t(LABEL_KEY[credential.status])}
+      aria-label={t(getCredentialStatusLabelKey(credential.status, isSubmission))}
     >
       {selectionMode && (
         <button
@@ -363,7 +380,7 @@ export function CredentialCard({
       <div className={cn("flex flex-1 flex-col", selectionMode && "pr-8")}>
         {/* Top bar: Status Badge + Lifecycle / Primary Date */}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <CredentialStatusBadge status={credential.status} />
+          <CredentialStatusBadge status={credential.status} isSubmission={isSubmission} />
           <div className="text-xs text-gray-500">
             <div className="space-y-0.5">
               {lifecycleDateLines(credential).map((line) => (
@@ -460,30 +477,23 @@ export function CredentialCard({
             <EyebrowLabel as="span" className="mb-1 block">
               {t("cred.competency.title")}
             </EyebrowLabel>
-            {canInlineReview && hasUnresolvedMetadata ? (
-              <p className="flex items-center gap-1.5 text-xs text-gray-500">
-                <CircleDashed className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                {t("cred.card.detailsIncomplete")}
-              </p>
-            ) : (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {competencies.slice(0, 2).map((comp, idx) => (
-                  <Badge
-                    key={`${comp.name}-${idx}`}
-                    tone={comp.staged ? "gray" : "gold"}
-                    icon={comp.staged ? CircleDashed : undefined}
-                    className="max-w-full truncate"
-                  >
-                    {comp.name}
-                  </Badge>
-                ))}
-                {competencies.length > 2 && (
-                  <span className="shrink-0 text-xs font-medium text-gray-500">
-                    {t("cred.card.competencyOverflow", { count: competencies.length - 2 })}
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {competencies.slice(0, 2).map((comp, idx) => (
+                <Badge
+                  key={`${comp.name}-${idx}`}
+                  tone={comp.staged ? "gray" : "gold"}
+                  icon={comp.staged ? CircleDashed : undefined}
+                  className="max-w-full truncate"
+                >
+                  {comp.name}
+                </Badge>
+              ))}
+              {competencies.length > 2 && (
+                <span className="shrink-0 text-xs font-medium text-gray-500">
+                  {t("cred.card.competencyOverflow", { count: competencies.length - 2 })}
+                </span>
+              )}
+            </div>
           </div>
         )}
 

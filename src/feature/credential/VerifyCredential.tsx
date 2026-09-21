@@ -281,7 +281,13 @@ export function VerifyCredential() {
                 <div className="border-t border-gray-100 pt-5">
                   {/* Status + Issuer metadata */}
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <CredentialStatusBadge status={result.credential!.status} />
+                    <CredentialStatusBadge
+                      status={result.credential!.status}
+                      isSubmission={Boolean(
+                        result.credential!.submitter_user_id &&
+                          result.credential!.submitter_user_id === result.credential!.holder_user_id,
+                      )}
+                    />
                     {meta?.issuing_organization_name && (
                       <span className="flex items-center gap-1.5 text-sm text-navy/60">
                         <Building2 className="h-4 w-4 shrink-0 text-gold/70" aria-hidden="true" />

@@ -38,4 +38,33 @@ describe("CredentialStatusBadge", () => {
     expect(pill?.className).toContain(TONE_BY_STATUS[status]);
     expect(pill?.querySelector("svg")).toBeInTheDocument();
   });
+
+  it("renders Registered when approved credential is from direct issuance", () => {
+    render(<CredentialStatusBadge status="approved" isSubmission={false} />, {
+      wrapper: TestProviders,
+    });
+    expect(screen.getByText("Registered")).toBeInTheDocument();
+    const pill = screen.getByText("Registered").closest("span");
+    expect(pill?.className).toContain("bg-green-100");
+  });
+
+  it("renders Approved when approved credential is from submission flow", () => {
+    render(<CredentialStatusBadge status="approved" isSubmission={true} />, {
+      wrapper: TestProviders,
+    });
+    expect(screen.getByText("Approved")).toBeInTheDocument();
+  });
+
+  it("localizes contextual approved labels in Indonesian", async () => {
+    await i18n.changeLanguage("id");
+
+    const { rerender } = render(
+      <CredentialStatusBadge status="approved" isSubmission={false} />,
+      { wrapper: TestProviders },
+    );
+    expect(screen.getByText("Didaftarkan")).toBeInTheDocument();
+
+    rerender(<CredentialStatusBadge status="approved" isSubmission={true} />);
+    expect(screen.getByText("Disetujui")).toBeInTheDocument();
+  });
 });

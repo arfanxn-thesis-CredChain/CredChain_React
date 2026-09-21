@@ -32,17 +32,31 @@ export const STATUS_SURFACE: Record<CredentialStatus, string> = {
   revoked: "border-gray-200 bg-gray-50",
 };
 
+export function getCredentialStatusLabelKey(
+  status: CredentialStatus,
+  isSubmission?: boolean,
+): string {
+  if (status === "approved" && isSubmission === false) {
+    return "cred.card.registered";
+  }
+  return LABEL_KEY[status];
+}
+
+export interface CredentialStatusBadgeProps {
+  status: CredentialStatus;
+  isSubmission?: boolean;
+  className?: string;
+}
+
 export function CredentialStatusBadge({
   status,
+  isSubmission,
   className,
-}: {
-  status: CredentialStatus;
-  className?: string;
-}) {
+}: CredentialStatusBadgeProps) {
   const { t } = useTranslation();
   return (
     <Badge tone={TONE_MAP[status]} icon={ICON_MAP[status]} className={className}>
-      {t(LABEL_KEY[status])}
+      {t(getCredentialStatusLabelKey(status, isSubmission))}
     </Badge>
   );
 }
