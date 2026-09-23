@@ -20,6 +20,7 @@ import { useReExtractCredentials } from "./api/useReExtractCredentials";
 import { useApproveCredentials } from "./api/useApproveCredentials";
 import { useRejectCredentials } from "./api/useRejectCredentials";
 import { CredentialRejectReasonModal } from "./components/CredentialRejectReasonModal";
+import { CredentialRevokeReasonModal } from "./components/CredentialRevokeReasonModal";
 import { CredentialDetailModal } from "./CredentialDetailModal";
 import { useStore } from "@app/store";
 import { useUserUnits } from "@shared/api/useUserUnits";
@@ -239,6 +240,7 @@ export function CredentialList() {
   const reject = useRejectCredentials();
   const { confirm, dialog: confirmDialog } = useConfirm();
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [revokeModalOpen, setRevokeModalOpen] = useState(false);
   const { data: units } = useUserUnits();
   const unitNames = useMemo(() => new Map((units ?? []).map((u) => [u.id, u.name])), [units]);
 
@@ -257,6 +259,21 @@ export function CredentialList() {
 
   const rejectItems = credentials
     .filter((c) => eligibleRejectIds.includes(c.id))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      holder: c.holder,
+      holderNumber: c.holder?.number,
+      holderUnitName: c.holder?.unit_id ? unitNames.get(c.holder.unit_id) : undefined,
+      typeName: c.type?.name,
+      submittedTypeName: c.submitted_type_name,
+      orgName: c.issuer_organization?.name,
+      submittedOrgName: c.submitted_issuer_organization_name,
+      submittedAt: c.created_at,
+    }));
+
+  const revokeItems = credentials
+    .filter((c) => eligibleRevokeIds.includes(c.id))
     .map((c) => ({
       id: c.id,
       name: c.name,
@@ -369,14 +386,7 @@ export function CredentialList() {
 
   const handleBulkRevoke = async () => {
     if (eligibleRevokeIds.length === 0) return;
-    const ok = await confirm({
-      title: t("cred.revoke.confirmTitle", { count: eligibleRevokeIds.length }),
-      description: t("cred.revoke.confirmBody"),
-      confirmLabel: t("cred.revoke.confirmAction"),
-      tone: "destructive",
-    });
-    if (!ok) return;
-    revoke.mutate(eligibleRevokeIds, { onSuccess: () => exitMode() });
+    setRevokeModalOpen(true);
   };
 
   const handleBulkReExtract = async () => {
@@ -393,6 +403,18 @@ export function CredentialList() {
   const handleBulkApprove = () => {
     if (eligibleApproveIds.length === 0) return;
     approve.mutate(eligibleApproveIds, { onSuccess: () => exitMode() });
+  };
+
+  const handleRevokeSubmit = (revocations: { id: string; reason: string | null }[]) => {
+    revoke.mutate(
+      { revocations },
+      {
+        onSuccess: () => {
+          setRevokeModalOpen(false);
+          exitMode();
+        },
+      },
+    );
   };
 
   const handleRejectSubmit = (rejections: { id: string; reason: string }[]) => {
@@ -690,6 +712,15 @@ export function CredentialList() {
         items={rejectItems}
         onSubmit={handleRejectSubmit}
         isSubmitting={reject.isPending}
+        onOpenDetail={handleOpenDetail}
+      />
+
+      <CredentialRevokeReasonModal
+        open={revokeModalOpen}
+        onOpenChange={setRevokeModalOpen}
+        items={revokeItems}
+        onSubmit={handleRevokeSubmit}
+        isSubmitting={revoke.isPending}
         onOpenDetail={handleOpenDetail}
       />
 

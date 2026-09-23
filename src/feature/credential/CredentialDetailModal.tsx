@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, CircleDashed, XCircle } from "lucide-react";
+import { AlertCircle, CircleDashed, XCircle, Ban } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -368,6 +368,16 @@ export function CredentialDetailModal({
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{t("cred.reject.modal.reasonLabel")}</p>
                   <p className="mt-1 whitespace-pre-wrap">{cred.rejection_reason}</p>
+                </div>
+              </div>
+            )}
+
+            {cred.status === "revoked" && cred.revocation_reason && (
+              <div className="flex gap-3 rounded-xl border border-error/20 bg-error/5 p-4 text-sm text-error">
+                <Ban className="h-5 w-5 shrink-0 text-error" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{t("cred.revoke.modal.reasonLabel")}</p>
+                  <p className="mt-1 whitespace-pre-wrap">{cred.revocation_reason}</p>
                 </div>
               </div>
             )}

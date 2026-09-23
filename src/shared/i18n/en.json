@@ -959,7 +959,17 @@
       "confirmTitle": "Revoke {{count}} credential?",
       "confirmTitle_plural": "Revoke {{count}} credentials?",
       "confirmBody": "This permanently revokes the credential and cannot be undone. The credential will no longer be verifiable.",
-      "confirmAction": "Revoke"
+      "confirmAction": "Revoke",
+      "modal": {
+        "title": "Revoke Credentials",
+        "description": "Provide a revocation reason (optional) for each selected credential. This permanently revokes the credential.",
+        "reasonLabel": "Revocation reason",
+        "reasonPlaceholder": "Explain why this credential is revoked (optional, max 1000 characters)",
+        "reasonRequired": "Revocation reason is required.",
+        "reasonTooLong": "Reason must be 1000 characters or less.",
+        "applyToAll": "Apply same reason to all",
+        "submit": "Revoke"
+      }
     },
     "reextract": {
       "confirmTitle": "Re-extract {{count}} credential?",

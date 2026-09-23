@@ -189,18 +189,14 @@ function AuditStrip({
     const label = t("cred.audit.revokedBy");
     const userId = credential.revoker_user_id;
 
-    if (!userId && !credential.revoker) {
-      return (
-        <div className="min-w-0">
-          <EyebrowLabel as="span" className="mb-1 block text-error">
-            {label}
-          </EyebrowLabel>
-          <p className="text-sm text-gray-500">—</p>
-        </div>
-      );
-    }
-
-    return (
+    const personContent = (!userId && !credential.revoker) ? (
+      <div className="min-w-0">
+        <EyebrowLabel as="span" className="mb-1 block text-error">
+          {label}
+        </EyebrowLabel>
+        <p className="text-sm text-gray-500">—</p>
+      </div>
+    ) : (
       <PersonRow
         user={credential.revoker}
         userId={userId ?? ""}
@@ -209,6 +205,18 @@ function AuditStrip({
         label={label}
         tone="error"
       />
+    );
+
+    return (
+      <div className="space-y-3">
+        {personContent}
+        {credential.revocation_reason && (
+          <div className="rounded-md bg-error/10 p-2.5 text-xs text-error">
+            <span className="font-semibold">{t("cred.revoke.modal.reasonLabel")}: </span>
+            <span className="line-clamp-2">{credential.revocation_reason}</span>
+          </div>
+        )}
+      </div>
     );
   }
 

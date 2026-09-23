@@ -52,6 +52,7 @@ export interface CredentialDTO {
   type_id: string | null;
   number: string | null;
   revoker_user_id: string | null;
+  revocation_reason: string | null;
   name: string;
   meta: Record<string, unknown> | null;
   /** Staged competency names; resolved_id null means still awaiting review. */

@@ -34,6 +34,7 @@ export function makeCredential(overrides: Partial<CredentialDTO> = {}): Credenti
     type_id: "type_test_1",
     number: null,
     revoker_user_id: null,
+    revocation_reason: null,
     name: "Test Credential",
     meta: null,
     submitted_competencies: null,

@@ -138,8 +138,13 @@ export function defaultCredentialSubmitRow(): CredentialSubmitRowInput {
 }
 
 export const credentialBatchRevokeSchema = z.object({
-  ids: z
-    .array(z.string().min(1, "zod.credential.idRequired"))
+  revocations: z
+    .array(
+      z.object({
+        id: z.string().min(1, "zod.credential.idRequired"),
+        reason: z.string().max(1000, "zod.credential.revokeReasonMax").nullable().optional(),
+      }),
+    )
     .min(1, "zod.credential.revokeMinOne")
     .max(100, "zod.credential.revokeMaxHundred"),
 });

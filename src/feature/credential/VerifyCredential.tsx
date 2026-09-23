@@ -423,7 +423,7 @@ export function VerifyCredential() {
                   {canViewCredential &&
                     result.credential!.revoked_at !== null &&
                     result.credential!.revoker && (
-                      <div className="mb-3 border-t border-gray-100 pt-3">
+                      <div className="mb-3 space-y-3 border-t border-gray-100 pt-3">
                         <UserContactBlock
                           labelType="compact"
                           user={result.credential!.revoker}
@@ -431,6 +431,12 @@ export function VerifyCredential() {
                           copyPrefix="revoker"
                           tone="error"
                         />
+                        {result.credential!.revocation_reason && (
+                          <div className="rounded-md bg-error/10 p-2.5 text-xs text-error">
+                            <span className="font-semibold">{t("cred.revoke.modal.reasonLabel")}: </span>
+                            <span className="line-clamp-2">{result.credential!.revocation_reason}</span>
+                          </div>
+                        )}
                       </div>
                     )}
 

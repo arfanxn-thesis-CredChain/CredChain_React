@@ -960,7 +960,17 @@
       "confirmTitle": "Cabut {{count}} kredensial?",
       "confirmTitle_plural": "Cabut {{count}} kredensial?",
       "confirmBody": "Ini mencabut kredensial secara permanen dan tidak bisa dibatalkan. Kredensial tidak akan bisa diverifikasi lagi.",
-      "confirmAction": "Cabut"
+      "confirmAction": "Cabut",
+      "modal": {
+        "title": "Cabut Kredensial",
+        "description": "Berikan alasan pencabutan (opsional) untuk setiap kredensial yang dipilih. Ini mencabut kredensial secara permanen.",
+        "reasonLabel": "Alasan pencabutan",
+        "reasonPlaceholder": "Jelaskan mengapa kredensial ini dicabut (opsional, maks 1000 karakter)",
+        "reasonRequired": "Alasan pencabutan wajib diisi.",
+        "reasonTooLong": "Alasan maksimal 1000 karakter.",
+        "applyToAll": "Terapkan alasan yang sama ke semua",
+        "submit": "Cabut"
+      }
     },
     "reextract": {
       "confirmTitle": "Ekstrak ulang {{count}} kredensial?",

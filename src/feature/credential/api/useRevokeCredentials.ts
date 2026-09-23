@@ -4,12 +4,14 @@ import { notify } from "@shared/lib/notify";
 import { isApiError } from "@shared/api/envelope";
 import { credentialKeys } from "./keys";
 
+import type { CredentialBatchRevokeInput } from "../schemas/credential";
+
 export function useRevokeCredentials() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (ids: string[]) => {
-      const response = await api.post("/credentials/batch/revoke", { ids });
+    mutationFn: async (payload: CredentialBatchRevokeInput) => {
+      const response = await api.post("/credentials/batch/revoke", payload);
       return response.data;
     },
     onSuccess: () => {
