@@ -70,6 +70,11 @@ describe("CODE_TO_MESSAGE_KEY", () => {
     expect(CODE_TO_MESSAGE_KEY[401242]).toBe("error_credential_review_already_rejected");
     expect(CODE_TO_MESSAGE_KEY[401243]).toBe("error_credential_review_already_revoked");
     expect(CODE_TO_MESSAGE_KEY[401244]).toBe("error_credential_review_blockchain_sync_failed");
+    expect(CODE_TO_MESSAGE_KEY[401245]).toBe("error_credential_review_already_expired");
+  });
+
+  it("maps the revoke already expired code", () => {
+    expect(CODE_TO_MESSAGE_KEY[400345]).toBe("error_credential_revoke_already_expired");
   });
 
   it("maps the step-3 competency link and credential update codes", () => {

@@ -73,7 +73,12 @@ export function CredentialSystemFacts({ credential: cred }: CredentialSystemFact
             key={line.labelKey}
             label={t(line.labelKey)}
             value={
-              <span className={cn("text-sm", line.tone === "error" ? "text-error" : "text-navy")}>
+              <span
+                className={cn(
+                  "text-sm",
+                  line.tone === "error" ? "text-error" : line.tone === "amber" ? "text-amber-800" : "text-navy",
+                )}
+              >
                 {formatDateTime(line.timestamp)}
               </span>
             }

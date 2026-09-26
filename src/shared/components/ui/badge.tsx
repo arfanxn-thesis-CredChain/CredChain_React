@@ -13,13 +13,14 @@ const badgeVariants = cva(
         error: "bg-error/10 text-error",
         green: "bg-green-100 text-green-700",
         gray: "bg-gray-100 text-gray-600",
+        amber: "bg-amber-100 text-amber-800",
       },
     },
     defaultVariants: { tone: "navy" },
   },
 );
 
-export type StatusTone = "navy" | "gold" | "error" | "green" | "gray";
+export type StatusTone = "navy" | "gold" | "error" | "green" | "gray" | "amber";
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,

@@ -123,6 +123,7 @@ export const CODE_TO_MESSAGE_KEY: Record<number, string> = {
   400341: "credential.revoke.not_found",
   400342: "credential.revoke.already_revoked",
   400344: "credential.revoke.not_approved",
+  400345: "error_credential_revoke_already_expired",
   400343: "credential.revoke.blockchain_sync_failed",
   400400: "credential.verify.success",
   400440: "credential.verify.failed",
@@ -197,6 +198,7 @@ export const CODE_TO_MESSAGE_KEY: Record<number, string> = {
   401242: "error_credential_review_already_rejected",
   401243: "error_credential_review_already_revoked",
   401244: "error_credential_review_blockchain_sync_failed",
+  401245: "error_credential_review_already_expired",
 
   // Competency link (40 + 13)
   401300: "success_credential_competency_link",

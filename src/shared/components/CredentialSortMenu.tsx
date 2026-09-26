@@ -25,12 +25,14 @@ const OPTIONS: SortOption[] = [
   {
     key: "newest",
     labelKey: "cred.sort.newest",
-    getSortString: (s) => (s === "revoked" ? "-revoked_at" : "-issued_at"),
+    getSortString: (s) =>
+      s === "revoked" ? "-revoked_at" : s === "expired" ? "-expires_at" : "-issued_at",
   },
   {
     key: "oldest",
     labelKey: "cred.sort.oldest",
-    getSortString: (s) => (s === "revoked" ? "revoked_at" : "issued_at"),
+    getSortString: (s) =>
+      s === "revoked" ? "revoked_at" : s === "expired" ? "expires_at" : "issued_at",
   },
   {
     key: "nameAZ",

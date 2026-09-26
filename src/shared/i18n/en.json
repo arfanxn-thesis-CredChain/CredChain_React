@@ -624,6 +624,7 @@
   "error_credential_issue_hash_failed": "Failed to compute credential file hash.",
   "error_credential_revoke_not_found": "One or more credentials were not found: {{.credential_ids}}",
   "error_credential_revoke_already_revoked": "One or more credentials are already revoked: {{.credential_ids}}",
+  "error_credential_revoke_already_expired": "One or more credentials are already expired: {{.credential_ids}}",
   "error_credential_revoke_blockchain_sync_failed": "Failed to revoke credentials on the blockchain.",
   "error_credential_verify_validation": "Invalid credential verify payload.",
   "error_credential_verify_extract_not_ready": "Credential verification is not ready yet, embeddings are still being computed.",
@@ -704,6 +705,7 @@
   "error_credential_review_already_approved": "One or more credentials are already approved.",
   "error_credential_review_already_rejected": "One or more credentials are already rejected.",
   "error_credential_review_already_revoked": "One or more credentials are already revoked.",
+  "error_credential_review_already_expired": "One or more credentials are already expired.",
   "error_credential_review_blockchain_sync_failed": "Failed to sync credential review to the blockchain.",
   "success_credential_competency_link": "Credential competencies linked successfully.",
   "success_credential_metadata_resolve": "Details completed.",
@@ -818,6 +820,7 @@
       "status": "Status",
       "all": "All",
       "active": "Active",
+      "expired": "Expired",
       "revoked": "Revoked",
       "pending": "Pending",
       "failed": "Failed",
@@ -918,6 +921,7 @@
       "registered": "Registered",
       "submitted": "Submitted",
       "revoked": "Revoked",
+      "expired": "Expired",
       "revokeMode": "Revoke",
       "reExtractMode": "Re-extract",
       "approveMode": "Approve",
@@ -931,6 +935,7 @@
       "deselect": "Deselect credential",
       "selectionCapReached": "Maximum of 100 credentials selected. Deselect some to add more.",
       "alreadyRevoked": "This credential is already revoked.",
+      "alreadyExpired": "This credential is already expired.",
       "alreadySucceeded": "Extraction has already succeeded.",
       "notPendingReview": "Only credentials pending review can be approved or rejected.",
       "detailsIncomplete": "Details incomplete",
@@ -981,6 +986,7 @@
       "pending": "Pending review",
       "approved": "Approved",
       "rejected": "Rejected",
+      "expired": "Expired",
       "revoked": "Revoked"
     },
     "review": {
@@ -989,6 +995,7 @@
       "pendingReview": "Pending review",
       "approved": "Approved & Registered",
       "rejected": "Rejected",
+      "expired": "Expired",
       "revoked": "Revoked"
     },
     "approve": {

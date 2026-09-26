@@ -625,6 +625,7 @@
   "error_credential_issue_hash_failed": "Gagal menghitung hash file kredensial.",
   "error_credential_revoke_not_found": "Satu atau lebih kredensial tidak ditemukan: {{.credential_ids}}",
   "error_credential_revoke_already_revoked": "Satu atau lebih kredensial sudah dicabut: {{.credential_ids}}",
+  "error_credential_revoke_already_expired": "Satu atau lebih kredensial sudah kedaluwarsa: {{.credential_ids}}",
   "error_credential_revoke_blockchain_sync_failed": "Gagal mencabut kredensial di blockchain.",
   "error_credential_verify_validation": "Data verifikasi kredensial tidak valid.",
   "error_credential_verify_extract_not_ready": "Verifikasi kredensial belum siap, embedding masih sedang dihitung.",
@@ -705,6 +706,7 @@
   "error_credential_review_already_approved": "Satu atau lebih kredensial sudah disetujui.",
   "error_credential_review_already_rejected": "Satu atau lebih kredensial sudah ditolak.",
   "error_credential_review_already_revoked": "Satu atau lebih kredensial sudah dicabut.",
+  "error_credential_review_already_expired": "Satu atau lebih kredensial sudah kedaluwarsa.",
   "error_credential_review_blockchain_sync_failed": "Gagal menyinkronkan tinjauan kredensial ke blockchain.",
   "success_credential_competency_link": "Kompetensi kredensial berhasil ditautkan.",
   "success_credential_metadata_resolve": "Data dilengkapi.",
@@ -822,6 +824,7 @@
       "status": "Status",
       "all": "Semua",
       "active": "Aktif",
+      "expired": "Kedaluwarsa",
       "revoked": "Dicabut",
       "pending": "Tertunda",
       "failed": "Gagal",
@@ -919,6 +922,7 @@
       "registered": "Didaftarkan",
       "submitted": "Diajukan",
       "revoked": "Dicabut",
+      "expired": "Kedaluwarsa",
       "revokeMode": "Cabut",
       "reExtractMode": "Ekstrak Ulang",
       "approveMode": "Setujui",
@@ -932,6 +936,7 @@
       "deselect": "Batal pilih kredensial",
       "selectionCapReached": "Maksimal 100 kredensial dipilih. Batalkan pilihan untuk menambah.",
       "alreadyRevoked": "Kredensial ini sudah dicabut.",
+      "alreadyExpired": "Kredensial ini telah kedaluwarsa.",
       "alreadySucceeded": "Ekstraksi sudah berhasil.",
       "notPendingReview": "Hanya kredensial yang menunggu tinjauan yang dapat disetujui atau ditolak.",
       "detailsIncomplete": "Data belum lengkap",
@@ -982,6 +987,7 @@
       "pending": "Menunggu tinjauan",
       "approved": "Disetujui",
       "rejected": "Ditolak",
+      "expired": "Kedaluwarsa",
       "revoked": "Dicabut"
     },
     "review": {
@@ -990,6 +996,7 @@
       "pendingReview": "Menunggu tinjauan",
       "approved": "Disetujui & Didaftarkan",
       "rejected": "Ditolak",
+      "expired": "Kedaluwarsa",
       "revoked": "Dicabut"
     },
     "approve": {

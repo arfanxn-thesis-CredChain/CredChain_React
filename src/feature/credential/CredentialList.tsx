@@ -62,13 +62,24 @@ import { HolderUnitFilterMenu } from "./components/HolderUnitFilterMenu";
 
 const MAX_SELECTION = 100;
 
-const REVIEW_FILTERS: Record<CredentialReviewStatus, string[]> = {
-  all: [],
-  pending: ["approved_at_", "rejected_at_"],
-  approved: ["approved_at!_", "revoked_at_"],
-  rejected: ["rejected_at!_"],
-  revoked: ["revoked_at!_"],
-};
+const PENDING_REVIEW_FILTERS = ["approved_at_", "rejected_at_"];
+
+function getReviewFilters(review: CredentialReviewStatus, nowISO: string): string[] {
+  switch (review) {
+    case "all":
+      return [];
+    case "pending":
+      return PENDING_REVIEW_FILTERS;
+    case "approved":
+      return ["approved_at!_", "revoked_at_"];
+    case "rejected":
+      return ["rejected_at!_"];
+    case "expired":
+      return ["approved_at!_", "revoked_at_", `expires_at<=${nowISO}`];
+    case "revoked":
+      return ["revoked_at!_"];
+  }
+}
 
 const EXTRACT_FILTERS: Record<CredentialExtractFilter, string[]> = {
   any: [],
@@ -81,11 +92,13 @@ const EXTRACT_FILTERS: Record<CredentialExtractFilter, string[]> = {
 const SORT_OPTIONS = [
   {
     key: "newest",
-    getSort: (r: CredentialReviewStatus) => (r === "revoked" ? "-revoked_at" : "-issued_at"),
+    getSort: (r: CredentialReviewStatus) =>
+      r === "revoked" ? "-revoked_at" : r === "expired" ? "-expires_at" : "-issued_at",
   },
   {
     key: "oldest",
-    getSort: (r: CredentialReviewStatus) => (r === "revoked" ? "revoked_at" : "issued_at"),
+    getSort: (r: CredentialReviewStatus) =>
+      r === "revoked" ? "revoked_at" : r === "expired" ? "expires_at" : "issued_at",
   },
   { key: "nameAZ", getSort: () => "name" },
   { key: "nameZA", getSort: () => "-name" },
@@ -109,6 +122,7 @@ const REVIEW_VALUES: CredentialReviewStatus[] = [
   "pending",
   "approved",
   "rejected",
+  "expired",
   "revoked",
 ];
 const EXTRACT_VALUES: CredentialExtractFilter[] = [
@@ -178,8 +192,10 @@ export function CredentialList() {
   const canManage = canAccessAny(currentUser?.role, [Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN]);
   const isHolder = currentUser?.role === Role.HOLDER;
 
+  const nowISO = useMemo(() => new Date().toISOString(), []);
+
   const filterArray: string[] = [
-    ...REVIEW_FILTERS[review],
+    ...getReviewFilters(review, nowISO),
     ...EXTRACT_FILTERS[extract],
     ...(typeId ? [`type_id=${typeId}`] : []),
     ...(orgId ? [`issuer_organization_id=${orgId}`] : []),
@@ -192,7 +208,7 @@ export function CredentialList() {
     queryFn: async () => {
       const endpoint = isHolder ? "/users/self/credentials" : "/credentials";
       const response = await api.get<PaginatedResponse<CredentialDTO>>(endpoint, {
-        params: { limit: 1, filters: REVIEW_FILTERS.pending },
+        params: { limit: 1, filters: PENDING_REVIEW_FILTERS },
       });
       return response.data.total;
     },

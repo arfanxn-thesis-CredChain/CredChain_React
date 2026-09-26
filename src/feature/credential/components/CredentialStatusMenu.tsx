@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@ui/dropdown-menu";
 
-export type CredentialReviewStatus = "all" | "pending" | "approved" | "rejected" | "revoked";
+export type CredentialReviewStatus = "all" | "pending" | "approved" | "rejected" | "expired" | "revoked";
 export type CredentialExtractFilter = "any" | "unextracted" | "pending" | "succeeded" | "failed";
 
 interface CredentialStatusMenuProps {
@@ -26,6 +26,7 @@ const REVIEW_OPTIONS: { key: CredentialReviewStatus; labelKey: string }[] = [
   { key: "pending", labelKey: "cred.review.pendingReview" },
   { key: "approved", labelKey: "cred.review.approved" },
   { key: "rejected", labelKey: "cred.review.rejected" },
+  { key: "expired", labelKey: "cred.review.expired" },
   { key: "revoked", labelKey: "cred.review.revoked" },
 ];
 

@@ -39,7 +39,7 @@ export interface AuthResponseDTO extends UserDTO {
  */
 export type ExtractState = "pending" | "succeeded" | "failed" | "unextracted";
 
-export type CredentialStatus = "pending" | "approved" | "rejected" | "revoked";
+export type CredentialStatus = "pending" | "approved" | "rejected" | "revoked" | "expired";
 
 export interface CredentialDTO {
   id: string;

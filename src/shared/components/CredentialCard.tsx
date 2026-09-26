@@ -122,7 +122,7 @@ function AuditStrip({
     return null;
   }
 
-  if (credential.status === "approved") {
+  if (credential.status === "approved" || credential.status === "expired") {
     const wasSubmittedByHolder = credential.submitter_user_id === credential.holder_user_id;
     const label = wasSubmittedByHolder ? t("cred.audit.approvedBy") : t("cred.audit.registeredBy");
     const userId = credential.issuer_user_id;
@@ -326,7 +326,11 @@ export function CredentialCard({
         onSelect?.();
       } else if (!isSelectable) {
         if (selectionMode === "revoke") {
-          notify.info("cred.card.alreadyRevoked");
+          if (credential.status === "expired") {
+            notify.info("cred.card.alreadyExpired");
+          } else {
+            notify.info("cred.card.alreadyRevoked");
+          }
         } else if (selectionMode === "approve" || selectionMode === "reject") {
           notify.info("cred.card.notPendingReview");
         } else {
@@ -396,13 +400,21 @@ export function CredentialCard({
                   key={line.labelKey}
                   className={cn(
                     "flex items-center gap-1.5",
-                    line.tone === "error" ? "text-error" : "",
+                    line.tone === "error"
+                      ? "text-error"
+                      : line.tone === "amber"
+                        ? "text-amber-800"
+                        : "",
                   )}
                 >
                   <Calendar
                     className={cn(
                       "h-3.5 w-3.5 shrink-0",
-                      line.tone === "error" ? "" : "text-gray-400",
+                      line.tone === "error"
+                        ? ""
+                        : line.tone === "amber"
+                          ? "text-amber-700"
+                          : "text-gray-400",
                     )}
                     aria-hidden="true"
                   />

@@ -3,7 +3,7 @@ import type { CredentialDTO } from "@shared/types/api";
 export interface LifecycleDateLine {
   labelKey: string;
   timestamp: string | null;
-  tone?: "error";
+  tone?: "error" | "amber";
 }
 
 /**
@@ -13,7 +13,7 @@ export interface LifecycleDateLine {
  * the system event date instead — when it was submitted, approved, rejected,
  * or (for revoked) both approved and revoked.
  */
-export function lifecycleDateLines(c: Pick<CredentialDTO, "status" | "created_at" | "approved_at" | "rejected_at" | "revoked_at" | "submitter_user_id" | "holder_user_id">): LifecycleDateLine[] {
+export function lifecycleDateLines(c: Pick<CredentialDTO, "status" | "created_at" | "approved_at" | "rejected_at" | "revoked_at" | "expires_at" | "submitter_user_id" | "holder_user_id">): LifecycleDateLine[] {
   const isSubmission = Boolean(c.submitter_user_id && c.submitter_user_id === c.holder_user_id);
   const approvedLabel = isSubmission ? "cred.lifecycle.approved" : "cred.card.registered";
 
@@ -28,6 +28,11 @@ export function lifecycleDateLines(c: Pick<CredentialDTO, "status" | "created_at
       return [
         { labelKey: approvedLabel, timestamp: c.approved_at },
         { labelKey: "cred.card.revoked", timestamp: c.revoked_at, tone: "error" },
+      ];
+    case "expired":
+      return [
+        { labelKey: approvedLabel, timestamp: c.approved_at },
+        { labelKey: "cred.card.expired", timestamp: c.expires_at, tone: "amber" },
       ];
   }
 }

@@ -62,6 +62,15 @@ describe("CredentialStatusMenu", () => {
     expect(onExtractChange).not.toHaveBeenCalled();
   });
 
+  it("selecting the expired review option calls onReviewChange with expired", async () => {
+    const user = userEvent.setup();
+    const onReviewChange = vi.fn();
+    renderMenu({ onReviewChange });
+    await user.click(screen.getByRole("button", { name: /status/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /^expired$/i }));
+    expect(onReviewChange).toHaveBeenCalledWith("expired");
+  });
+
   it("selecting an extraction option keeps the review filter", async () => {
     const user = userEvent.setup();
     const onReviewChange = vi.fn();

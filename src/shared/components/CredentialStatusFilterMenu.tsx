@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@ui/dropdown-menu";
 
-export type CredentialStatusFilter = "all" | "active" | "revoked" | "pending" | "failed";
+export type CredentialStatusFilter = "all" | "active" | "expired" | "revoked" | "pending" | "failed";
 
 interface CredentialStatusFilterMenuProps {
   value: CredentialStatusFilter;
@@ -18,6 +18,7 @@ interface CredentialStatusFilterMenuProps {
 const OPTIONS: { key: CredentialStatusFilter; labelKey: string }[] = [
   { key: "all", labelKey: "cred.filter.all" },
   { key: "active", labelKey: "cred.filter.active" },
+  { key: "expired", labelKey: "cred.filter.expired" },
   { key: "revoked", labelKey: "cred.filter.revoked" },
   { key: "pending", labelKey: "cred.filter.pending" },
   { key: "failed", labelKey: "cred.filter.failed" },

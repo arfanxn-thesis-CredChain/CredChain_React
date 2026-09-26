@@ -14,6 +14,7 @@ const TONE_BY_STATUS: Record<CredentialStatus, string> = {
   approved: "bg-green-100",
   rejected: "bg-error/10",
   revoked: "bg-gray-100",
+  expired: "bg-amber-100",
 };
 
 describe("CredentialStatusBadge", () => {
@@ -22,6 +23,7 @@ describe("CredentialStatusBadge", () => {
     ["approved", "Approved"],
     ["rejected", "Rejected"],
     ["revoked", "Revoked"],
+    ["expired", "Expired"],
   ])("renders label for %s", (status, label) => {
     render(<CredentialStatusBadge status={status} />, { wrapper: TestProviders });
     expect(screen.getByText(label)).toBeInTheDocument();
@@ -32,6 +34,7 @@ describe("CredentialStatusBadge", () => {
     ["approved", "Approved"],
     ["rejected", "Rejected"],
     ["revoked", "Revoked"],
+    ["expired", "Expired"],
   ])("uses the correct tone for %s", (status, label) => {
     render(<CredentialStatusBadge status={status} />, { wrapper: TestProviders });
     const pill = screen.getByText(label).closest("span");
@@ -66,5 +69,8 @@ describe("CredentialStatusBadge", () => {
 
     rerender(<CredentialStatusBadge status="approved" isSubmission={true} />);
     expect(screen.getByText("Disetujui")).toBeInTheDocument();
+
+    rerender(<CredentialStatusBadge status="expired" />);
+    expect(screen.getByText("Kedaluwarsa")).toBeInTheDocument();
   });
 });

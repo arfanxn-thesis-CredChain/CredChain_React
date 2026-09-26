@@ -63,11 +63,13 @@ import { useStore } from "@app/store";
 const CRED_SORT_OPTIONS = [
   {
     key: "newest",
-    getSort: (s: CredentialStatusFilter) => (s === "revoked" ? "-revoked_at" : "-issued_at"),
+    getSort: (s: CredentialStatusFilter) =>
+      s === "revoked" ? "-revoked_at" : s === "expired" ? "-expires_at" : "-issued_at",
   },
   {
     key: "oldest",
-    getSort: (s: CredentialStatusFilter) => (s === "revoked" ? "revoked_at" : "issued_at"),
+    getSort: (s: CredentialStatusFilter) =>
+      s === "revoked" ? "revoked_at" : s === "expired" ? "expires_at" : "issued_at",
   },
   { key: "nameAZ", getSort: () => "name" },
   { key: "nameZA", getSort: () => "-name" },
@@ -127,6 +129,8 @@ export function UserDetail() {
     }
   }, [searchParam]);
 
+  const nowISO = useMemo(() => new Date().toISOString(), []);
+
   const credFilterArray: string[] = (() => {
     const roleField = isIssuerOrAbove ? "issuer_user_id" : "holder_user_id";
     const base = [`${roleField}=${id}`];
@@ -135,6 +139,8 @@ export function UserDetail() {
         return base;
       case "active":
         return [...base, "revoked_at_", "extract_failed_at_"];
+      case "expired":
+        return [...base, "revoked_at_", "approved_at!_", `expires_at<=${nowISO}`];
       case "revoked":
         return [...base, "revoked_at!_", "extract_failed_at_"];
       case "pending":
