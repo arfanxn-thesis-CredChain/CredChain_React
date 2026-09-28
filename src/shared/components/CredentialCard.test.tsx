@@ -98,7 +98,7 @@ describe("CredentialCard", () => {
     const pendingCredential = makeCredential({
       id: "cred_pending",
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       rejected_at: null,
     });
     const approvedCredential = makeCredential({ id: "cred_approved" });
@@ -117,7 +117,7 @@ describe("CredentialCard", () => {
     const pendingCredential = makeCredential({
       id: "cred_pending",
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       rejected_at: null,
     });
     const approvedCredential = makeCredential({ id: "cred_approved" });
@@ -136,7 +136,7 @@ describe("CredentialCard", () => {
     const user = userEvent.setup();
     const credential = makeCredential({
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       rejected_at: null,
     });
     const onSelect = vi.fn();
@@ -196,7 +196,7 @@ describe("CredentialCard", () => {
     const credential = makeCredential({
       id: "cred_pending",
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       rejected_at: null,
       created_at: "2026-02-03T00:00:00Z",
     });
@@ -210,7 +210,7 @@ describe("CredentialCard", () => {
   it("shows approved date for an approved submission credential", () => {
     const credential = makeCredential({
       status: "approved",
-      approved_at: "2026-03-04T00:00:00Z",
+      activated_at: "2026-03-04T00:00:00Z",
     });
 
     render(<CredentialCard credential={credential} isHolder />, { wrapper: TestProviders });
@@ -221,7 +221,7 @@ describe("CredentialCard", () => {
   it("shows submitted date, not registered date, for a holder viewing their own pending credential", () => {
     const credential = makeCredential({
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       rejected_at: null,
       created_at: "2026-02-03T00:00:00Z",
       issued_at: "2022-01-01T00:00:00Z",
@@ -546,7 +546,7 @@ describe("CredentialCard", () => {
   });
 
   it("hides review affordances when canReview is false", () => {
-    const credential = makeCredential({ status: "pending", approved_at: null });
+    const credential = makeCredential({ status: "pending", activated_at: null });
     render(<CredentialCard credential={credential} />, { wrapper: TestProviders });
 
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
@@ -554,7 +554,7 @@ describe("CredentialCard", () => {
   });
 
   it("hides review affordances in selection mode even when canReview is true", () => {
-    const credential = makeCredential({ status: "pending", approved_at: null });
+    const credential = makeCredential({ status: "pending", activated_at: null });
     render(<CredentialCard credential={credential} canReview selectionMode="reject" />, {
       wrapper: TestProviders,
     });
@@ -565,7 +565,7 @@ describe("CredentialCard", () => {
   it("shows the Complete details CTA instead of Approve when details are unresolved", () => {
     const credential = makeCredential({
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       unresolved_metadata: ["competency"],
     });
     render(<CredentialCard credential={credential} canReview />, { wrapper: TestProviders });
@@ -580,7 +580,7 @@ describe("CredentialCard", () => {
     const credential = makeCredential({
       id: "cred_pending",
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       unresolved_metadata: ["competency"],
     });
     render(<CredentialCard credential={credential} canReview />, { wrapper: TestProviders });
@@ -592,7 +592,7 @@ describe("CredentialCard", () => {
   it("calls onApprove with the credential id", async () => {
     const user = userEvent.setup();
     const onApprove = vi.fn();
-    const credential = makeCredential({ id: "cred_pending", status: "pending", approved_at: null });
+    const credential = makeCredential({ id: "cred_pending", status: "pending", activated_at: null });
 
     render(<CredentialCard credential={credential} canReview onApprove={onApprove} />, {
       wrapper: TestProviders,
@@ -606,7 +606,7 @@ describe("CredentialCard", () => {
   it("reveals an inline reason field on Reject click and submits it", async () => {
     const user = userEvent.setup();
     const onReject = vi.fn();
-    const credential = makeCredential({ id: "cred_pending", status: "pending", approved_at: null });
+    const credential = makeCredential({ id: "cred_pending", status: "pending", activated_at: null });
 
     render(<CredentialCard credential={credential} canReview onReject={onReject} />, {
       wrapper: TestProviders,
@@ -624,7 +624,7 @@ describe("CredentialCard", () => {
   it("shows competency names on a pending card with resolved details", () => {
     const credential = makeCredential({
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       competencies: [
         { id: "comp_1", name: "Data Analysis" },
         { id: "comp_2", name: "Machine Learning" },
@@ -663,7 +663,7 @@ describe("CredentialCard", () => {
   it("does not use text-gray-400 for visible text nodes", () => {
     const credential = makeCredential({
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       unresolved_metadata: ["type"],
       extract_state: "pending",
       submitted_issuer_organization_name: "Acme Institute",
@@ -685,7 +685,7 @@ describe("CredentialCard", () => {
   it("renders competencies directly even when metadata is unresolved", () => {
     const credential = makeCredential({
       status: "pending",
-      approved_at: null,
+      activated_at: null,
       unresolved_metadata: ["type"],
       competencies: [{ id: "comp_1", name: "Data Analysis" }],
     });
@@ -699,7 +699,7 @@ describe("CredentialCard", () => {
   it("blocks reject submission when the reason is empty", async () => {
     const user = userEvent.setup();
     const onReject = vi.fn();
-    const credential = makeCredential({ status: "pending", approved_at: null });
+    const credential = makeCredential({ status: "pending", activated_at: null });
 
     render(<CredentialCard credential={credential} canReview onReject={onReject} />, {
       wrapper: TestProviders,
@@ -775,7 +775,7 @@ describe("CredentialCard", () => {
 
   describe("bulk selection muting", () => {
     it("mutes card and disables checkbox when credential is not eligible for mode", () => {
-      const credential = makeCredential({ status: "pending", approved_at: null });
+      const credential = makeCredential({ status: "pending", activated_at: null });
 
       render(<CredentialCard credential={credential} selectionMode="revoke" />, {
         wrapper: TestProviders,
@@ -958,7 +958,7 @@ describe("CredentialCard", () => {
     it("renders no audit strip when credential is pending", () => {
       const credential = makeCredential({
         status: "pending",
-        approved_at: null,
+        activated_at: null,
       });
 
       render(<CredentialCard credential={credential} />, { wrapper: TestProviders });

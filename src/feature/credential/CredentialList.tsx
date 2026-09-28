@@ -62,7 +62,7 @@ import { HolderUnitFilterMenu } from "./components/HolderUnitFilterMenu";
 
 const MAX_SELECTION = 100;
 
-const PENDING_REVIEW_FILTERS = ["approved_at_", "rejected_at_"];
+const PENDING_REVIEW_FILTERS = ["activated_at_", "rejected_at_"];
 
 function getReviewFilters(review: CredentialReviewStatus, nowISO: string): string[] {
   switch (review) {
@@ -71,11 +71,11 @@ function getReviewFilters(review: CredentialReviewStatus, nowISO: string): strin
     case "pending":
       return PENDING_REVIEW_FILTERS;
     case "approved":
-      return ["approved_at!_", "revoked_at_"];
+      return ["activated_at!_", "revoked_at_"];
     case "rejected":
       return ["rejected_at!_"];
     case "expired":
-      return ["approved_at!_", "revoked_at_", `expires_at<=${nowISO}`];
+      return ["activated_at!_", "revoked_at_", `expires_at<=${nowISO}`];
     case "revoked":
       return ["revoked_at!_"];
   }

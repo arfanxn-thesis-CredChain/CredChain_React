@@ -140,7 +140,7 @@ export function UserDetail() {
       case "active":
         return [...base, "revoked_at_", "extract_failed_at_"];
       case "expired":
-        return [...base, "revoked_at_", "approved_at!_", `expires_at<=${nowISO}`];
+        return [...base, "revoked_at_", "activated_at!_", `expires_at<=${nowISO}`];
       case "revoked":
         return [...base, "revoked_at!_", "extract_failed_at_"];
       case "pending":

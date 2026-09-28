@@ -66,9 +66,7 @@ export function CredentialHeroCard({
     onReject([{ id: cred.id, reason: reason.trim() }]);
   };
 
-  const statusBadges = (
-    <div className="flex flex-wrap items-center gap-3">
-      const isSubmission = Boolean(
+  const isSubmission = Boolean(
     cred.submitter_user_id && cred.submitter_user_id === cred.holder_user_id,
   );
 

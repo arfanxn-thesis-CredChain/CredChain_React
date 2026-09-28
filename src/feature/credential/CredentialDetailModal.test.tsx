@@ -16,7 +16,7 @@ function credentialResponse(overrides = {}) {
     name: "Master of Science",
     number: "CRED/2026/0099",
     status: "pending",
-    approved_at: null,
+    activated_at: null,
     rejected_at: null,
     file_uri: "ipfs://test-hash",
     ...overrides,
@@ -131,7 +131,7 @@ describe("CredentialDetailModal", () => {
       http.get("*/api/credentials/:id", () =>
         credentialResponse({
           status: "approved",
-          approved_at: "2026-02-01T00:00:00Z",
+          activated_at: "2026-02-01T00:00:00Z",
         }),
       ),
     );

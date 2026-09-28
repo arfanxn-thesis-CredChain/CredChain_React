@@ -60,7 +60,7 @@ function credentialsResponse(items: CredentialDTO[]) {
 function pendingCredential(overrides: Partial<CredentialDTO> = {}): CredentialDTO {
   return makeCredential({
     status: "pending",
-    approved_at: null,
+    activated_at: null,
     rejected_at: null,
     ...overrides,
   });
@@ -100,7 +100,7 @@ describe("CredentialList", () => {
     expect(screen.getByRole("button", { name: /status/i })).toBeInTheDocument();
   });
 
-  it("sends approved_at_ and rejected_at_ filters when Pending review is selected", async () => {
+  it("sends activated_at_ and rejected_at_ filters when Pending review is selected", async () => {
     const recorded: string[] = [];
     server.use(
       http.get("*/api/credentials", ({ request }) => {
@@ -117,7 +117,7 @@ describe("CredentialList", () => {
 
     await waitFor(() => {
       const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
-      expect(filters).toContain("approved_at_");
+      expect(filters).toContain("activated_at_");
       expect(filters).toContain("rejected_at_");
     });
   });
@@ -138,7 +138,7 @@ describe("CredentialList", () => {
     await user.click(await screen.findByRole("menuitem", { name: /pending review/i }));
     await waitFor(() => {
       const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
-      expect(filters).toContain("approved_at_");
+      expect(filters).toContain("activated_at_");
     });
 
     await user.click(screen.getByRole("button", { name: /pending review/i }));
@@ -146,7 +146,7 @@ describe("CredentialList", () => {
 
     await waitFor(() => {
       const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
-      expect(filters).toContain("approved_at_");
+      expect(filters).toContain("activated_at_");
       expect(filters).toContain("rejected_at_");
       expect(filters).toContain("extract_failed_at!_");
     });
@@ -470,7 +470,7 @@ describe("CredentialList", () => {
 
     await waitFor(() => {
       const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
-      expect(filters).toContain("approved_at_");
+      expect(filters).toContain("activated_at_");
       expect(filters).toContain("rejected_at_");
     });
 
@@ -479,7 +479,7 @@ describe("CredentialList", () => {
     await waitFor(() => {
       const lastRequest = listRequestsOf(recorded).at(-1);
       const filters = lastRequest ? lastRequest.searchParams.getAll("filters") : [];
-      expect(filters).not.toContain("approved_at_");
+      expect(filters).not.toContain("activated_at_");
       expect(filters).not.toContain("rejected_at_");
     });
   });
@@ -500,7 +500,7 @@ describe("CredentialList", () => {
 
     await waitFor(() => {
       const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
-      expect(filters).toContain("approved_at!_");
+      expect(filters).toContain("activated_at!_");
       expect(filters).toContain("revoked_at_");
     });
 
@@ -509,7 +509,7 @@ describe("CredentialList", () => {
     await waitFor(() => {
       const lastRequest = listRequestsOf(recorded).at(-1);
       const filters = lastRequest ? lastRequest.searchParams.getAll("filters") : [];
-      expect(filters).not.toContain("approved_at!_");
+      expect(filters).not.toContain("activated_at!_");
       expect(filters).not.toContain("revoked_at_");
     });
   });

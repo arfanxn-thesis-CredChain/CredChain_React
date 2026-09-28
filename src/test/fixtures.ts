@@ -51,7 +51,7 @@ export function makeCredential(overrides: Partial<CredentialDTO> = {}): Credenti
     revoked_at: null,
     expires_at: null,
     status: "approved",
-    approved_at: "2026-01-01T00:00:00Z",
+    activated_at: "2026-01-01T00:00:00Z",
     rejecter_user_id: null,
     rejected_at: null,
     rejection_reason: null,

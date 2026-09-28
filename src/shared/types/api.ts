@@ -73,7 +73,7 @@ export interface CredentialDTO {
   revoked_at: string | null;
   expires_at: string | null;
   status: CredentialStatus;
-  approved_at: string | null;
+  activated_at: string | null;
   rejecter_user_id: string | null;
   rejected_at: string | null;
   rejection_reason: string | null;

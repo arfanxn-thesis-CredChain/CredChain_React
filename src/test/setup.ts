@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
 import { afterAll, afterEach, beforeAll } from "vitest";
+import { transferableAbortController } from "node:util";
+
+// React Router uses Node's Request; keep its signals compatible with Undici.
+const nativeController = transferableAbortController();
+globalThis.AbortController = Object.getPrototypeOf(nativeController).constructor;
+globalThis.AbortSignal = Object.getPrototypeOf(nativeController.signal).constructor;
 import { server } from "./msw/server";
 
 // Polyfill: jsdom's File doesn't implement arrayBuffer() but Blob does.
