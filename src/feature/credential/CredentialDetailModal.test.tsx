@@ -37,6 +37,7 @@ describe("CredentialDetailModal", () => {
         unit_id: null,
         joined_year: null,
         email: "admin@test.com",
+        language: "id",
         birth_date: null,
         gender: null,
         role: Role.ADMIN,

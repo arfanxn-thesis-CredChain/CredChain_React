@@ -1,4 +1,9 @@
 import { Languages } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { userKeys } from "@feature/user/api/keys";
+import type { UserDTO } from "@shared/types/api";
+import { api } from "@shared/api/client";
+import { notify } from "@shared/lib/notify";
 import { useTranslation } from "react-i18next";
 import { useStore } from "@app/store";
 import {
@@ -20,12 +25,44 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ variant = "light" }: LanguageSwitcherProps) {
   const { i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const setLocale = useStore((s) => s.setLocale);
   const currentLocale = useStore((s) => s.locale);
+  const languageSavePending = useStore((s) => s.languageSavePending);
+  const setLanguageSavePending = useStore((s) => s.setLanguageSavePending);
 
-  const change = (lng: "en" | "id") => {
-    void i18n.changeLanguage(lng);
+  const change = async (lng: "en" | "id") => {
+    const state = useStore.getState();
+    if (lng === state.locale || state.languageSavePending) return;
+    const previous = state.locale;
     setLocale(lng);
+    void i18n.changeLanguage(lng);
+    if (!state.isAuthenticated || !state.user) return;
+
+    const accountId = state.user.id;
+    setLanguageSavePending(true);
+    try {
+      await queryClient.cancelQueries({ queryKey: userKeys.self() });
+      const response = await api.put<{ language: "en" | "id" }>("/users/self/language", {
+        language: lng,
+      });
+      const latest = useStore.getState();
+      if (latest.isAuthenticated && latest.user?.id === accountId) {
+        const updated = { ...latest.user, language: response.data.language };
+        queryClient.setQueryData<UserDTO>(userKeys.self(), updated);
+        useStore.setState({ user: updated, locale: updated.language });
+      }
+    } catch {
+      const latest = useStore.getState();
+      if (latest.isAuthenticated && latest.user?.id === accountId) {
+        queryClient.setQueryData<UserDTO>(userKeys.self(), latest.user);
+        setLocale(previous);
+        void i18n.changeLanguage(previous);
+        notify.error("language.saveFailed");
+      }
+    } finally {
+      setLanguageSavePending(false);
+    }
   };
 
   const triggerColor =
@@ -48,7 +85,8 @@ export function LanguageSwitcher({ variant = "light" }: LanguageSwitcherProps) {
         {LOCALES.map((locale) => (
           <DropdownMenuItem
             key={locale.code}
-            onClick={() => change(locale.code)}
+            onClick={() => void change(locale.code)}
+            disabled={languageSavePending}
             className={cn(
               "flex cursor-pointer items-center justify-between",
               currentLocale === locale.code && "font-bold",

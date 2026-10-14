@@ -10,6 +10,7 @@ export function makeUser(overrides: Partial<UserDTO> = {}): UserDTO {
     unit_id: null,
     joined_year: null,
     email: "test@credchain.demo",
+    language: "id",
     birth_date: null,
     gender: null,
     role,

@@ -40,6 +40,7 @@ beforeEach(async () => {
       unit_id: null,
       joined_year: null,
       email: "admin@test.com",
+      language: "en",
       birth_date: null,
       gender: null,
       role: Role.ADMIN,

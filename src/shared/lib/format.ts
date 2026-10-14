@@ -32,10 +32,13 @@ export function formatISODate(date: Date): string {
 
 export function formatDate(value: string | number | Date | null, locale = "en"): string {
   if (!value) return "-";
-  const date = new Date(value);
+  const date =
+    typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+      ? new Date(`${value}T00:00:00`)
+      : new Date(value);
   return new Intl.DateTimeFormat(locale === "id" ? "id-ID" : "en-US", {
     year: "numeric",
-    month: "short",
+    month: locale === "id" ? "long" : "short",
     day: "numeric",
   }).format(date);
 }
@@ -43,7 +46,13 @@ export function formatDate(value: string | number | Date | null, locale = "en"):
 export function formatDateTime(value: string | number | Date | null, locale = "en"): string {
   if (!value) return "-";
   const date = new Date(value);
-  return new Intl.DateTimeFormat(locale === "id" ? "id-ID" : "en-US", {
+  if (locale === "id") {
+    const day = formatDate(date, "id");
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
+    return `${day}, ${hour}.${minute}`;
+  }
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",

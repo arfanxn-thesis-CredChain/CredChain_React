@@ -16,7 +16,7 @@ interface CredentialSystemFactsProps {
  * with copy buttons providing the full value.
  */
 export function CredentialSystemFacts({ credential: cred }: CredentialSystemFactsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <div className="mt-6 border-t border-gray-100 pt-6">
@@ -76,10 +76,14 @@ export function CredentialSystemFacts({ credential: cred }: CredentialSystemFact
               <span
                 className={cn(
                   "text-sm",
-                  line.tone === "error" ? "text-error" : line.tone === "amber" ? "text-amber-800" : "text-navy",
+                  line.tone === "error"
+                    ? "text-error"
+                    : line.tone === "amber"
+                      ? "text-amber-800"
+                      : "text-navy",
                 )}
               >
-                {formatDateTime(line.timestamp)}
+                {formatDateTime(line.timestamp, i18n.language)}
               </span>
             }
             tone={line.tone}

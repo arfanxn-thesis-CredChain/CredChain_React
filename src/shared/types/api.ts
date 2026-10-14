@@ -12,6 +12,7 @@ export interface UserDTO {
   unit_id: string | null;
   joined_year: number | null;
   email: string;
+  language: "en" | "id";
   birth_date: string | null;
   gender: Gender | null;
   meta: Record<string, unknown> | null;

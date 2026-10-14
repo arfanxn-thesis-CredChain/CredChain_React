@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { truncateAddress, truncateId, truncateHash, formatDate, toKebabCase } from "./format";
+import {
+  truncateAddress,
+  truncateId,
+  truncateHash,
+  formatDate,
+  formatDateTime,
+  toKebabCase,
+} from "./format";
 
 describe("format", () => {
   describe("truncateAddress", () => {
@@ -47,8 +54,32 @@ describe("format", () => {
       expect(formatDate("2026-06-18", "en")).toMatch(/Jun 18, 2026/);
     });
 
+    it("formats Indonesian with full month", () => {
+      expect(formatDate(new Date(2025, 5, 25), "id")).toBe("25 Juni 2025");
+    });
+
+    it("does not shift a date-only string to the previous day in western timezones", () => {
+      expect(formatDate("2025-06-25", "id")).toBe("25 Juni 2025");
+    });
+
     it("returns a dash for null values", () => {
       expect(formatDate(null)).toBe("-");
+    });
+  });
+
+  describe("formatDateTime", () => {
+    it("formats Indonesian dates with full month and 24-hour time", () => {
+      expect(formatDateTime(new Date(2025, 5, 25, 7, 0), "id")).toBe("25 Juni 2025, 07.00");
+    });
+
+    it("retains English time formatting", () => {
+      expect(formatDateTime(new Date(2025, 5, 25, 7, 0), "en")).toMatch(/Jun 25, 2025, 07:00 AM/);
+    });
+  });
+
+  describe("locale", () => {
+    it("keeps date-only input local", () => {
+      expect(formatDate(new Date(2025, 5, 25), "id")).toBe("25 Juni 2025");
     });
   });
 

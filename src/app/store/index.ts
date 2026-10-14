@@ -5,6 +5,8 @@ import type { UserDTO } from "@shared/types/api";
 interface AuthSlice {
   user: UserDTO | null;
   isAuthenticated: boolean;
+  languageSavePending: boolean;
+  setLanguageSavePending: (pending: boolean) => void;
   setUser: (user: UserDTO) => void;
   clearUser: () => void;
 }
@@ -25,8 +27,16 @@ export const useStore = create<StoreState>()(
       // Auth slice
       user: null,
       isAuthenticated: false,
-      setUser: (user) => set({ user, isAuthenticated: true }),
-      clearUser: () => set({ user: null, isAuthenticated: false }),
+      languageSavePending: false,
+      setLanguageSavePending: (pending) => set({ languageSavePending: pending }),
+      setUser: (user) =>
+        set((state) => ({
+          user,
+          isAuthenticated: true,
+          locale:
+            state.languageSavePending && state.user?.id === user.id ? state.locale : user.language,
+        })),
+      clearUser: () => set({ user: null, isAuthenticated: false, languageSavePending: false }),
 
       // UI slice
       overviewSidebarOpen: false,

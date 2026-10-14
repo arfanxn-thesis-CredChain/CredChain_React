@@ -44,7 +44,8 @@ function check(lang) {
   const fe = flatKeys(loadJson(fePath));
   const be = flatKeys(loadJson(bePath));
 
-  const missingInFe = [...be].filter((k) => !fe.has(k));
+  // Worker-only mail copy is translated by Go and never rendered in React.
+  const missingInFe = [...be].filter((k) => !k.startsWith("mail_") && !fe.has(k));
   const extraInFe = [...fe].filter((k) => !be.has(k));
 
   let problems = 0;

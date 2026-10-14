@@ -95,7 +95,10 @@ function buildDefaults(user: UserDTO): UserDetailEditInput {
   };
 }
 
-function unitPathLabel(unitId: string | null | undefined, byId: Map<string, HolderUnitDTO>): string {
+function unitPathLabel(
+  unitId: string | null | undefined,
+  byId: Map<string, HolderUnitDTO>,
+): string {
   if (!unitId) return "—";
   const unit = byId.get(unitId);
   if (!unit) return unitId;
@@ -103,7 +106,7 @@ function unitPathLabel(unitId: string | null | undefined, byId: Map<string, Hold
 }
 
 export function UserDetail() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { data: user, isLoading, isError } = useUser(id ?? "");
   const currentUser = useStore((s) => s.user);
@@ -232,15 +235,13 @@ export function UserDetail() {
   const restoreUsers = useRestoreUsers();
   const { confirm, dialog } = useConfirm();
   const { data: units } = useUserUnits();
-  const unitsById = useMemo(
-    () => new Map((units ?? []).map((u) => [u.id, u])),
-    [units],
-  );
+  const unitsById = useMemo(() => new Map((units ?? []).map((u) => [u.id, u])), [units]);
 
   const isSelf = !!user && user.id === currentUser?.id;
   const canEdit = !!user && canEditUser(currentUser, user) && !user.deleted_at;
   const canDelete = !!user && !!currentUser && canDeleteUser(currentUser, user) && !user.deleted_at;
-  const canRestore = !!user?.deleted_at && canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN]);
+  const canRestore =
+    !!user?.deleted_at && canAccessAny(currentUser?.role, [Role.ADMIN, Role.SUPER_ADMIN]);
 
   const editForm = useForm<UserDetailEditInput>({
     resolver: zodResolver(userDetailEditSchema),
@@ -427,7 +428,7 @@ export function UserDetail() {
         {
           key: "birth_date",
           label: t("user.edit.birthDate"),
-          readValue: user.birth_date ? formatDate(user.birth_date) : "—",
+          readValue: user.birth_date ? formatDate(user.birth_date, i18n.language) : "—",
           editControl: (
             <Input
               type="date"
@@ -626,18 +627,18 @@ export function UserDetail() {
               <DetailRow
                 icon={Clock}
                 label={t("user.detail.created")}
-                value={formatDateTime(user.created_at)}
+                value={formatDateTime(user.created_at, i18n.language)}
               />
               <DetailRow
                 icon={CalendarClock}
                 label={t("user.detail.updated")}
-                value={formatDateTime(user.updated_at)}
+                value={formatDateTime(user.updated_at, i18n.language)}
               />
               {user.deleted_at && (
                 <DetailRow
                   icon={Trash2}
                   label={t("user.detail.deleted")}
-                  value={formatDateTime(user.deleted_at)}
+                  value={formatDateTime(user.deleted_at, i18n.language)}
                   tone="error"
                 />
               )}

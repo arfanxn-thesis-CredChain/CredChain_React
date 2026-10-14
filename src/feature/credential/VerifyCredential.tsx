@@ -76,7 +76,7 @@ const SIMILARITY_BAR_COLOR: Record<string, string> = {
 type VerifyState = "idle" | "verifying" | "done";
 
 export function VerifyCredential() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [state, setState] = useState<VerifyState>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -221,7 +221,9 @@ export function VerifyCredential() {
               {tier === "expired" && result.credential?.expires_at && (
                 <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-white/90">
                   <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  {t("cred.verify.expiredOn", { date: formatDate(result.credential.expires_at) })}
+                  {t("cred.verify.expiredOn", {
+                    date: formatDate(result.credential.expires_at, i18n.language),
+                  })}
                 </p>
               )}
             </div>
@@ -285,7 +287,7 @@ export function VerifyCredential() {
                       status={result.credential!.status}
                       isSubmission={Boolean(
                         result.credential!.submitter_user_id &&
-                          result.credential!.submitter_user_id === result.credential!.holder_user_id,
+                        result.credential!.submitter_user_id === result.credential!.holder_user_id,
                       )}
                     />
                     {meta?.issuing_organization_name && (
@@ -297,7 +299,7 @@ export function VerifyCredential() {
                   </div>
 
                   {/* Name */}
-                  <h4 className="font-bold text-lg text-navy">{result.credential!.name}</h4>
+                  <h4 className="text-lg font-bold text-navy">{result.credential!.name}</h4>
 
                   {/* Credential ULID — shield icon */}
                   <div className="mt-2 flex items-center gap-2 text-xs">
@@ -358,7 +360,7 @@ export function VerifyCredential() {
                     result.credential!.issuer_organization_id) && (
                     <div className="mt-1.5 flex items-center gap-2 text-xs">
                       <Building2 className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
-                      <span className="shrink-0 text-gray-500 font-medium">
+                      <span className="shrink-0 font-medium text-gray-500">
                         {t("cred.parties.issuerOrganization")}:
                       </span>
                       {result.credential!.issuer_organization?.name ? (
@@ -433,8 +435,12 @@ export function VerifyCredential() {
                         />
                         {result.credential!.revocation_reason && (
                           <div className="rounded-md bg-error/10 p-2.5 text-xs text-error">
-                            <span className="font-semibold">{t("cred.revoke.modal.reasonLabel")}: </span>
-                            <span className="line-clamp-2">{result.credential!.revocation_reason}</span>
+                            <span className="font-semibold">
+                              {t("cred.revoke.modal.reasonLabel")}:{" "}
+                            </span>
+                            <span className="line-clamp-2">
+                              {result.credential!.revocation_reason}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -443,12 +449,16 @@ export function VerifyCredential() {
                   {/* Issued Date */}
                   <div className="flex items-center gap-1.5 border-t border-gray-100 pt-3 text-xs text-gray-500">
                     <Calendar className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
-                    {t("cred.detail.issuedDate")} {formatDate(result.credential!.issued_at)}
+                    {t("cred.detail.issuedDate")}{" "}
+                    {formatDate(result.credential!.issued_at, i18n.language)}
                   </div>
 
                   {/* Unchecked-number disclaimer */}
                   <div className="mt-3 flex items-start gap-1.5 text-xs text-gray-500">
-                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
+                    <Info
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400"
+                      aria-hidden="true"
+                    />
                     <span>{t("verify.numberNotChecked")}</span>
                   </div>
                 </div>

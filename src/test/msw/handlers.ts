@@ -150,6 +150,10 @@ export const handlers = [
   ),
 
   http.get("*/api/users/self", () => envelope(100200, "OK", mockUsers[0])),
+  http.put("*/api/users/self/language", async ({ request }) => {
+    const { language } = (await request.json()) as { language: "en" | "id" };
+    return envelope(300800, "Language saved", { language });
+  }),
 
   http.get("*/api/users", ({ request }) => {
     const url = new URL(request.url);
@@ -239,7 +243,9 @@ export const handlers = [
             token_id: "123456",
             file_hash: "0xabcd1234",
             file_uri: "local:///uploads/test.pdf",
-            extract_state: "succeeded", extract_enqueued_at: "2026-01-01T00:00:00Z", extract_failed_at: null,
+            extract_state: "succeeded",
+            extract_enqueued_at: "2026-01-01T00:00:00Z",
+            extract_failed_at: null,
             status: "approved",
             extract_error: null,
             extracted_at: "2024-01-15T10:00:00Z",
@@ -276,7 +282,9 @@ export const handlers = [
             token_id: "123457",
             file_hash: "0xefgh5678",
             file_uri: null,
-            extract_state: "succeeded", extract_enqueued_at: "2026-01-01T00:00:00Z", extract_failed_at: null,
+            extract_state: "succeeded",
+            extract_enqueued_at: "2026-01-01T00:00:00Z",
+            extract_failed_at: null,
             status: "revoked",
             extract_error: null,
             extracted_at: "2024-03-20T14:00:00Z",
@@ -323,7 +331,9 @@ export const handlers = [
             token_id: "123458",
             file_hash: "0xdeadbeef",
             file_uri: null,
-            extract_state: "failed", extract_enqueued_at: "2026-01-01T00:00:00Z", extract_failed_at: "2026-01-01T01:00:00Z",
+            extract_state: "failed",
+            extract_enqueued_at: "2026-01-01T00:00:00Z",
+            extract_failed_at: "2026-01-01T01:00:00Z",
             status: "pending",
             extract_error: "OCR failed",
             extracted_at: null,
@@ -382,7 +392,9 @@ export const handlers = [
         token_id: "123456",
         file_hash: "0xabcd1234",
         file_uri: "local:///uploads/test.pdf",
-        extract_state: "succeeded", extract_enqueued_at: "2026-01-01T00:00:00Z", extract_failed_at: null,
+        extract_state: "succeeded",
+        extract_enqueued_at: "2026-01-01T00:00:00Z",
+        extract_failed_at: null,
         status: "approved",
         extract_error: null,
         extracted_at: "2024-01-15T10:00:00Z",
@@ -440,7 +452,9 @@ export const handlers = [
             token_id: "123456",
             file_hash: "0xabcd1234",
             file_uri: "local:///uploads/test.pdf",
-            extract_state: "succeeded", extract_enqueued_at: "2026-01-01T00:00:00Z", extract_failed_at: null,
+            extract_state: "succeeded",
+            extract_enqueued_at: "2026-01-01T00:00:00Z",
+            extract_failed_at: null,
             status: "approved",
             extract_error: null,
             extracted_at: "2024-01-15T10:00:00Z",
@@ -497,7 +511,9 @@ export const handlers = [
           token_id: "123458",
           file_hash: "0xnewhash1",
           file_uri: "local:///uploads/new.pdf",
-          extract_state: "pending", extract_enqueued_at: "2026-01-01T00:00:00Z", extract_failed_at: null,
+          extract_state: "pending",
+          extract_enqueued_at: "2026-01-01T00:00:00Z",
+          extract_failed_at: null,
           status: "pending",
           extract_error: null,
           extracted_at: null,
@@ -663,9 +679,7 @@ export const handlers = [
 
   http.post("*/api/user-units", async ({ request }) => {
     const body = (await request.json()) as { name?: string; parent_id?: string | null };
-    const parent = body.parent_id
-      ? mockUserUnits.find((u) => u.id === body.parent_id)
-      : undefined;
+    const parent = body.parent_id ? mockUserUnits.find((u) => u.id === body.parent_id) : undefined;
     const created: HolderUnitDTO = {
       id: `unit_${mockUserUnits.length + 1}`,
       parent_id: body.parent_id ?? null,

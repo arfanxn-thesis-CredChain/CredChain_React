@@ -3,13 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, CircleDashed, XCircle, Ban } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@ui/dialog";
 import { Input } from "@ui/input";
 import { Badge } from "@ui/badge";
 import { Skeleton } from "@ui/skeleton";
@@ -61,7 +55,7 @@ export function CredentialDetailModal({
   open,
   onOpenChange,
 }: CredentialDetailModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentUser = useStore((s) => s.user);
   const canManage = canAccessAny(currentUser?.role, [Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN]);
 
@@ -222,7 +216,7 @@ export function CredentialDetailModal({
         {
           key: "issued_at",
           label: t("cred.submit.field.issuedAt"),
-          readValue: <span>{formatDate(cred.issued_at)}</span>,
+          readValue: <span>{formatDate(cred.issued_at, i18n.language)}</span>,
           editControl: <Input type="date" {...form.register("issued_at")} />,
           error: form.formState.errors.issued_at?.message,
         },
@@ -230,7 +224,9 @@ export function CredentialDetailModal({
           key: "expires_at",
           label: t("cred.submit.field.expiresAt"),
           readValue: (
-            <span>{cred.expires_at ? formatDate(cred.expires_at) : t("common.notSet")}</span>
+            <span>
+              {cred.expires_at ? formatDate(cred.expires_at, i18n.language) : t("common.notSet")}
+            </span>
           ),
           editControl: <Input type="date" {...form.register("expires_at")} />,
           error: form.formState.errors.expires_at?.message,
@@ -250,7 +246,8 @@ export function CredentialDetailModal({
               const raw = cred.meta.competencies || cred.meta.competency;
               if (Array.isArray(raw)) {
                 raw.forEach((c) => {
-                  if (typeof c === "string" && c.trim()) list.push({ name: c.trim(), staged: true });
+                  if (typeof c === "string" && c.trim())
+                    list.push({ name: c.trim(), staged: true });
                 });
               } else if (typeof raw === "string" && raw.trim()) {
                 list.push({ name: raw.trim(), staged: true });
@@ -305,18 +302,13 @@ export function CredentialDetailModal({
   const statusBadges = cred ? (
     <div className="flex flex-wrap items-center gap-3">
       <CredentialStatusBadge status={cred.status} isSubmission={isSubmission} />
-      {canManage && (
-        <CredentialExtractNote
-          state={cred.extract_state}
-          error={cred.extract_error}
-        />
-      )}
+      {canManage && <CredentialExtractNote state={cred.extract_state} error={cred.extract_error} />}
     </div>
   ) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl sm:max-w-5xl p-6 sm:p-8">
+      <DialogContent className="max-w-5xl p-6 sm:max-w-5xl sm:p-8">
         <DialogHeader className="mb-4 pr-10">
           <DialogTitle className="font-display text-xl font-bold tracking-tight text-navy">
             {cred?.name ?? t("cred.detail.title")}
@@ -392,7 +384,9 @@ export function CredentialDetailModal({
               title={t("cred.detail.cardTitle")}
               fields={editFields}
               canEdit={canManage && isPendingReview}
-              editDisabledReason={canManage && !isPendingReview ? t("cred.detail.editOnlyPending") : undefined}
+              editDisabledReason={
+                canManage && !isPendingReview ? t("cred.detail.editOnlyPending") : undefined
+              }
               onSave={handleSave}
               onCancel={handleCancel}
               isSaving={update.isPending || link.isPending}
