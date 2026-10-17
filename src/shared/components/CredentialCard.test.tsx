@@ -165,6 +165,61 @@ describe("CredentialCard", () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  it("opens details without selecting when title is activated with Enter", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(
+      <CredentialCard credential={makeCredential()} selectionMode="revoke" onSelect={onSelect} />,
+      { wrapper: TestProviders },
+    );
+
+    screen.getByRole("button", { name: "Test Credential" }).focus();
+    await user.keyboard("{Enter}");
+
+    expect(navigateMock).toHaveBeenCalledOnce();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("selects exactly once when selection button is activated with Enter", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    render(
+      <CredentialCard credential={makeCredential()} selectionMode="revoke" onSelect={onSelect} />,
+      { wrapper: TestProviders },
+    );
+
+    screen.getByRole("button", { name: /select credential/i }).focus();
+    await user.keyboard("{Enter}");
+
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("names select and deselect buttons for the credential in both locales", async () => {
+    const credential = makeCredential({ name: "Specific Diploma" });
+    const { rerender } = render(<CredentialCard credential={credential} selectionMode="revoke" />, {
+      wrapper: TestProviders,
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Select credential: Specific Diploma" }),
+    ).toBeEnabled();
+    rerender(<CredentialCard credential={credential} selectionMode="revoke" isSelected />);
+    expect(
+      screen.getByRole("button", { name: "Deselect credential: Specific Diploma" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await i18n.changeLanguage("id");
+    rerender(<CredentialCard credential={credential} selectionMode="revoke" />);
+    expect(
+      screen.getByRole("button", { name: "Pilih kredensial: Specific Diploma" }),
+    ).toBeEnabled();
+    rerender(<CredentialCard credential={credential} selectionMode="revoke" isSelected />);
+    expect(
+      screen.getByRole("button", { name: "Batal pilih kredensial: Specific Diploma" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("calls onSelect when checkbox is clicked", async () => {
     const user = userEvent.setup();
     const credential = makeCredential();
@@ -264,7 +319,7 @@ describe("CredentialCard", () => {
     expect(screen.getByText("Approved")).toBeInTheDocument();
   });
 
-    it("renders the Registered badge and aria-label for direct-issued credential", () => {
+  it("renders the Registered badge and aria-label for direct-issued credential", () => {
     const directCred = makeCredential({
       status: "approved",
       submitter_user_id: "usr_test_2",
@@ -355,7 +410,10 @@ describe("CredentialCard", () => {
     expect(screen.getByText("Registered by")).toBeInTheDocument();
     expect(screen.getByText("12345")).toBeInTheDocument();
     expect(screen.queryByText("Alice Holder")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /bob issuer/i })).toHaveAttribute("href", "/users/usr_i");
+    expect(screen.getByRole("link", { name: /bob issuer/i })).toHaveAttribute(
+      "href",
+      "/users/usr_i",
+    );
   });
 
   it("shows Approved by when approved credential was submitted by holder", () => {
@@ -395,7 +453,10 @@ describe("CredentialCard", () => {
     expect(screen.getByText("Revoked by")).toBeInTheDocument();
     expect(screen.queryByText("Bob Issuer")).not.toBeInTheDocument();
     expect(screen.queryByText("Alice Holder")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /charlie revoker/i })).toHaveAttribute("href", "/users/usr_r");
+    expect(screen.getByRole("link", { name: /charlie revoker/i })).toHaveAttribute(
+      "href",
+      "/users/usr_r",
+    );
   });
 
   it("shows the rejecter and hides issuer/holder when hideHolder is true on rejected credential", () => {
@@ -408,7 +469,12 @@ describe("CredentialCard", () => {
       rejecter_user_id: "usr_rej",
       holder: makeUser({ id: "usr_h", role: Role.HOLDER, name: "Alice Holder" }),
       issuer: makeUser({ id: "usr_i", role: Role.ISSUER, name: "Bob Issuer" }),
-      rejecter: makeUser({ id: "usr_rej", role: Role.ISSUER, name: "Dave Rejecter", number: "98765" }),
+      rejecter: makeUser({
+        id: "usr_rej",
+        role: Role.ISSUER,
+        name: "Dave Rejecter",
+        number: "98765",
+      }),
     });
 
     render(<CredentialCard credential={credential} hideHolder />, { wrapper: TestProviders });
@@ -418,7 +484,10 @@ describe("CredentialCard", () => {
     expect(screen.getByText("98765")).toBeInTheDocument();
     expect(screen.queryByText("Bob Issuer")).not.toBeInTheDocument();
     expect(screen.queryByText("Alice Holder")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /dave rejecter/i })).toHaveAttribute("href", "/users/usr_rej");
+    expect(screen.getByRole("link", { name: /dave rejecter/i })).toHaveAttribute(
+      "href",
+      "/users/usr_rej",
+    );
   });
 
   it("shows the issuing organization eyebrow label above the organization name in holder view", () => {
@@ -457,7 +526,9 @@ describe("CredentialCard", () => {
       issuer: makeUser({ id: "usr_i", role: Role.ISSUER, name: "Bob Issuer" }),
     });
 
-    render(<CredentialCard credential={credential} showActor={false} />, { wrapper: TestProviders });
+    render(<CredentialCard credential={credential} showActor={false} />, {
+      wrapper: TestProviders,
+    });
 
     expect(screen.getByText("Alice Holder")).toBeInTheDocument();
     expect(screen.getByText("Bob Issuer")).toBeInTheDocument();
@@ -507,14 +578,17 @@ describe("CredentialCard", () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it("shows not-allowed cursor when selectDisabled is true", () => {
+  it("keeps detail navigation available when selectDisabled is true", async () => {
+    const user = userEvent.setup();
     const credential = makeCredential();
     render(<CredentialCard credential={credential} selectionMode="revoke" selectDisabled />, {
       wrapper: TestProviders,
     });
 
     const card = screen.getByRole("link", { name: /approved/i });
-    expect(card.className).toContain("cursor-not-allowed");
+    expect(card.className).not.toContain("cursor-not-allowed");
+    await user.click(screen.getByRole("button", { name: "Test Credential" }));
+    expect(navigateMock).toHaveBeenCalledWith("/credentials?credential_id=cred_test_1");
   });
 
   it("disables checkbox when selectDisabled is true", () => {
@@ -562,17 +636,37 @@ describe("CredentialCard", () => {
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
   });
 
-  it("shows the Complete details CTA instead of Approve when details are unresolved", () => {
-    const credential = makeCredential({
-      status: "pending",
-      activated_at: null,
-      unresolved_metadata: ["competency"],
-    });
-    render(<CredentialCard credential={credential} canReview />, { wrapper: TestProviders });
+  it.each(["type", "issuer_organization", "competency"] as const)(
+    "shows Complete details and Reject instead of Approve when %s is unresolved",
+    (field) => {
+      const credential = makeCredential({
+        status: "pending",
+        activated_at: null,
+        unresolved_metadata: [field],
+      });
+      render(<CredentialCard credential={credential} canReview />, { wrapper: TestProviders });
+
+      expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /complete details/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
+    },
+  );
+
+  it("shows Complete details instead of Approve for known inactive references", () => {
+    render(
+      <CredentialCard
+        credential={makeCredential({
+          status: "pending",
+          type: { id: "type", name: "Retired", active: false },
+        })}
+        canReview
+      />,
+      { wrapper: TestProviders },
+    );
 
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /complete details/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
   });
 
   it("navigates to the credential detail page when Complete details is clicked", async () => {
@@ -592,7 +686,11 @@ describe("CredentialCard", () => {
   it("calls onApprove with the credential id", async () => {
     const user = userEvent.setup();
     const onApprove = vi.fn();
-    const credential = makeCredential({ id: "cred_pending", status: "pending", activated_at: null });
+    const credential = makeCredential({
+      id: "cred_pending",
+      status: "pending",
+      activated_at: null,
+    });
 
     render(<CredentialCard credential={credential} canReview onApprove={onApprove} />, {
       wrapper: TestProviders,
@@ -606,7 +704,11 @@ describe("CredentialCard", () => {
   it("reveals an inline reason field on Reject click and submits it", async () => {
     const user = userEvent.setup();
     const onReject = vi.fn();
-    const credential = makeCredential({ id: "cred_pending", status: "pending", activated_at: null });
+    const credential = makeCredential({
+      id: "cred_pending",
+      status: "pending",
+      activated_at: null,
+    });
 
     render(<CredentialCard credential={credential} canReview onReject={onReject} />, {
       wrapper: TestProviders,
@@ -618,6 +720,34 @@ describe("CredentialCard", () => {
     await user.click(screen.getByRole("button", { name: "Reject" }));
 
     expect(onReject).toHaveBeenCalledWith([{ id: "cred_pending", reason: "Wrong document" }]);
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("requires a reason before rejecting unresolved details and submits a trimmed reason", async () => {
+    const user = userEvent.setup();
+    const onReject = vi.fn();
+    const credential = makeCredential({
+      id: "cred_unresolved",
+      status: "pending",
+      activated_at: null,
+      unresolved_metadata: ["issuer_organization"],
+    });
+    render(<CredentialCard credential={credential} canReview onReject={onReject} />, {
+      wrapper: TestProviders,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    expect(screen.queryByRole("button", { name: /complete details/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    expect(onReject).not.toHaveBeenCalled();
+    expect(screen.getByText(/rejection reason is required/i)).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole("textbox", { name: /rejection reason/i }),
+      "  Wrong document  ",
+    );
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    expect(onReject).toHaveBeenCalledWith([{ id: "cred_unresolved", reason: "Wrong document" }]);
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
@@ -773,8 +903,58 @@ describe("CredentialCard", () => {
     });
   });
 
-  describe("bulk selection muting", () => {
-    it("mutes card and disables checkbox when credential is not eligible for mode", () => {
+  describe("bulk selection eligibility", () => {
+    it("explains unresolved approval fields without disabling detail navigation or rejection", async () => {
+      const user = userEvent.setup();
+      const credential = makeCredential({
+        status: "pending",
+        unresolved_metadata: ["type", "issuer_organization", "competency"],
+      });
+      const onSelect = vi.fn();
+      const { rerender } = render(
+        <CredentialCard credential={credential} selectionMode="approve" onSelect={onSelect} />,
+        { wrapper: TestProviders },
+      );
+      const checkbox = screen.getByRole("button", { name: /select credential/i });
+      expect(checkbox).toBeDisabled();
+      expect(
+        screen.getByText(/resolve.*credential type.*issuing organization.*competenc/i),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /pending review/i }).className).not.toContain(
+        "opacity-50",
+      );
+      await user.click(screen.getByRole("button", { name: "Test Credential" }));
+      expect(navigateMock).toHaveBeenCalledWith("/credentials?credential_id=cred_test_1");
+      expect(onSelect).not.toHaveBeenCalled();
+      rerender(
+        <CredentialCard credential={credential} selectionMode="reject" onSelect={onSelect} />,
+      );
+      expect(screen.getByRole("button", { name: /select credential/i })).toBeEnabled();
+    });
+
+    it("explains inactive references and a missing re-extraction file", () => {
+      const { rerender } = render(
+        <CredentialCard
+          credential={makeCredential({
+            status: "pending",
+            type: { id: "type", name: "Retired", active: false },
+          })}
+          selectionMode="approve"
+        />,
+        { wrapper: TestProviders },
+      );
+      expect(screen.getByText(/inactive.*credential type/i)).toBeInTheDocument();
+      rerender(
+        <CredentialCard
+          credential={makeCredential({ extract_state: "failed", file_uri: null })}
+          selectionMode="reextract"
+        />,
+      );
+      expect(screen.getByRole("button", { name: /select credential/i })).toBeDisabled();
+      expect(screen.getByText(/file.*unavailable/i)).toBeInTheDocument();
+    });
+
+    it("disables checkbox when credential is not eligible for mode", () => {
       const credential = makeCredential({ status: "pending", activated_at: null });
 
       render(<CredentialCard credential={credential} selectionMode="revoke" />, {
@@ -782,13 +962,31 @@ describe("CredentialCard", () => {
       });
 
       const card = screen.getByRole("link", { name: /pending review/i });
-      expect(card.className).toContain("opacity-50");
-      expect(card.className).toContain("cursor-not-allowed");
+      expect(card.className).not.toContain("opacity-50");
+      expect(card.className).not.toContain("cursor-not-allowed");
 
       const checkbox = screen.getByRole("button", { name: /select credential/i });
       expect(checkbox).toBeDisabled();
+      expect(checkbox).toHaveAttribute("aria-describedby");
+      expect(screen.getByText(/only approved credentials/i)).toBeInTheDocument();
       expect(checkbox.className).toContain("cursor-not-allowed");
       expect(checkbox.className).not.toContain("opacity-30");
+    });
+
+    it("explains an expired unactivated credential is not eligible for revocation", () => {
+      const credential = makeCredential({
+        status: "expired",
+        activated_at: null,
+        expires_at: "2026-02-01T00:00:00Z",
+      });
+
+      render(<CredentialCard credential={credential} selectionMode="revoke" />, {
+        wrapper: TestProviders,
+      });
+
+      expect(screen.getByRole("button", { name: /select credential/i })).toBeDisabled();
+      expect(screen.getByText(/only approved credentials/i)).toBeInTheDocument();
+      expect(screen.queryByText("This credential is already expired.")).not.toBeInTheDocument();
     });
 
     it("keeps card at full contrast and checkbox enabled when credential is eligible", () => {
@@ -807,18 +1005,20 @@ describe("CredentialCard", () => {
       expect(checkbox.className).not.toContain("cursor-not-allowed");
     });
 
-    it("mutes card when selectDisabled is forced (e.g. selection cap reached)", () => {
+    it("keeps card readable when selection cap is reached", () => {
       const credential = makeCredential({ status: "approved" });
 
-      render(
-        <CredentialCard credential={credential} selectionMode="revoke" selectDisabled />,
-        { wrapper: TestProviders },
-      );
+      render(<CredentialCard credential={credential} selectionMode="revoke" selectDisabled />, {
+        wrapper: TestProviders,
+      });
 
       const card = screen.getByRole("link", { name: /approved/i });
-      expect(card.className).toContain("opacity-50");
-      expect(card.className).toContain("cursor-not-allowed");
-      expect(screen.getByRole("button", { name: /select credential/i })).toBeDisabled();
+      expect(card.className).not.toContain("opacity-50");
+      expect(card.className).not.toContain("cursor-not-allowed");
+      const checkbox = screen.getByRole("button", { name: /select credential/i });
+      expect(checkbox).toBeDisabled();
+      expect(checkbox).toHaveAttribute("aria-describedby");
+      expect(screen.getByText(/maximum of 100 credentials selected/i)).toBeInTheDocument();
     });
   });
 
@@ -845,7 +1045,7 @@ describe("CredentialCard", () => {
       expect(screen.queryByText(/Staged Workshop/)).not.toBeInTheDocument();
     });
 
-        it("renders raw competencies from meta when stored as an array of strings", () => {
+    it("renders raw competencies from meta when stored as an array of strings", () => {
       const credential = makeCredential({
         competencies: [],
         submitted_competencies: [],
@@ -898,7 +1098,9 @@ describe("CredentialCard", () => {
         status: "revoked",
         revoked_at: "2026-06-01T00:00:00Z",
       });
-      const { rerender } = render(<CredentialCard credential={revokedCred} />, { wrapper: TestProviders });
+      const { rerender } = render(<CredentialCard credential={revokedCred} />, {
+        wrapper: TestProviders,
+      });
 
       const revokedCard = screen.getByRole("link", { name: /revoked/i });
       expect(revokedCard.className).toContain("bg-gray-50");
@@ -925,7 +1127,9 @@ describe("CredentialCard", () => {
 
       for (const { status, name } of statuses) {
         const cred = makeCredential({ status });
-        const { unmount } = render(<CredentialCard credential={cred} />, { wrapper: TestProviders });
+        const { unmount } = render(<CredentialCard credential={cred} />, {
+          wrapper: TestProviders,
+        });
         expect(screen.getByRole("link", { name })).toBeInTheDocument();
         unmount();
       }
@@ -936,7 +1140,9 @@ describe("CredentialCard", () => {
         issuer_organization: { id: "org_1", name: "Global Certification Board" },
       });
 
-      render(<CredentialCard credential={credential} isHolder={false} />, { wrapper: TestProviders });
+      render(<CredentialCard credential={credential} isHolder={false} />, {
+        wrapper: TestProviders,
+      });
 
       expect(screen.getByText("Issuing organization")).toBeInTheDocument();
       expect(screen.getByText("Global Certification Board")).toBeInTheDocument();
@@ -949,7 +1155,9 @@ describe("CredentialCard", () => {
       const revokedCred = makeCredential({ status: "revoked" });
 
       for (const cred of [pendingCred, approvedCred, rejectedCred, revokedCred]) {
-        const { unmount } = render(<CredentialCard credential={cred} showActor />, { wrapper: TestProviders });
+        const { unmount } = render(<CredentialCard credential={cred} showActor />, {
+          wrapper: TestProviders,
+        });
         expect(screen.queryByText(/^issuer$/i)).not.toBeInTheDocument();
         unmount();
       }
@@ -976,7 +1184,9 @@ describe("CredentialCard", () => {
         submitter_user_id: "usr_alice",
         issuer: makeUser({ id: "usr_staff", name: "Staff Reviewer" }),
       });
-      const { rerender } = render(<CredentialCard credential={submissionCred} />, { wrapper: TestProviders });
+      const { rerender } = render(<CredentialCard credential={submissionCred} />, {
+        wrapper: TestProviders,
+      });
 
       expect(screen.getByText("Approved by")).toBeInTheDocument();
       expect(screen.queryByText("Registered by")).not.toBeInTheDocument();

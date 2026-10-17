@@ -1,17 +1,16 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, Calendar, CheckCircle2, CircleDashed, Loader2, XCircle } from "lucide-react";
 import { cn } from "@shared/lib/cn";
 import { formatDate } from "@shared/lib/format";
 import { lifecycleDateLines } from "@shared/lib/credentialDate";
-import { isEligibleFor, type BulkMode } from "@shared/lib/credentialEligibility";
+import { ineligibilityReason, type BulkMode } from "@shared/lib/credentialEligibility";
 import { Card } from "@ui/card";
 import { Button } from "@ui/button";
 import { Badge } from "@ui/badge";
 import { FormField } from "@ui/form-field";
 import { Textarea } from "@ui/textarea";
-import { notify } from "@shared/lib/notify";
 import { UserAvatar } from "@shared/components/UserAvatar";
 import { EyebrowLabel } from "@shared/components/EyebrowLabel";
 import { StagedValue } from "@shared/components/StagedValue";
@@ -189,23 +188,24 @@ function AuditStrip({
     const label = t("cred.audit.revokedBy");
     const userId = credential.revoker_user_id;
 
-    const personContent = (!userId && !credential.revoker) ? (
-      <div className="min-w-0">
-        <EyebrowLabel as="span" className="mb-1 block text-error">
-          {label}
-        </EyebrowLabel>
-        <p className="text-sm text-gray-500">—</p>
-      </div>
-    ) : (
-      <PersonRow
-        user={credential.revoker}
-        userId={userId ?? ""}
-        subline={credential.revoker?.number ?? undefined}
-        blockLinks={blockLinks}
-        label={label}
-        tone="error"
-      />
-    );
+    const personContent =
+      !userId && !credential.revoker ? (
+        <div className="min-w-0">
+          <EyebrowLabel as="span" className="mb-1 block text-error">
+            {label}
+          </EyebrowLabel>
+          <p className="text-sm text-gray-500">—</p>
+        </div>
+      ) : (
+        <PersonRow
+          user={credential.revoker}
+          userId={userId ?? ""}
+          subline={credential.revoker?.number ?? undefined}
+          blockLinks={blockLinks}
+          label={label}
+          tone="error"
+        />
+      );
 
     return (
       <div className="space-y-3">
@@ -247,10 +247,12 @@ export function CredentialCard({
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [reasonMissing, setReasonMissing] = useState(false);
+  const selectionReasonId = useId();
 
   const isRevoked = credential.status === "revoked";
   const canInlineReview = canReview && !selectionMode && credential.status === "pending";
-  const hasUnresolvedMetadata = (credential.unresolved_metadata?.length ?? 0) > 0;
+  const approvalReason = ineligibilityReason(credential, "approve");
+  const needsDetails = approvalReason?.kind === "unresolved" || approvalReason?.kind === "inactive";
   const competencies = [
     ...(credential.competencies ?? []).map((c) => ({ name: c.name, staged: false })),
     ...(credential.submitted_competencies ?? [])
@@ -316,30 +318,47 @@ export function CredentialCard({
   const isSubmission = Boolean(
     credential.submitter_user_id && credential.submitter_user_id === credential.holder_user_id,
   );
-  const isSelectable = isEligibleFor(credential, selectionMode ?? null);
+  const selectionReason = selectionMode ? ineligibilityReason(credential, selectionMode) : null;
+  const isSelectable = !!selectionMode && !selectionReason;
   const selectBlocked = !!selectionMode && (!isSelectable || !!selectDisabled);
+  const unavailableMessage =
+    selectionReason?.kind === "unresolved" || selectionReason?.kind === "inactive"
+      ? t(`cred.card.${selectionReason.kind}References`, {
+          fields: selectionReason.fields
+            .map((field) =>
+              t(
+                {
+                  type: "cred.submit.field.type",
+                  issuer_organization: "cred.parties.issuerOrganization",
+                  competency: "cred.competency.title",
+                }[field],
+              ),
+            )
+            .join(", "),
+        })
+      : selectionReason?.kind === "missing_file"
+        ? t("cred.card.fileUnavailable")
+        : selectionReason?.kind === "extract_state"
+          ? t(
+              credential.extract_state === "succeeded"
+                ? "cred.card.alreadySucceeded"
+                : "credential.reextract.not_eligible",
+            )
+          : selectionReason?.kind === "status"
+            ? t(
+                selectionMode === "revoke"
+                  ? "cred.card.onlyApproved"
+                  : "cred.card.notPendingReview",
+              )
+            : selectDisabled
+              ? t("cred.card.selectionCapReached")
+              : null;
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest(INTERACTIVE_SELECTORS)) return;
     if (selectionMode) {
       if (isSelectable && !selectDisabled) {
         onSelect?.();
-      } else if (!isSelectable) {
-        if (selectionMode === "revoke") {
-          if (credential.status === "expired") {
-            notify.info("cred.card.alreadyExpired");
-          } else {
-            notify.info("cred.card.alreadyRevoked");
-          }
-        } else if (selectionMode === "approve" || selectionMode === "reject") {
-          notify.info("cred.card.notPendingReview");
-        } else {
-          notify.info(
-            credential.extract_state === "succeeded"
-              ? "cred.card.alreadySucceeded"
-              : "credential.reextract.not_eligible",
-          );
-        }
       }
       return;
     }
@@ -347,7 +366,7 @@ export function CredentialCard({
   };
 
   const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "Enter") return;
+    if (e.key !== "Enter" || e.target !== e.currentTarget) return;
     e.preventDefault();
     if (selectionMode) {
       if (isSelectable && !selectDisabled) onSelect?.();
@@ -364,7 +383,6 @@ export function CredentialCard({
       onKeyDown={handleCardKeyDown}
       className={cn(
         "relative flex h-full cursor-pointer flex-col p-5 transition-all focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none",
-        selectBlocked && "cursor-not-allowed opacity-50",
         STATUS_SURFACE[credential.status],
       )}
       aria-label={t(getCredentialStatusLabelKey(credential.status, isSubmission))}
@@ -385,7 +403,10 @@ export function CredentialCard({
             isSelected ? "border-gold bg-gold" : "border-gray-300 hover:border-gold",
           )}
           aria-pressed={isSelected}
-          aria-label={isSelected ? t("cred.card.deselect") : t("cred.card.select")}
+          aria-describedby={unavailableMessage ? selectionReasonId : undefined}
+          aria-label={t(isSelected ? "cred.card.deselect" : "cred.card.select", {
+            name: credential.name,
+          })}
         />
       )}
 
@@ -517,6 +538,15 @@ export function CredentialCard({
           </div>
         )}
 
+        {selectionMode && unavailableMessage && (
+          <p
+            id={selectionReasonId}
+            className="mt-auto rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-navy"
+          >
+            {unavailableMessage}
+          </p>
+        )}
+
         {/* Audit Band / Actions Footer */}
         {showFooter && (
           <div className="mt-auto pt-4">
@@ -534,44 +564,7 @@ export function CredentialCard({
 
               {canInlineReview && (
                 <div>
-                  {hasUnresolvedMetadata ? (
-                    <Button
-                      type="button"
-                      variant="gold"
-                      size="sm"
-                      className="w-full"
-                      onClick={handleCompleteDetailsClick}
-                    >
-                      {t("cred.card.completeDetails")}
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  ) : !rejectOpen ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="gold"
-                        size="sm"
-                        onClick={handleApproveClick}
-                        disabled={isApproving}
-                      >
-                        {isApproving ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-4 w-4" />
-                        )}
-                        {t("cred.detail.approve")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRejectToggle}
-                      >
-                        <XCircle className="h-4 w-4" />
-                        {t("cred.detail.reject")}
-                      </Button>
-                    </div>
-                  ) : (
+                  {rejectOpen ? (
                     <div className="space-y-2">
                       <FormField
                         label={t("cred.reject.modal.reasonLabel")}
@@ -612,6 +605,44 @@ export function CredentialCard({
                             : t("cred.reject.modal.submit")}
                         </Button>
                       </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {needsDetails ? (
+                        <Button
+                          type="button"
+                          variant="gold"
+                          size="sm"
+                          onClick={handleCompleteDetailsClick}
+                        >
+                          {t("cred.card.completeDetails")}
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="gold"
+                          size="sm"
+                          onClick={handleApproveClick}
+                          disabled={isApproving}
+                        >
+                          {isApproving ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4" />
+                          )}
+                          {t("cred.detail.approve")}
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRejectToggle}
+                      >
+                        <XCircle className="h-4 w-4" />
+                        {t("cred.detail.reject")}
+                      </Button>
                     </div>
                   )}
                 </div>

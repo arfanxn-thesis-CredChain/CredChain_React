@@ -934,13 +934,18 @@
       "reExtractSelectedCount": "Ekstrak Ulang ({{count}})",
       "approveSelectedCount": "Setujui ({{count}})",
       "rejectSelectedCount": "Tolak ({{count}})",
-      "select": "Pilih kredensial",
-      "deselect": "Batal pilih kredensial",
+      "select": "Pilih kredensial: {{name}}",
+      "deselect": "Batal pilih kredensial: {{name}}",
       "selectionCapReached": "Maksimal 100 kredensial dipilih. Batalkan pilihan untuk menambah.",
       "alreadyRevoked": "Kredensial ini sudah dicabut.",
       "alreadyExpired": "Kredensial ini telah kedaluwarsa.",
       "alreadySucceeded": "Ekstraksi sudah berhasil.",
       "notPendingReview": "Hanya kredensial yang menunggu tinjauan yang dapat disetujui atau ditolak.",
+      "onlyApproved": "Hanya kredensial yang disetujui dapat dicabut.",
+      "unresolvedReferences": "Lengkapi {{fields}} di detail kredensial sebelum menyetujui.",
+      "inactiveReferences": "{{fields}} tidak aktif. Perbarui detail kredensial sebelum menyetujui.",
+      "fileUnavailable": "Berkas tidak tersedia untuk ekstraksi ulang.",
+      "selectionChanged": "Pilihan berubah. Tutup dialog ini dan periksa kembali kredensial yang dapat diproses sebelum mengonfirmasi.",
       "detailsIncomplete": "Data belum lengkap",
       "completeDetails": "Lengkapi data",
       "competencyOverflow": "+{{count}}"
@@ -1003,7 +1008,14 @@
     },
     "approve": {
       "success": "Kredensial berhasil disetujui.",
-      "failed": "Persetujuan kredensial gagal. Silakan coba lagi."
+      "failed": "Persetujuan kredensial gagal. Silakan coba lagi.",
+      "modal": {
+        "title_one": "Setujui {{count}} Kredensial",
+        "title_other": "Setujui {{count}} Kredensial",
+        "description": "Tinjau kredensial yang dipilih sebelum menyetujuinya.",
+        "confirm": "Konfirmasi Persetujuan",
+        "submitting": "Menyetujui..."
+      }
     },
     "reject": {
       "success": "Kredensial berhasil ditolak.",

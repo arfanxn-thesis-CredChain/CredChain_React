@@ -936,13 +936,18 @@
       "reExtractSelectedCount": "Re-extract ({{count}})",
       "approveSelectedCount": "Approve ({{count}})",
       "rejectSelectedCount": "Reject ({{count}})",
-      "select": "Select credential",
-      "deselect": "Deselect credential",
+      "select": "Select credential: {{name}}",
+      "deselect": "Deselect credential: {{name}}",
       "selectionCapReached": "Maximum of 100 credentials selected. Deselect some to add more.",
       "alreadyRevoked": "This credential is already revoked.",
       "alreadyExpired": "This credential is already expired.",
       "alreadySucceeded": "Extraction has already succeeded.",
       "notPendingReview": "Only credentials pending review can be approved or rejected.",
+      "onlyApproved": "Only approved credentials can be revoked.",
+      "unresolvedReferences": "Resolve {{fields}} in credential details before approval.",
+      "inactiveReferences": "Inactive {{fields}}. Update credential details before approval.",
+      "fileUnavailable": "File unavailable for re-extraction.",
+      "selectionChanged": "Selection changed. Close this dialog and review eligible credentials before confirming.",
       "detailsIncomplete": "Details incomplete",
       "completeDetails": "Complete details",
       "competencyOverflow": "+{{count}}"
@@ -1005,7 +1010,14 @@
     },
     "approve": {
       "success": "Credential(s) approved successfully.",
-      "failed": "Credential approval failed. Please try again."
+      "failed": "Credential approval failed. Please try again.",
+      "modal": {
+        "title_one": "Approve {{count}} Credential",
+        "title_other": "Approve {{count}} Credentials",
+        "description": "Review the selected credentials before approving them.",
+        "confirm": "Confirm Approval",
+        "submitting": "Approving..."
+      }
     },
     "reject": {
       "success": "Credential(s) rejected successfully.",
