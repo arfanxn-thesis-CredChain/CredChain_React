@@ -35,6 +35,7 @@ export interface CredentialRejectReasonModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   items: CredentialRejectItem[];
+  selectionChanged?: boolean;
   onSubmit: (rejections: { id: string; reason: string }[]) => void;
   isSubmitting?: boolean;
   onOpenDetail?: (id: string) => void;
@@ -46,6 +47,7 @@ export function CredentialRejectReasonModal({
   open,
   onOpenChange,
   items,
+  selectionChanged,
   onSubmit,
   isSubmitting = false,
   onOpenDetail,
@@ -99,16 +101,21 @@ export function CredentialRejectReasonModal({
 
   const handleSubmit = () => {
     setAttempted(true);
-    if (!allValid) return;
+    if (!allValid || !items.length || selectionChanged) return;
     onSubmit(items.map((item) => ({ id: item.id, reason: reasonFor(item.id).trim() })));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl sm:max-w-5xl p-6 sm:p-8">
+      <DialogContent className="max-w-5xl p-6 sm:max-w-5xl sm:p-8">
         <DialogHeader>
           <DialogTitle>{t("cred.reject.modal.title")}</DialogTitle>
           <DialogDescription>{t("cred.reject.modal.description")}</DialogDescription>
+          {selectionChanged && (
+            <p role="status" className="text-sm font-medium text-error">
+              {t("cred.card.selectionChanged")}
+            </p>
+          )}
         </DialogHeader>
 
         <div className="space-y-4">
@@ -126,13 +133,10 @@ export function CredentialRejectReasonModal({
           )}
 
           {items.map((item) => (
-            <div
-              key={item.id}
-              className="space-y-3 rounded-2xl border border-gray-100 p-4"
-            >
+            <div key={item.id} className="space-y-3 rounded-2xl border border-gray-100 p-4">
               <button
                 type="button"
-                className="text-left font-sans text-base font-bold text-navy hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold rounded wrap-break-word"
+                className="rounded text-left font-sans font-bold wrap-break-word text-base text-navy hover:underline focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none"
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenDetail?.(item.id);
@@ -149,9 +153,8 @@ export function CredentialRejectReasonModal({
                       user={item.holder}
                       userId={item.holder.id}
                       subline={
-                        [item.holderNumber, item.holderUnitName]
-                          .filter(Boolean)
-                          .join(" · ") || undefined
+                        [item.holderNumber, item.holderUnitName].filter(Boolean).join(" · ") ||
+                        undefined
                       }
                       blockLinks={true}
                       label={t("cred.detail.holder")}
@@ -171,10 +174,7 @@ export function CredentialRejectReasonModal({
                   <EyebrowLabel as="span" className="mb-1 block">
                     {t("cred.submit.field.type")}
                   </EyebrowLabel>
-                  <StagedValue
-                    resolved={item.typeName}
-                    staged={item.submittedTypeName}
-                  />
+                  <StagedValue resolved={item.typeName} staged={item.submittedTypeName} />
                 </div>
 
                 {/* Row 2, Col 1: SUBMITTED */}
@@ -184,10 +184,7 @@ export function CredentialRejectReasonModal({
                   </EyebrowLabel>
                   {item.submittedAt ? (
                     <div className="flex items-center gap-1.5 text-sm font-semibold text-navy">
-                      <Calendar
-                        className="h-3.5 w-3.5 shrink-0 text-gray-400"
-                        aria-hidden="true"
-                      />
+                      <Calendar className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
                       <span>{formatDate(item.submittedAt, i18n.language)}</span>
                     </div>
                   ) : (
@@ -200,18 +197,12 @@ export function CredentialRejectReasonModal({
                   <EyebrowLabel as="span" className="mb-1 block">
                     {t("cred.parties.issuerOrganization")}
                   </EyebrowLabel>
-                  <StagedValue
-                    resolved={item.orgName}
-                    staged={item.submittedOrgName}
-                  />
+                  <StagedValue resolved={item.orgName} staged={item.submittedOrgName} />
                 </div>
               </div>
 
               <div className="pt-2">
-                <FormField
-                  label={t("cred.reject.modal.reasonLabel")}
-                  error={errorFor(item.id)}
-                >
+                <FormField label={t("cred.reject.modal.reasonLabel")} error={errorFor(item.id)}>
                   <Textarea
                     value={reasonFor(item.id)}
                     onChange={(e) => setReason(item.id, e.target.value)}
@@ -239,7 +230,7 @@ export function CredentialRejectReasonModal({
             type="button"
             variant="destructive"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || selectionChanged || items.length === 0}
           >
             {isSubmitting ? t("cred.reject.modal.submitting") : t("cred.reject.modal.submit")}
           </Button>

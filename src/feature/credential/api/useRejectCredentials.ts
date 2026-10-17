@@ -22,8 +22,12 @@ export function useRejectCredentials() {
       notify.success("cred.reject.success");
     },
     onError: (error) => {
-      if (isApiError(error)) notify.error(error.messageKey);
-      else notify.error("cred.reject.failed");
+      if (isApiError(error)) {
+        notify.error(error.messageKey);
+        if (error.status === 409 || error.status === 422 || error.status === 404) {
+          void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+        }
+      } else notify.error("cred.reject.failed");
     },
   });
 }

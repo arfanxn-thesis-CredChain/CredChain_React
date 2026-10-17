@@ -17,7 +17,12 @@ export function useReExtractCredentials() {
       notify.success("credential.reextract.success");
     },
     onError: (error) => {
-      if (isApiError(error)) notify.error(error.messageKey);
+      if (isApiError(error)) {
+        notify.error(error.messageKey);
+        if (error.status === 409 || error.status === 422 || error.status === 404) {
+          void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+        }
+      }
     },
   });
 }

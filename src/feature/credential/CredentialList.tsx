@@ -19,6 +19,7 @@ import { useRevokeCredentials } from "./api/useRevokeCredentials";
 import { useReExtractCredentials } from "./api/useReExtractCredentials";
 import { useApproveCredentials } from "./api/useApproveCredentials";
 import { useRejectCredentials } from "./api/useRejectCredentials";
+import { CredentialApproveModal } from "./components/CredentialApproveModal";
 import { CredentialRejectReasonModal } from "./components/CredentialRejectReasonModal";
 import { CredentialRevokeReasonModal } from "./components/CredentialRevokeReasonModal";
 import { CredentialDetailModal } from "./CredentialDetailModal";
@@ -247,34 +248,61 @@ export function CredentialList() {
     },
   );
 
+  const [previousCredentials, setPreviousCredentials] = useState(credentials);
+  if (previousCredentials !== credentials) {
+    setPreviousCredentials(credentials);
+    const eligibleIds = new Set(
+      credentials.filter((c) => isEligibleFor(c, bulkMode)).map((c) => c.id),
+    );
+    setSelectedIds((previous) => {
+      const retained = new Set([...previous].filter((id) => eligibleIds.has(id)));
+      return retained.size === previous.size ? previous : retained;
+    });
+  }
+
   const isEmpty = !isLoading && credentials.length === 0;
-  const selectionFull = selectedIds.size >= MAX_SELECTION;
+  const currentSelection = credentials.filter(
+    (c) => selectedIds.has(c.id) && isEligibleFor(c, bulkMode),
+  );
+  const selectionFull = currentSelection.length >= MAX_SELECTION;
 
   const revoke = useRevokeCredentials();
   const reExtract = useReExtractCredentials();
   const approve = useApproveCredentials();
   const reject = useRejectCredentials();
   const { confirm, dialog: confirmDialog } = useConfirm();
+  const [approveItems, setApproveItems] = useState<CredentialDTO[]>([]);
+  const [approveFromBulk, setApproveFromBulk] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [revokeModalOpen, setRevokeModalOpen] = useState(false);
+  const [modalSelectionIds, setModalSelectionIds] = useState<string[]>([]);
   const { data: units } = useUserUnits();
   const unitNames = useMemo(() => new Map((units ?? []).map((u) => [u.id, u.name])), [units]);
 
-  const eligibleRevokeIds = Array.from(selectedIds).filter((id) =>
-    credentials.some((c) => c.id === id && isEligibleFor(c, "revoke")),
-  );
-  const eligibleReExtractIds = Array.from(selectedIds).filter((id) =>
-    credentials.some((c) => c.id === id && isEligibleFor(c, "reextract")),
-  );
-  const eligibleApproveIds = Array.from(selectedIds).filter((id) =>
-    credentials.some((c) => c.id === id && isEligibleFor(c, "approve")),
-  );
-  const eligibleRejectIds = Array.from(selectedIds).filter((id) =>
-    credentials.some((c) => c.id === id && isEligibleFor(c, "reject")),
-  );
+  const eligibleRevokeIds = currentSelection
+    .filter((c) => isEligibleFor(c, "revoke"))
+    .map((c) => c.id);
+  const eligibleReExtractIds = currentSelection
+    .filter((c) => isEligibleFor(c, "reextract"))
+    .map((c) => c.id);
+  const eligibleApproveIds = currentSelection
+    .filter((c) => isEligibleFor(c, "approve"))
+    .map((c) => c.id);
+  const eligibleRejectIds = currentSelection
+    .filter((c) => isEligibleFor(c, "reject"))
+    .map((c) => c.id);
+  const reExtractIdsRef = useRef(eligibleReExtractIds);
+  useEffect(() => {
+    reExtractIdsRef.current = eligibleReExtractIds;
+  }, [eligibleReExtractIds]);
+  const liveApproveItems = approveItems
+    .map((item) => credentials.find((c) => c.id === item.id))
+    .filter((item): item is CredentialDTO => !!item && isEligibleFor(item, "approve"));
+  const approvalChanged =
+    approveItems.length > 0 && liveApproveItems.length !== approveItems.length;
 
   const rejectItems = credentials
-    .filter((c) => eligibleRejectIds.includes(c.id))
+    .filter((c) => modalSelectionIds.includes(c.id) && eligibleRejectIds.includes(c.id))
     .map((c) => ({
       id: c.id,
       name: c.name,
@@ -289,7 +317,7 @@ export function CredentialList() {
     }));
 
   const revokeItems = credentials
-    .filter((c) => eligibleRevokeIds.includes(c.id))
+    .filter((c) => modalSelectionIds.includes(c.id) && eligibleRevokeIds.includes(c.id))
     .map((c) => ({
       id: c.id,
       name: c.name,
@@ -314,6 +342,7 @@ export function CredentialList() {
       else next.set("sort", newSort);
       return next;
     });
+    setSelectedIds(new Set());
     reset();
   };
 
@@ -325,6 +354,7 @@ export function CredentialList() {
       else next.set("extract", value);
       return next;
     });
+    setSelectedIds(new Set());
     reset();
   };
 
@@ -335,6 +365,7 @@ export function CredentialList() {
       else next.delete(param);
       return next;
     });
+    setSelectedIds(new Set());
     reset();
   };
 
@@ -347,6 +378,7 @@ export function CredentialList() {
       else next.set("sort", sortString);
       return next;
     });
+    setSelectedIds(new Set());
     reset();
   };
 
@@ -359,6 +391,7 @@ export function CredentialList() {
       else next.set("search", value);
       return next;
     });
+    setSelectedIds(new Set());
     reset();
   };
 
@@ -387,10 +420,11 @@ export function CredentialList() {
   };
 
   const toggleSelection = (id: string) => {
-    const next = new Set(selectedIds);
+    const next = new Set(currentSelection.map((item) => item.id));
     if (next.has(id)) {
       next.delete(id);
     } else {
+      if (!credentials.some((c) => c.id === id && isEligibleFor(c, bulkMode))) return;
       if (next.size >= MAX_SELECTION) {
         notify.warning("cred.card.selectionCapReached");
         return;
@@ -400,28 +434,66 @@ export function CredentialList() {
     setSelectedIds(next);
   };
 
-  const handleBulkRevoke = async () => {
+  const handleBulkRevoke = () => {
     if (eligibleRevokeIds.length === 0) return;
+    setModalSelectionIds(eligibleRevokeIds);
     setRevokeModalOpen(true);
   };
 
   const handleBulkReExtract = async () => {
     if (eligibleReExtractIds.length === 0) return;
+    const confirmedIds = eligibleReExtractIds;
     const ok = await confirm({
-      title: t("cred.reextract.confirmTitle", { count: eligibleReExtractIds.length }),
+      title: t("cred.reextract.confirmTitle", { count: confirmedIds.length }),
       description: t("cred.reextract.confirmBody"),
       confirmLabel: t("cred.reextract.confirmAction"),
     });
     if (!ok) return;
-    reExtract.mutate(eligibleReExtractIds, { onSuccess: () => exitMode() });
+    if (confirmedIds.some((id) => !reExtractIdsRef.current.includes(id))) {
+      notify.warning("cred.card.selectionChanged");
+      setSelectedIds(new Set(reExtractIdsRef.current));
+      return;
+    }
+    reExtract.mutate(confirmedIds, { onSuccess: () => exitMode() });
   };
 
   const handleBulkApprove = () => {
     if (eligibleApproveIds.length === 0) return;
-    approve.mutate(eligibleApproveIds, { onSuccess: () => exitMode() });
+    setApproveItems(credentials.filter((c) => eligibleApproveIds.includes(c.id)));
+    setApproveFromBulk(true);
+  };
+
+  const handleInlineApprove = (id: string) => {
+    const item = credentials.find((c) => c.id === id && isEligibleFor(c, "approve"));
+    if (!item) return;
+    setApproveItems([item]);
+    setApproveFromBulk(false);
+  };
+
+  const handleApproveConfirm = () => {
+    if (approve.isPending || approveItems.length === 0 || approvalChanged) return;
+    if (approveFromBulk && approveItems.some((item) => !eligibleApproveIds.includes(item.id)))
+      return;
+    approve.mutate(
+      liveApproveItems.map((item) => item.id),
+      {
+        onSuccess: () => {
+          setApproveItems([]);
+          if (approveFromBulk) exitMode();
+        },
+      },
+    );
   };
 
   const handleRevokeSubmit = (revocations: { id: string; reason: string | null }[]) => {
+    if (
+      revoke.isPending ||
+      modalSelectionIds.length === 0 ||
+      modalSelectionIds.some((id) => !eligibleRevokeIds.includes(id)) ||
+      revocations.length !== modalSelectionIds.length ||
+      revocations.some((item) => !modalSelectionIds.includes(item.id))
+    )
+      return;
     revoke.mutate(
       { revocations },
       {
@@ -434,6 +506,17 @@ export function CredentialList() {
   };
 
   const handleRejectSubmit = (rejections: { id: string; reason: string }[]) => {
+    if (
+      reject.isPending ||
+      modalSelectionIds.length === 0 ||
+      modalSelectionIds.some((id) => !eligibleRejectIds.includes(id)) ||
+      rejections.length !== modalSelectionIds.length ||
+      rejections.some(
+        (item) =>
+          !modalSelectionIds.includes(item.id) || !item.reason.trim() || item.reason.length > 1000,
+      )
+    )
+      return;
     reject.mutate(rejections, {
       onSuccess: () => {
         setRejectModalOpen(false);
@@ -530,7 +613,11 @@ export function CredentialList() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => setRejectModalOpen(true)}
+            onClick={() => {
+              if (!eligibleRejectIds.length) return;
+              setModalSelectionIds(eligibleRejectIds);
+              setRejectModalOpen(true);
+            }}
             disabled={eligibleRejectIds.length === 0 || reject.isPending}
           >
             <XCircle className="h-4 w-4 text-error" />
@@ -683,17 +770,20 @@ export function CredentialList() {
                     key={cred.id}
                     credential={cred}
                     selectionMode={canManage ? bulkMode : undefined}
-                    isSelected={canManage ? selectedIds.has(cred.id) : undefined}
+                    isSelected={
+                      canManage ? currentSelection.some((item) => item.id === cred.id) : undefined
+                    }
                     onSelect={canManage ? () => toggleSelection(cred.id) : undefined}
                     selectDisabled={
                       canManage && bulkMode
-                        ? !isSelectable || (selectionFull && !selectedIds.has(cred.id))
+                        ? !isSelectable ||
+                          (selectionFull && !currentSelection.some((item) => item.id === cred.id))
                         : undefined
                     }
                     blockLinks={!canManage}
                     canReview={canManage}
                     canManage={canManage}
-                    onApprove={(id) => approve.mutate([id])}
+                    onApprove={handleInlineApprove}
                     onReject={(rejections) => reject.mutate(rejections)}
                     isApproving={approve.isPending}
                     isRejecting={reject.isPending}
@@ -722,10 +812,33 @@ export function CredentialList() {
 
       {confirmDialog}
 
+      <CredentialApproveModal
+        open={approveItems.length > 0}
+        onOpenChange={(open) => {
+          if (!open && !approve.isPending) {
+            setApproveItems([]);
+            if (approvalChanged) setSelectedIds(new Set(currentSelection.map((item) => item.id)));
+          }
+        }}
+        items={liveApproveItems}
+        selectionChanged={
+          approvalChanged ||
+          (approveFromBulk && approveItems.some((item) => !eligibleApproveIds.includes(item.id)))
+        }
+        unitNames={unitNames}
+        onConfirm={handleApproveConfirm}
+        isSubmitting={approve.isPending}
+        onOpenDetail={handleOpenDetail}
+      />
+
       <CredentialRejectReasonModal
         open={rejectModalOpen}
-        onOpenChange={setRejectModalOpen}
+        onOpenChange={(open) => {
+          setRejectModalOpen(open);
+          if (!open) setSelectedIds(new Set(currentSelection.map((item) => item.id)));
+        }}
         items={rejectItems}
+        selectionChanged={rejectModalOpen && rejectItems.length !== modalSelectionIds.length}
         onSubmit={handleRejectSubmit}
         isSubmitting={reject.isPending}
         onOpenDetail={handleOpenDetail}
@@ -733,8 +846,12 @@ export function CredentialList() {
 
       <CredentialRevokeReasonModal
         open={revokeModalOpen}
-        onOpenChange={setRevokeModalOpen}
+        onOpenChange={(open) => {
+          setRevokeModalOpen(open);
+          if (!open) setSelectedIds(new Set(currentSelection.map((item) => item.id)));
+        }}
         items={revokeItems}
+        selectionChanged={revokeModalOpen && revokeItems.length !== modalSelectionIds.length}
         onSubmit={handleRevokeSubmit}
         isSubmitting={revoke.isPending}
         onOpenDetail={handleOpenDetail}
