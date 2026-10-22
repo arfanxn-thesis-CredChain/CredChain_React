@@ -69,7 +69,7 @@ export function useLoadMore<T extends { id: string }>(
       items: query.data.items,
       total: query.data.total,
     });
-  }, [query.data, state.page]);
+  }, [query.data, state.page, state.items.length === 0]);
 
   const loadMore = useCallback(() => {
     if (query.data && state.page < query.data.last_page) {

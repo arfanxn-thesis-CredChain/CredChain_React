@@ -161,4 +161,22 @@ describe("useLoadMore", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.items).toHaveLength(1);
   });
+
+  it("restores items from cached query data when reset is called on page 1", async () => {
+    const queryFn = vi.fn().mockResolvedValue(makeResponse([{ id: "1", name: "A" }], 1, 1, 1));
+
+    const { result } = renderHook(() => useLoadMore(["test-cached-reset"], queryFn), {
+      wrapper: wrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.items).toHaveLength(1);
+
+    await act(async () => {
+      result.current.reset();
+    });
+
+    await waitFor(() => expect(result.current.items).toHaveLength(1));
+    expect(result.current.items).toEqual([{ id: "1", name: "A" }]);
+  });
 });

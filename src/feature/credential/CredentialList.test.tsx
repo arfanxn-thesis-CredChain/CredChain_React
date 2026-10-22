@@ -103,14 +103,18 @@ function QueryClientCapture() {
   return null;
 }
 
-function renderList() {
+function renderList(initialEntry = "/") {
   activeQueryClient = undefined;
   return render(
     <>
       <QueryClientCapture />
       <CredentialList />
     </>,
-    { wrapper: TestProviders },
+    {
+      wrapper: ({ children }) => (
+        <TestProviders initialEntries={[initialEntry]}>{children}</TestProviders>
+      ),
+    },
   );
 }
 
@@ -1280,5 +1284,29 @@ describe("CredentialList", () => {
     await user.click(await screen.findByRole("button", { name: "Pending Diploma" }));
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("keeps credentials visible after entering and cancelling an action when Pending Review filter is active", async () => {
+    const pending = pendingCredential({ id: "cred_pending_1", name: "Pending Diploma" });
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        const url = new URL(request.url);
+        return url.searchParams.get("limit") === "1"
+          ? pageResponse(1)
+          : credentialsResponse([pending]);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList("/credentials?review=pending");
+
+    expect(await screen.findByText("Pending Diploma")).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: /^approve$/i })[0]);
+    expect(await screen.findByRole("button", { name: /^cancel$/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(screen.queryByText("No credentials yet")).not.toBeInTheDocument();
+    expect(screen.getByText("Pending Diploma")).toBeInTheDocument();
   });
 });

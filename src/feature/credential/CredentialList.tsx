@@ -413,9 +413,12 @@ export function CredentialList() {
     setBulkMode(null);
     setSelectedIds(new Set());
     if (prevSearchParams) {
-      setSearchParams(prevSearchParams);
+      const prevString = prevSearchParams.toString();
+      const currentString = searchParams.toString();
+      if (prevString !== currentString) {
+        setSearchParams(prevSearchParams);
+      }
       setPrevSearchParams(null);
-      reset();
     }
   };
 
