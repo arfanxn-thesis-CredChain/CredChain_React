@@ -143,6 +143,28 @@ describe("CredentialList", () => {
     });
   });
 
+  it("requests lifecycle-approved credentials when Approved is selected", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /status/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /approved & registered/i }));
+
+    await waitFor(() => {
+      const requests = listRequestsOf(recorded);
+      expect(requests.at(-1)?.searchParams.getAll("filters")).toContain("status=approved");
+      expect(requests.at(-1)?.searchParams.getAll("filters")).not.toContain("activated_at!_");
+    });
+  });
+
   it("keeps the review filter when an extraction option is selected", async () => {
     const recorded: string[] = [];
     server.use(
@@ -1197,8 +1219,8 @@ describe("CredentialList", () => {
 
     await waitFor(() => {
       const filters = listRequestsOf(recorded).flatMap((url) => url.searchParams.getAll("filters"));
-      expect(filters).toContain("activated_at!_");
-      expect(filters).toContain("revoked_at_");
+      expect(filters).toContain("status=approved");
+      expect(filters).not.toContain("activated_at!_");
     });
 
     await user.click(screen.getByRole("button", { name: /^cancel$/i }));
@@ -1206,8 +1228,7 @@ describe("CredentialList", () => {
     await waitFor(() => {
       const lastRequest = listRequestsOf(recorded).at(-1);
       const filters = lastRequest ? lastRequest.searchParams.getAll("filters") : [];
-      expect(filters).not.toContain("activated_at!_");
-      expect(filters).not.toContain("revoked_at_");
+      expect(filters).not.toContain("status=approved");
     });
   });
 

@@ -72,7 +72,7 @@ function getReviewFilters(review: CredentialReviewStatus, nowISO: string): strin
     case "pending":
       return PENDING_REVIEW_FILTERS;
     case "approved":
-      return ["activated_at!_", "revoked_at_"];
+      return ["status=approved"];
     case "rejected":
       return ["rejected_at!_"];
     case "expired":
