@@ -11,6 +11,7 @@ import { i18n } from "@shared/i18n/config";
 import { makeCredential } from "@/test/fixtures";
 import { TestProviders } from "@/test/TestProviders";
 import { server } from "@/test/msw/server";
+import { notify } from "@shared/lib/notify";
 import type { CredentialDTO } from "@shared/types/api";
 import { CredentialList } from "./CredentialList";
 
@@ -1308,5 +1309,38 @@ describe("CredentialList", () => {
 
     expect(screen.queryByText("No credentials yet")).not.toBeInTheDocument();
     expect(screen.getByText("Pending Diploma")).toBeInTheDocument();
+  });
+
+  it("displays a toast warning when attempting to select an unresolved credential in approve mode", async () => {
+    const unresolved = pendingCredential({
+      id: "cred_unresolved_toast",
+      name: "Unresolved Cert",
+      unresolved_metadata: ["type", "issuer_organization"],
+    });
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        const url = new URL(request.url);
+        return url.searchParams.get("limit") === "1"
+          ? pageResponse(1)
+          : credentialsResponse([unresolved]);
+      }),
+    );
+    const warningSpy = vi.spyOn(notify, "warning").mockImplementation(() => {});
+    const user = userEvent.setup();
+    renderList("/credentials?review=pending");
+
+    expect(await screen.findByText("Unresolved Cert")).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: /^approve$/i })[0]);
+
+    const card = screen.getByText("Unresolved Cert").closest("[role='link']") as HTMLElement;
+    expect(card).toBeInTheDocument();
+
+    await user.click(card);
+
+    expect(warningSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/resolve.*credential type.*issuing organization/i),
+    );
+    warningSpy.mockRestore();
   });
 });

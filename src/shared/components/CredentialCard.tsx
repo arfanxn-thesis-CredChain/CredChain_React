@@ -6,6 +6,7 @@ import { cn } from "@shared/lib/cn";
 import { formatDate } from "@shared/lib/format";
 import { lifecycleDateLines } from "@shared/lib/credentialDate";
 import { ineligibilityReason, type BulkMode } from "@shared/lib/credentialEligibility";
+import { notify } from "@shared/lib/notify";
 import { Card } from "@ui/card";
 import { Button } from "@ui/button";
 import { Badge } from "@ui/badge";
@@ -359,6 +360,8 @@ export function CredentialCard({
     if (selectionMode) {
       if (isSelectable && !selectDisabled) {
         onSelect?.();
+      } else if (unavailableMessage) {
+        notify.warning(unavailableMessage);
       }
       return;
     }
@@ -369,7 +372,11 @@ export function CredentialCard({
     if (e.key !== "Enter" || e.target !== e.currentTarget) return;
     e.preventDefault();
     if (selectionMode) {
-      if (isSelectable && !selectDisabled) onSelect?.();
+      if (isSelectable && !selectDisabled) {
+        onSelect?.();
+      } else if (unavailableMessage) {
+        notify.warning(unavailableMessage);
+      }
       return;
     }
     openDetail();
@@ -388,26 +395,41 @@ export function CredentialCard({
       aria-label={t(getCredentialStatusLabelKey(credential.status, isSubmission))}
     >
       {selectionMode && (
-        <button
-          type="button"
+        <div
+          className={cn("absolute top-4 right-4 z-10", selectBlocked && "cursor-not-allowed")}
           onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (isSelectable && !selectDisabled) onSelect?.();
+            if (selectBlocked && unavailableMessage) {
+              e.preventDefault();
+              e.stopPropagation();
+              notify.warning(unavailableMessage);
+            }
           }}
-          disabled={selectBlocked}
-          className={cn(
-            "absolute top-4 right-4 z-10 h-5 w-5 rounded border-2 transition-colors",
-            "focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none",
-            selectBlocked && "cursor-not-allowed",
-            isSelected ? "border-gold bg-gold" : "border-gray-300 hover:border-gold",
-          )}
-          aria-pressed={isSelected}
-          aria-describedby={unavailableMessage ? selectionReasonId : undefined}
-          aria-label={t(isSelected ? "cred.card.deselect" : "cred.card.select", {
-            name: credential.name,
-          })}
-        />
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isSelectable && !selectDisabled) {
+                onSelect?.();
+              } else if (unavailableMessage) {
+                notify.warning(unavailableMessage);
+              }
+            }}
+            disabled={selectBlocked}
+            className={cn(
+              "h-5 w-5 rounded border-2 transition-colors",
+              "focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none",
+              selectBlocked && "pointer-events-none cursor-not-allowed",
+              isSelected ? "border-gold bg-gold" : "border-gray-300 hover:border-gold",
+            )}
+            aria-pressed={isSelected}
+            aria-describedby={unavailableMessage ? selectionReasonId : undefined}
+            aria-label={t(isSelected ? "cred.card.deselect" : "cred.card.select", {
+              name: credential.name,
+            })}
+          />
+        </div>
       )}
 
       <div className={cn("flex flex-1 flex-col", selectionMode && "pr-8")}>

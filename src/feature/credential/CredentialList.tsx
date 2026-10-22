@@ -30,7 +30,7 @@ import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { api } from "@shared/api/client";
 import { notify } from "@shared/lib/notify";
-import { isEligibleFor, type BulkMode } from "@shared/lib/credentialEligibility";
+import { isEligibleFor, ineligibilityReason, type BulkMode } from "@shared/lib/credentialEligibility";
 import type { CredentialDTO, PaginatedResponse } from "@shared/types/api";
 
 import { PageHeader } from "@shared/components/PageHeader";
@@ -467,8 +467,29 @@ export function CredentialList() {
   };
 
   const handleInlineApprove = (id: string) => {
-    const item = credentials.find((c) => c.id === id && isEligibleFor(c, "approve"));
+    const item = credentials.find((c) => c.id === id);
     if (!item) return;
+    const reason = ineligibilityReason(item, "approve");
+    if (reason) {
+      const msg =
+        reason.kind === "unresolved" || reason.kind === "inactive"
+          ? t(`cred.card.${reason.kind}References`, {
+              fields: reason.fields
+                .map((field) =>
+                  t(
+                    {
+                      type: "cred.submit.field.type",
+                      issuer_organization: "cred.parties.issuerOrganization",
+                      competency: "cred.competency.title",
+                    }[field],
+                  ),
+                )
+                .join(", "),
+            })
+          : t("cred.metadata.blocksApproval");
+      notify.warning(msg);
+      return;
+    }
     setApproveItems([item]);
     setApproveFromBulk(false);
   };

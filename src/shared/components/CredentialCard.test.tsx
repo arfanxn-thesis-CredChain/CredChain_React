@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TestProviders } from "@/test/TestProviders";
 import { i18n } from "@shared/i18n/config";
+import { notify } from "@shared/lib/notify";
 import { CredentialCard } from "./CredentialCard";
 import { makeCredential, makeUser } from "@/test/fixtures";
 import { Role } from "@shared/auth/role";
@@ -1019,6 +1020,50 @@ describe("CredentialCard", () => {
       expect(checkbox).toBeDisabled();
       expect(checkbox).toHaveAttribute("aria-describedby");
       expect(screen.getByText(/maximum of 100 credentials selected/i)).toBeInTheDocument();
+    });
+
+    it("displays a toast warning with the card explanation when attempting to select a blocked credential", async () => {
+      const user = userEvent.setup();
+      const warningSpy = vi.spyOn(notify, "warning").mockImplementation(() => {});
+      const credential = makeCredential({
+        status: "pending",
+        unresolved_metadata: ["type", "issuer_organization"],
+      });
+      render(
+        <CredentialCard credential={credential} selectionMode="approve" onSelect={vi.fn()} />,
+        { wrapper: TestProviders },
+      );
+
+      const selectButton = screen.getByRole("button", { name: /select credential/i });
+      expect(selectButton).toBeDisabled();
+
+      await user.click(selectButton.parentElement ?? selectButton);
+
+      expect(warningSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/resolve.*credential type.*issuing organization/i),
+      );
+      warningSpy.mockRestore();
+    });
+
+    it("displays a toast warning when clicking the card body of a blocked credential in approve mode", async () => {
+      const user = userEvent.setup();
+      const warningSpy = vi.spyOn(notify, "warning").mockImplementation(() => {});
+      const credential = makeCredential({
+        status: "pending",
+        unresolved_metadata: ["competency"],
+      });
+      const { container } = render(
+        <CredentialCard credential={credential} selectionMode="approve" onSelect={vi.fn()} />,
+        { wrapper: TestProviders },
+      );
+
+      const card = container.firstElementChild as HTMLElement;
+      await user.click(card);
+
+      expect(warningSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/resolve.*competenc/i),
+      );
+      warningSpy.mockRestore();
     });
   });
 
