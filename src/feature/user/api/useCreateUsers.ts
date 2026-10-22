@@ -17,6 +17,7 @@ export function useCreateUsers<T extends FieldValues>(form?: UseFormReturn<T>) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("user.store.success");
     },
     onError: (error) => {

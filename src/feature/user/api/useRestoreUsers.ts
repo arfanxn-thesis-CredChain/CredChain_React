@@ -14,6 +14,7 @@ export function useRestoreUsers() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("user.restore.success");
     },
     onError: (error) => {

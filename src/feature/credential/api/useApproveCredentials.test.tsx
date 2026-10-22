@@ -69,6 +69,34 @@ describe("useApproveCredentials", () => {
     expect(successSpy).toHaveBeenCalledWith("cred.approve.success");
   });
 
+  it("invalidates overview queries after approval", async () => {
+    let refetches = 0;
+    server.use(
+      http.post("*/api/credentials/batch/approve", () =>
+        HttpResponse.json({ code: 401200, message: "ok", data: [] }),
+      ),
+    );
+
+    function ObserveAndAct() {
+      useQuery({
+        queryKey: ["overview", "credential-recap"],
+        queryFn: async () => {
+          refetches += 1;
+          return "data";
+        },
+      });
+      const approve = useApproveCredentials();
+      return <button onClick={() => approve.mutate(["cred_pending_1"])}>approve</button>;
+    }
+
+    const user = userEvent.setup();
+    render(<ObserveAndAct />, { wrapper: TestProviders });
+    await waitFor(() => expect(refetches).toBe(1));
+
+    await user.click(screen.getByRole("button", { name: "approve" }));
+    await waitFor(() => expect(refetches).toBe(2));
+  });
+
   it("surfaces the backend messageKey via notify.error on failure", async () => {
     const errorSpy = vi.spyOn(notify, "error");
     server.use(

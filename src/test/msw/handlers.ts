@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
+import { Role } from "@shared/auth/role";
 import type { HolderUnitDTO, ReferenceRow, UserDTO } from "@shared/types/api";
-import { mockUsers } from "../fixtures";
+import { makeUser, mockUsers } from "../fixtures";
 
 const envelope = <T>(code: number, message: string, data?: T) =>
   HttpResponse.json({ code, message, ...(data !== undefined ? { data } : {}) });
@@ -793,6 +794,48 @@ export const handlers = [
     });
   }),
 
+  http.get("*/api/overview/credential-recap", () =>
+    envelope(100100, "Credential recap loaded", {
+      as_of: "2026-06-20T12:00:00Z",
+      units: [
+        { id: "unit_01", parent_id: null, name: "Faculty of Engineering", active: true },
+        { id: "unit_02", parent_id: "unit_01", name: "Computer Science Department", active: true },
+      ],
+      rows: [
+        {
+          unit_id: "unit_02",
+          joined_year: 2024,
+          total_holders: 2,
+          holders_with_credentials: 1,
+          holders_without_credentials: 1,
+          holders_with_active_credentials: 1,
+          holders_without_active_credentials: 1,
+          total_credentials: 3,
+          active_credentials: 2,
+          pending_credentials: 1,
+          rejected_credentials: 0,
+          expired_credentials: 0,
+          revoked_credentials: 0,
+        },
+        {
+          unit_id: null,
+          joined_year: null,
+          total_holders: 1,
+          holders_with_credentials: 1,
+          holders_without_credentials: 0,
+          holders_with_active_credentials: 0,
+          holders_without_active_credentials: 1,
+          total_credentials: 1,
+          active_credentials: 0,
+          pending_credentials: 0,
+          rejected_credentials: 0,
+          expired_credentials: 0,
+          revoked_credentials: 1,
+        },
+      ],
+    }),
+  ),
+
   http.get("*/api/overview", () => {
     return HttpResponse.json({
       code: 100100,
@@ -812,8 +855,21 @@ export const handlers = [
             {
               id: "01J1",
               name: "Bachelor's Degree",
-              holder: { id: "01H1", name: "John", email: "john@example.com", role: "holder" },
-              issuer: { id: "01I1", name: "UI", email: "admin@ui.ac.id", role: "issuer" },
+              holder: makeUser({
+                id: "01H1",
+                name: "John",
+                email: "john@example.com",
+                role: Role.HOLDER,
+                unit_id: "unit_01",
+                joined_year: 2023,
+                number: "22090009",
+              }),
+              issuer: makeUser({
+                id: "01I1",
+                name: "UI",
+                email: "admin@ui.ac.id",
+                role: Role.ISSUER,
+              }),
               issued_at: "2026-06-20T10:00:00Z",
             },
           ],
@@ -821,20 +877,34 @@ export const handlers = [
             {
               id: "01J2",
               name: "Diploma",
-              holder: { id: "01H2", name: "Jane", email: "jane@example.com", role: "holder" },
-              revoker: { id: "01R1", name: "Admin", email: "admin@example.com", role: "admin" },
+              holder: makeUser({
+                id: "01H2",
+                name: "Jane",
+                email: "jane@example.com",
+                role: Role.HOLDER,
+                unit_id: "unit_02",
+                joined_year: 2024,
+                number: "22090001",
+              }),
+              revoker: makeUser({
+                id: "01R1",
+                name: "Admin",
+                email: "admin@example.com",
+                role: Role.ADMIN,
+              }),
               issued_at: "2026-04-01T00:00:00Z",
               revoked_at: "2026-06-19T08:00:00Z",
             },
           ],
           stored_users: [
-            {
+            makeUser({
               id: "01H3",
               name: "Jane",
               email: "jane@example.com",
-              role: "holder",
+              role: Role.HOLDER,
               created_at: "2026-06-18T00:00:00Z",
-            },
+              joined_year: 2024,
+            }),
           ],
         },
         chain_details: {

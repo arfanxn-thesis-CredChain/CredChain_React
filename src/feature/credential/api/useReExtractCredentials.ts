@@ -14,6 +14,7 @@ export function useReExtractCredentials() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("credential.reextract.success");
     },
     onError: (error) => {
@@ -21,6 +22,7 @@ export function useReExtractCredentials() {
         notify.error(error.messageKey);
         if (error.status === 409 || error.status === 422 || error.status === 404) {
           void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+          void queryClient.invalidateQueries({ queryKey: ["overview"] });
         }
       }
     },

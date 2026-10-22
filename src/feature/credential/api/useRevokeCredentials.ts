@@ -16,6 +16,7 @@ export function useRevokeCredentials() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("credential.revoke.success");
     },
     onError: (error) => {
@@ -23,6 +24,7 @@ export function useRevokeCredentials() {
         notify.error(error.messageKey);
         if (error.status === 409 || error.status === 422 || error.status === 404) {
           void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+          void queryClient.invalidateQueries({ queryKey: ["overview"] });
         }
       }
     },

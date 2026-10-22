@@ -15,6 +15,7 @@ export function useUpdateUserRoles() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("user.role_update.success");
     },
     onError: (error) => {

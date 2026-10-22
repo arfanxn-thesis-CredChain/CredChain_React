@@ -25,6 +25,7 @@ export function useUpdateCredentials() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("success_credential_update");
     },
     onError: (error) => {

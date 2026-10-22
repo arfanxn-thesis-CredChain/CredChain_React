@@ -14,6 +14,7 @@ export function useApproveCredentials() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("cred.approve.success");
     },
     onError: (error) => {
@@ -21,6 +22,7 @@ export function useApproveCredentials() {
         notify.error(error.messageKey);
         if (error.status === 409 || error.status === 422 || error.status === 404) {
           void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+          void queryClient.invalidateQueries({ queryKey: ["overview"] });
         }
       } else notify.error("cred.approve.failed");
     },

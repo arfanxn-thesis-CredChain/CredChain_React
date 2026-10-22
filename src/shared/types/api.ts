@@ -177,6 +177,31 @@ export interface PaginationParams {
   includes?: string[];
 }
 
+export interface CredentialRecapCounts {
+  total_holders: number;
+  holders_with_credentials: number;
+  holders_without_credentials: number;
+  holders_with_active_credentials: number;
+  holders_without_active_credentials: number;
+  total_credentials: number;
+  active_credentials: number;
+  pending_credentials: number;
+  rejected_credentials: number;
+  expired_credentials: number;
+  revoked_credentials: number;
+}
+
+export interface CredentialRecapRow extends CredentialRecapCounts {
+  unit_id: string | null;
+  joined_year: number | null;
+}
+
+export interface CredentialRecap {
+  as_of: string;
+  rows: CredentialRecapRow[];
+  units: Pick<HolderUnitDTO, "id" | "parent_id" | "name" | "active">[];
+}
+
 export interface OverviewCredentialCounts {
   total: number;
   active: number;
@@ -206,20 +231,14 @@ export interface OverviewChainDetails {
 export interface OverviewRecentCredential {
   id: string;
   name: string;
-  holder?: { id: string; name: string; email: string; role: Role };
-  issuer?: { id: string; name: string; email: string; role: Role };
-  revoker?: { id: string; name: string; email: string; role: Role };
+  holder?: UserDTO;
+  issuer?: UserDTO;
+  revoker?: UserDTO;
   issued_at: string;
   revoked_at?: string;
 }
 
-export interface OverviewRecentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  created_at: string;
-}
+export type OverviewRecentUser = UserDTO;
 
 export interface OverviewRecents {
   active_credentials?: OverviewRecentCredential[];

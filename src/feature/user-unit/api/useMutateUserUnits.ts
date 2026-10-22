@@ -25,6 +25,7 @@ export function useStoreUserUnit() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userUnitKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("success_user_unit_store");
     },
     onError: handleError,
@@ -55,6 +56,7 @@ export function useUpdateUserUnit() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userUnitKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("success_user_unit_update");
     },
     onError: handleError,
@@ -71,6 +73,7 @@ export function useDestroyUserUnit() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userUnitKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("success_user_unit_destroy");
     },
     onError: handleError,

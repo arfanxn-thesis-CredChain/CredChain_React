@@ -15,6 +15,7 @@ export function useUpdateUsers() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: userKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("user.update.success");
     },
     onError: (error) => {

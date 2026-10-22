@@ -3,6 +3,8 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { TestProviders } from "@/test/TestProviders";
+import { makeUser } from "@/test/fixtures";
+import { Role } from "@shared/auth/role";
 import { useOverview } from "./useOverview";
 import type { OverviewDTO } from "@shared/types/api";
 
@@ -14,14 +16,20 @@ const mockData: OverviewDTO = {
       {
         id: "c1",
         name: "Degree",
-        issuer: { id: "i1", name: "UI", email: "ui@test.com", role: "issuer" },
+        issuer: makeUser({ id: "i1", name: "UI", email: "ui@test.com", role: Role.ISSUER }),
         issued_at: "2026-06-20T10:00:00Z",
       },
     ],
     revoked_credentials: [],
     stored_users: [],
   },
-  chain_details: { authority_contract: "0x9A", registry_contract: "0x8B", last_block: 100, relayer_address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", relayer_balance: "10499.98" },
+  chain_details: {
+    authority_contract: "0x9A",
+    registry_contract: "0x8B",
+    last_block: 100,
+    relayer_address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    relayer_balance: "10499.98",
+  },
 };
 
 const server = setupServer(

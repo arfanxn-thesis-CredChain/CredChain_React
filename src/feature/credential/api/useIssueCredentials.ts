@@ -72,12 +72,14 @@ export function useIssueCredentials<T extends FieldValues>(form?: UseFormReturn<
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: ["overview"] });
       notify.success("credential.issue.success");
     },
     onError: (error) => {
       if (isApiError(error) && error.fieldErrors && form) {
         setServerErrors(form, normalizeBatchErrorPaths(error.fieldErrors));
         void queryClient.invalidateQueries({ queryKey: credentialKeys.all() });
+        void queryClient.invalidateQueries({ queryKey: ["overview"] });
         notify.error("validation.form_errors");
       } else if (isApiError(error)) {
         notify.error(error.messageKey);
