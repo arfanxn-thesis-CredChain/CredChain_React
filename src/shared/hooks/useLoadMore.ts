@@ -61,6 +61,7 @@ export function useLoadMore<T extends { id: string }>(
     dispatch({ type: "reset" });
   }, [serializedKey]);
 
+  const hasNoItems = state.items.length === 0;
   useEffect(() => {
     if (!query.data || query.data.page !== state.page) return;
     dispatch({
@@ -69,7 +70,7 @@ export function useLoadMore<T extends { id: string }>(
       items: query.data.items,
       total: query.data.total,
     });
-  }, [query.data, state.page, state.items.length === 0]);
+  }, [query.data, state.page, hasNoItems]);
 
   const loadMore = useCallback(() => {
     if (query.data && state.page < query.data.last_page) {
