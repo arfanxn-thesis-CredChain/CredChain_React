@@ -324,6 +324,7 @@
   "profile.field.email": "Email",
   "profile.field.wallet": "Wallet",
   "profile.field.gender": "Gender",
+  "profile.field.cannotClear": "This field cannot be cleared. Select a value or cancel the change.",
   "profile.empty": "Not set",
   "profile.phone.hint": "International format, e.g. +6281234567890",
   "profile.phone.placeholder": "+6281234567890",

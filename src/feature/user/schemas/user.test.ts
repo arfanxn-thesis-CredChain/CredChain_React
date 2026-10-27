@@ -238,25 +238,49 @@ describe("userBatchStoreSchema", () => {
 });
 
 describe("userSelfProfileSchema", () => {
-  it("accepts empty object (phone is optional)", () => {
-    const result = userSelfProfileSchema.safeParse({});
-    expect(result.success).toBe(true);
+  it("validates editable profile fields", () => {
+    expect(
+      userSelfProfileSchema.safeParse({
+        name: "Jane",
+        number: "ID-42",
+        unit_id: "unit-1",
+        joined_year: 2025,
+        birth_date: "2003-07-21",
+        gender: "female",
+        meta_entries: [{ key: "department", value: "Research" }],
+      }).success,
+    ).toBe(true);
+    expect(userSelfProfileSchema.safeParse({ name: "" }).success).toBe(false);
+    expect(
+      userSelfProfileSchema.safeParse({ name: "Jane", birth_date: "21/07/2003" }).success,
+    ).toBe(false);
+    expect(userSelfProfileSchema.safeParse({ name: "Jane", unit_id: "x".repeat(27) }).success).toBe(
+      false,
+    );
+    expect(userSelfProfileSchema.safeParse({ name: "Jane", joined_year: 1899 }).success).toBe(
+      false,
+    );
   });
 
-  it("accepts valid E.164 phone number", () => {
-    const result = userSelfProfileSchema.safeParse({ phone_number: "+6281234567890" });
+  it("preserves empty number for an intentional clear", () => {
+    const result = userSelfProfileSchema.safeParse({ name: "Jane", number: "" });
     expect(result.success).toBe(true);
+    if (result.success) expect(result.data.number).toBe("");
   });
 
-  it("rejects invalid phone format", () => {
-    const result = userSelfProfileSchema.safeParse({ phone_number: "08123456789" });
-    expect(result.success).toBe(false);
-  });
-
-  it("treats empty string phone as undefined", () => {
-    const result = userSelfProfileSchema.safeParse({ phone_number: "" });
+  it("strips protected and unsupported fields", () => {
+    const result = userSelfProfileSchema.safeParse({
+      name: "Jane",
+      email: "changed@example.com",
+      role: Role.ADMIN,
+      unit_id: "unit-1",
+      joined_year: 2025,
+      wallet_address: "0x123",
+      phone_number: "+6281234567890",
+    });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.phone_number).toBeUndefined();
+    if (result.success)
+      expect(result.data).toEqual({ name: "Jane", unit_id: "unit-1", joined_year: 2025 });
   });
 });
 

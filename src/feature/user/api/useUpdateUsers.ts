@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/api/client";
 import { notify } from "@shared/lib/notify";
 import { isApiError } from "@shared/api/envelope";
+import type { UserDTO } from "@shared/types/api";
 import type { UserBatchUpdateInput } from "../schemas/user";
 import { userKeys } from "./keys";
 
@@ -10,7 +11,7 @@ export function useUpdateUsers() {
 
   return useMutation({
     mutationFn: async (data: UserBatchUpdateInput) => {
-      const response = await api.put("/users/batch", data);
+      const response = await api.put<UserDTO[]>("/users/batch", data);
       return response.data;
     },
     onSuccess: () => {

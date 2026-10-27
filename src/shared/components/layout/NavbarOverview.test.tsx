@@ -36,6 +36,26 @@ describe("NavbarOverview logout confirmation", () => {
   });
 });
 
+describe("NavbarOverview profile menu", () => {
+  it.each([Role.SUPER_ADMIN, Role.ADMIN, Role.ISSUER, Role.HOLDER])(
+    "links %s to Profile without a separate Edit Profile item",
+    async (role) => {
+      useStore.setState({ user: mockUserWithMeta({ role }), isAuthenticated: true });
+      renderNavbar();
+      await userEvent.click(screen.getByRole("button", { name: /user menu/i }));
+      expect(screen.getByRole("menuitem", { name: "Profile" })).toHaveAttribute(
+        "href",
+        "/account/profile",
+      );
+      expect(screen.getByRole("menuitem", { name: "Update Email" })).toHaveAttribute(
+        "href",
+        "/account/email",
+      );
+      expect(screen.queryByRole("menuitem", { name: "Edit Profile" })).not.toBeInTheDocument();
+    },
+  );
+});
+
 describe("NavbarOverview search", () => {
   beforeEach(() => {
     void i18n.changeLanguage("en");

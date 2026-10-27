@@ -4,7 +4,6 @@ import { Role } from "@shared/auth/role";
 import { metaEntriesSchema } from "@shared/lib/meta";
 export { metaEntrySchema, metaEntriesSchema } from "@shared/lib/meta";
 
-const STRICT_E164 = /^\+[1-9]\d{6,14}$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 const optionalEmptyToNull = (schema: z.ZodString) =>
@@ -38,11 +37,6 @@ const optionalJoinedYear = z.preprocess(
  */
 const nullableOptionalEmptyToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((val) => (val === "" ? undefined : val), schema.nullable().optional());
-
-export const phoneSchema = z
-  .string()
-  .max(19, "zod.user.phoneTooLong")
-  .regex(STRICT_E164, "zod.user.phoneFormat");
 
 export const birthDateSchema = z.string().regex(ISO_DATE, "zod.user.dateFormat");
 
@@ -128,12 +122,6 @@ export const userBatchDeleteSchema = z.object({
 
 export type UserBatchDeleteInput = z.infer<typeof userBatchDeleteSchema>;
 
-export const userSelfProfileSchema = z.object({
-  phone_number: optionalEmptyToNull(phoneSchema),
-});
-
-export type UserSelfProfileInput = z.infer<typeof userSelfProfileSchema>;
-
 export const userSelfEmailSchema = z.object({
   email: z
     .string()
@@ -166,6 +154,20 @@ export const userDetailEditSchema = z.object({
 });
 
 export type UserDetailEditInput = z.infer<typeof userDetailEditSchema>;
+
+export const userSelfProfileSchema = userDetailEditSchema
+  .pick({
+    name: true,
+    number: true,
+    unit_id: true,
+    joined_year: true,
+    birth_date: true,
+    gender: true,
+    meta_entries: true,
+  })
+  .extend({ number: z.string().max(256, "zod.user.numberTooLong").optional() });
+
+export type UserSelfProfileInput = z.infer<typeof userSelfProfileSchema>;
 
 export function defaultUserStoreRow(): UserStoreInput {
   return {
