@@ -144,23 +144,9 @@ export function CredentialRecapCard() {
   return (
     <Card className="min-w-0 overflow-hidden p-5 sm:p-6" aria-label={label("title")}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-xl font-semibold tracking-tight text-navy">
-            {label("title")}
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            {label("scope")}
-            {data && (
-              <>
-                {" "}
-                ·{" "}
-                <time dateTime={data.as_of}>
-                  {new Date(data.as_of).toLocaleString(i18n.language)}
-                </time>
-              </>
-            )}
-          </p>
-        </div>
+        <h2 className="font-display text-xl font-semibold tracking-tight text-navy">
+          {label("title")}
+        </h2>
         <Dialog>
           <DialogTrigger asChild>
             <Button
@@ -179,9 +165,7 @@ export function CredentialRecapCard() {
             </DialogHeader>
             <div className="space-y-3 text-sm leading-relaxed text-gray-600">
               <p>{label("definitionText")}</p>
-              <p className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs leading-relaxed text-gray-500">
-                {label("scopeNote")}
-              </p>
+              <p>{label("scopeNote")}</p>
             </div>
           </DialogContent>
         </Dialog>

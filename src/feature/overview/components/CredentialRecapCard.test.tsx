@@ -35,15 +35,33 @@ describe("CredentialRecapCard", () => {
     const u = userEvent.setup();
     renderCard();
     expect(screen.getByRole("heading", { name: "Credential Distribution" })).toBeVisible();
+    expect(screen.queryByText(/current holders only|calculated at/i)).not.toBeInTheDocument();
+    expect(document.querySelector("time")).not.toBeInTheDocument();
     const trigger = screen.getByRole("button", { name: "About" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     await u.click(trigger);
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeVisible();
     expect(within(dialog).getByRole("heading", { name: "About" })).toBeVisible();
-    expect(within(dialog).getByText(/current unit and joined-year assignments/i)).toBeVisible();
+    const scopeNote = within(dialog).getByText(/holders’ current units and joined years/i);
+    expect(scopeNote).toBeVisible();
+    expect(scopeNote).not.toHaveClass("bg-gray-50");
+    expect(within(dialog).getByText(/at least one active credential/i)).toBeVisible();
     await u.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("uses concise Indonesian labels and About text", async () => {
+    await i18n.changeLanguage("id");
+    const u = userEvent.setup();
+    renderCard();
+    expect(await screen.findByRole("button", { name: /unit: semua/i })).toBeVisible();
+    expect(screen.queryByText(/hanya pemegang saat ini|dihitung pada/i)).not.toBeInTheDocument();
+    await u.click(screen.getByRole("button", { name: "Tentang" }));
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText(/penghitungan memakai unit dan tahun bergabung/i),
+    ).toBeVisible();
   });
 
   it("shows additive totals and complete ownership columns", async () => {
@@ -52,13 +70,12 @@ describe("CredentialRecapCard", () => {
     const totals = screen.getByRole("row", { name: /filtered total/i });
     expect(within(totals).getAllByText("3").length).toBeGreaterThan(0);
     expect(within(totals).getAllByText("4").length).toBeGreaterThan(0);
-    expect(screen.getByText(/current holders only/i)).toBeVisible();
   });
   it("filters by descendants in URL, preserves date, and restores history", async () => {
     const u = userEvent.setup();
     renderCard("/overview?date=..2026-01-01,2026-06-30&other=ok");
-    await screen.findByRole("button", { name: /organisational unit:/i });
-    await u.click(screen.getByRole("button", { name: /organisational unit:/i }));
+    await screen.findByRole("button", { name: /unit:/i });
+    await u.click(screen.getByRole("button", { name: /unit:/i }));
     await u.click(screen.getByRole("menuitem", { name: /faculty of engineering/i }));
     expect(screen.getByTestId("location").textContent).toContain("recap_unit=unit_01");
     expect(screen.getByTestId("location").textContent).toContain("other=ok");
@@ -67,14 +84,14 @@ describe("CredentialRecapCard", () => {
     await waitFor(() =>
       expect(screen.getByTestId("location").textContent).not.toContain("recap_unit"),
     );
-    expect(screen.getByRole("button", { name: /organisational unit: all/i })).toBeVisible();
+    expect(screen.getByRole("button", { name: /unit: all/i })).toBeVisible();
   });
   it("supports regrouping, sorting and optional columns", async () => {
     const u = userEvent.setup();
     renderCard();
-    await screen.findByRole("button", { name: /organisational unit:/i });
+    await screen.findByRole("button", { name: /unit:/i });
     await u.click(screen.getByRole("button", { name: /group: unit \+ year/i }));
-    await u.click(screen.getByRole("menuitem", { name: "Organisational unit" }));
+    await u.click(screen.getByRole("menuitem", { name: "Unit" }));
     expect(screen.queryByRole("columnheader", { name: "Joined year" })).not.toBeInTheDocument();
     await u.click(screen.getByRole("button", { name: /columns/i }));
     await u.click(screen.getByRole("menuitemcheckbox", { name: "Revoked credentials" }));
@@ -153,7 +170,7 @@ describe("CredentialRecapCard", () => {
     await screen.findByText(/showing 10 of 12/i);
     await u.click(screen.getByRole("button", { name: /load more/i }));
     expect(screen.getByText(/showing 12 of 12/i)).toBeVisible();
-    await u.click(screen.getByRole("button", { name: /organisational unit:/i }));
+    await u.click(screen.getByRole("button", { name: /unit:/i }));
     await u.click(screen.getByRole("menuitem", { name: /unit/i }));
     expect(screen.getByTestId("location").textContent).toContain("recap_unit=u");
     expect(screen.getByText(/showing 10 of 12/i)).toBeVisible();
@@ -223,7 +240,7 @@ describe("CredentialRecapCard", () => {
     await screen.findByRole("button", { name: /joined year:/i });
     await u.click(screen.getByRole("button", { name: /joined year:/i }));
     await u.click(screen.getByRole("menuitem", { name: "2024" }));
-    await u.click(screen.getByRole("button", { name: /organisational unit:/i }));
+    await u.click(screen.getByRole("button", { name: /unit:/i }));
     await u.click(screen.getByRole("menuitem", { name: /unassigned unit/i }));
     expect(await screen.findByText(/no groups match/i)).toBeVisible();
     await u.click(screen.getByRole("button", { name: /clear recap filters/i }));
