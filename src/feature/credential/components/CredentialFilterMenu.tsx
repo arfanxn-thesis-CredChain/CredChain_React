@@ -34,6 +34,8 @@ interface CredentialFilterMenuProps {
   isFetchingNextPage?: boolean;
   /** Name for the current selection when it lives past the loaded page. */
   selectedName?: string;
+  isLoadingSelected?: boolean;
+  isUnavailable?: boolean;
 }
 
 export function CredentialFilterMenu({
@@ -48,6 +50,8 @@ export function CredentialFilterMenu({
   onLoadMore,
   isFetchingNextPage,
   selectedName,
+  isLoadingSelected,
+  isUnavailable,
 }: CredentialFilterMenuProps) {
   const { t } = useTranslation();
   const [localQuery, setLocalQuery] = useState("");
@@ -57,7 +61,16 @@ export function CredentialFilterMenu({
   const setQuery = serverSide ? onSearchChange : setLocalQuery;
 
   const selected = options.find((opt) => opt.id === value);
-  const triggerLabel = selected?.name ?? selectedName ?? t(allLabelKey);
+  const triggerLabel =
+    value === null
+      ? t(allLabelKey)
+      : (selected?.name ??
+        selectedName ??
+        (isLoadingSelected
+          ? t("cred.filter.loading")
+          : isUnavailable
+            ? t("cred.filter.unavailable")
+            : t("cred.filter.unavailable")));
 
   // Server-side results arrive already filtered; re-filtering here would drop
   // rows the server matched on something other than a substring.

@@ -15,6 +15,10 @@ export function CredentialCompetencyFilterMenu({
   const [query, setQuery] = useState("");
   const list = useCompetencies({ search: useDebouncedValue(query.trim(), 300) });
   const selected = useReferenceByIds("competencies", value ? [value] : []);
+  const hasSelectedInOptions = list.items.some((o) => o.id === value);
+  const isUnavailable = Boolean(
+    value && selected.isSuccess && !selected.data?.length && !hasSelectedInOptions,
+  );
 
   return (
     <CredentialFilterMenu
@@ -29,6 +33,8 @@ export function CredentialCompetencyFilterMenu({
       onLoadMore={list.loadMore}
       isFetchingNextPage={list.isFetchingNextPage}
       selectedName={selected.data?.[0]?.name}
+      isLoadingSelected={Boolean(value && selected.isLoading && !hasSelectedInOptions)}
+      isUnavailable={isUnavailable}
     />
   );
 }

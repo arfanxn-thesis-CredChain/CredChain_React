@@ -19,7 +19,13 @@ export function TestProviders({ children, initialEntries = ["/"], routePath }: T
   });
 
   // Data router (createMemoryRouter) is required so hooks like useBlocker work.
-  const router = createMemoryRouter([{ path: routePath ?? "*", element: <>{children}</> }], {
+  const routes = routePath
+    ? [
+        { path: routePath, element: <>{children}</> },
+        { path: "*", element: <div data-testid="navigated-out" /> },
+      ]
+    : [{ path: "*", element: <>{children}</> }];
+  const router = createMemoryRouter(routes, {
     initialEntries,
   });
 

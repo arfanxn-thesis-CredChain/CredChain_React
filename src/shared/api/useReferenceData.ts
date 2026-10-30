@@ -1,9 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useStore } from "@app/store";
 import { api } from "@shared/api/client";
-import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { notify } from "@shared/lib/notify";
 import { isApiError } from "@shared/api/envelope";
-import type { PaginatedResponse, ReferenceResource, ReferenceRow } from "@shared/types/api";
+import type {
+  PaginatedResponse,
+  ReferenceResource,
+  ReferenceRow,
+  ReferenceStatus,
+} from "@shared/types/api";
 
 /**
  * Reference-data lookups (credential types, issuer organizations, competencies)
@@ -14,11 +19,29 @@ import type { PaginatedResponse, ReferenceResource, ReferenceRow } from "@shared
  * re-exports these as `src/feature/credential/api/useReferenceData.ts`.
  */
 
+export interface ReferenceQuery {
+  search?: string;
+  status?: ReferenceStatus;
+  activeOnly?: boolean;
+  active?: boolean;
+}
+
 export const referenceKeys = {
   /** Prefix covering every page and search variant of one resource. */
   all: (resource: ReferenceResource) => ["reference", resource] as const,
-  page: (resource: ReferenceResource, search?: string) =>
-    ["reference", resource, "page", { search: search || undefined }] as const,
+  page: (resource: ReferenceResource, query?: ReferenceQuery | string) => {
+    const q: ReferenceQuery = typeof query === "string" ? { search: query } : (query ?? {});
+    return [
+      "reference",
+      resource,
+      "page",
+      {
+        search: q.search?.trim() || undefined,
+        status: q.status || undefined,
+        active: q.active ?? (q.activeOnly ? true : undefined),
+      },
+    ] as const;
+  },
   byIds: (resource: ReferenceResource, ids: string[]) =>
     ["reference", resource, "byIds", [...ids].sort()] as const,
 };
@@ -41,29 +64,57 @@ const RESOURCE_PAGE_SIZE: Record<ReferenceResource, number> = {
   competencies: 50,
 };
 
-export interface ReferenceQuery {
-  search?: string;
-}
-
 /**
- * Paginated, server-searched list of one reference resource. Accumulates pages
- * the same way the user and credential lists do; changing `search` resets to
- * page 1 because the query key changes.
+ * Paginated, server-searched reference list. Keep loaded pages in the query
+ * cache so invalidation replaces every page when a row leaves the filter.
  */
 export function useReferencePage(resource: ReferenceResource, query: ReferenceQuery = {}) {
   const search = query.search?.trim() || undefined;
-  return useLoadMore<ReferenceRow>(
-    referenceKeys.page(resource, search),
-    async (page, limit) => {
-      const params: Record<string, unknown> = { page, limit };
+  const status = query.status;
+  const active = query.active ?? (query.activeOnly ? true : undefined);
+
+  const user = useStore((s) => s.user);
+  const queryClient = useQueryClient();
+  const queryKey = [...referenceKeys.page(resource, query), user?.id, user?.role];
+  const list = useInfiniteQuery<PaginatedResponse<ReferenceRow>>({
+    queryKey,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.last_page ? lastPage.page + 1 : undefined,
+    queryFn: async ({ pageParam, signal }) => {
+      const params: Record<string, unknown> = {
+        page: pageParam,
+        limit: RESOURCE_PAGE_SIZE[resource],
+      };
       if (search) params.search = search;
+      const filters: string[] = [];
+      if (status) filters.push(`status=${status}`);
+      if (active !== undefined) filters.push(`active=${active}`);
+      if (filters.length > 0) params.filters = filters;
+
       const response = await api.get<PaginatedResponse<ReferenceRow>>(RESOURCE_PATH[resource], {
         params,
+        signal,
       });
       return response.data;
     },
-    RESOURCE_PAGE_SIZE[resource],
-  );
+  });
+
+  const items = [
+    ...new Map(list.data?.pages.flatMap((page) => page.items).map((row) => [row.id, row])).values(),
+  ];
+  return {
+    items,
+    total: list.data?.pages[0]?.total ?? 0,
+    isLoading: list.isLoading,
+    isError: list.isError,
+    isFetchingNextPage: list.isFetchingNextPage,
+    hasMore: list.hasNextPage,
+    loadMore: () => {
+      if (!list.isFetching && list.hasNextPage) void list.fetchNextPage();
+    },
+    reset: () => void queryClient.resetQueries({ queryKey, exact: true }),
+  };
 }
 
 /**
@@ -74,8 +125,9 @@ export function useReferencePage(resource: ReferenceResource, query: ReferenceQu
  * unfiltered request would return the whole first page and pretend it matched.
  */
 export function useReferenceByIds(resource: ReferenceResource, ids: string[]) {
+  const user = useStore((s) => s.user);
   return useQuery({
-    queryKey: referenceKeys.byIds(resource, ids),
+    queryKey: [...referenceKeys.byIds(resource, ids), user?.id, user?.role],
     enabled: ids.length > 0,
     queryFn: async () => {
       const response = await api.get<PaginatedResponse<ReferenceRow>>(RESOURCE_PATH[resource], {
@@ -104,6 +156,74 @@ export function useUpsertReference(resource: ReferenceResource) {
         notify.error(error.messageKey);
       } else {
         notify.error("cred.submit.createError");
+      }
+    },
+  });
+}
+
+export function useSubmitReference(resource: ReferenceResource) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const response = await api.post<ReferenceRow>(`${RESOURCE_PATH[resource]}/submit`, { name });
+      return response.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: referenceKeys.all(resource) });
+      notify.success("cred.references.submitSuccess");
+    },
+    onError: (error) => {
+      if (isApiError(error)) {
+        notify.error(error.messageKey);
+      } else {
+        notify.error("cred.references.submitError");
+      }
+    },
+  });
+}
+
+export function useApproveReference(resource: ReferenceResource) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.post<ReferenceRow>(`${RESOURCE_PATH[resource]}/${id}/approve`);
+      return response.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: referenceKeys.all(resource) });
+      notify.success("cred.references.approveSuccess");
+    },
+    onError: (error) => {
+      if (isApiError(error)) {
+        notify.error(error.messageKey);
+      } else {
+        notify.error("cred.references.approveError");
+      }
+    },
+  });
+}
+
+export function useRejectReference(resource: ReferenceResource) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, rejection_reason }: { id: string; rejection_reason: string }) => {
+      const response = await api.post<ReferenceRow>(`${RESOURCE_PATH[resource]}/${id}/reject`, {
+        rejection_reason,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: referenceKeys.all(resource) });
+      notify.success("cred.references.rejectSuccess");
+    },
+    onError: (error) => {
+      if (isApiError(error)) {
+        notify.error(error.messageKey);
+      } else {
+        notify.error("cred.references.rejectError");
       }
     },
   });

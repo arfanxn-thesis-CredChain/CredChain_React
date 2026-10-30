@@ -13,6 +13,16 @@ describe("FormField", () => {
     expect(screen.getByTestId("name-input")).toBeDefined();
   });
 
+  it("associates its label and error with an input", () => {
+    render(
+      <FormField label="Reason" htmlFor="reason" errorId="reason-error" error="Required">
+        <input id="reason" aria-describedby="reason-error" />
+      </FormField>,
+    );
+    expect(screen.getByRole("textbox")).toHaveAccessibleName("Reason");
+    expect(screen.getByRole("alert")).toHaveAttribute("id", "reason-error");
+  });
+
   it("renders error message when error prop provided", () => {
     render(
       <FormField label="Name" error="Required field">

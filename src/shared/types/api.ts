@@ -47,19 +47,17 @@ export interface CredentialDTO {
   holder_user_id: string;
   submitter_user_id: string;
   issuer_user_id: string | null;
-  submitted_issuer_organization_name: string | null;
-  issuer_organization_id: string | null;
-  submitted_type_name: string | null;
-  type_id: string | null;
+  issuer_organization_id: string;
+  type_id: string;
+  submitted_issuer_organization_name?: string | null;
+  submitted_type_name?: string | null;
   number: string | null;
   revoker_user_id: string | null;
   revocation_reason: string | null;
   name: string;
   meta: Record<string, unknown> | null;
-  /** Staged competency names; resolved_id null means still awaiting review. */
-  submitted_competencies: SubmittedCompetencyDTO[] | null;
-  /** Metadata kinds blocking approval; empty means approvable. */
-  unresolved_metadata: string[];
+  submitted_competencies?: SubmittedCompetencyDTO[] | null;
+  unresolved_metadata?: string[];
   /** Resolved competency rows linked through competency_credential. */
   competencies?: ReferenceRow[];
   token_id: string | null;
@@ -96,6 +94,8 @@ export interface CredentialVerifyDTO {
   credential: CredentialDTO | null;
 }
 
+export type ReferenceStatus = "pending" | "approved" | "rejected";
+
 /**
  * Reference-data row (credential types, issuer organizations, competencies).
  * Mirrors response.CredentialType / response.IssuerOrganization / response.Competency.
@@ -104,32 +104,20 @@ export interface ReferenceRow {
   id: string;
   name: string;
   active?: boolean;
+  status?: ReferenceStatus;
+  submitter_user_id?: string | null;
+  approver_user_id?: string | null;
+  rejecter_user_id?: string | null;
+  rejection_reason?: string | null;
+  activated_at?: string | null;
+  rejected_at?: string | null;
+  created_at?: string;
+  updated_at?: string | null;
 }
 
 export interface SubmittedCompetencyDTO {
   name: string;
   resolved_id: string | null;
-}
-
-/** Mirrors credential.MetadataMatch. */
-export interface MetadataMatchDTO {
-  id: string;
-  name: string;
-  active: boolean;
-}
-
-/** Mirrors credential.StagedNameSuggestion. */
-export interface StagedNameSuggestionDTO {
-  submitted_name: string;
-  matches: MetadataMatchDTO[];
-}
-
-/** Mirrors credential.CredentialMetadataSuggestions. */
-export interface CredentialMetadataSuggestionsDTO {
-  credential_id: string;
-  type: StagedNameSuggestionDTO | null;
-  organization: StagedNameSuggestionDTO | null;
-  competencies: StagedNameSuggestionDTO[];
 }
 
 export type ReferenceResource =
@@ -259,4 +247,36 @@ export interface MetaDTO {
   registry_contract: string;
   chain_id: number;
   last_block: number;
+}
+
+export type CredentialNotificationType = "registered" | "approved" | "rejected" | "revoked";
+
+export interface CredentialNotificationSummaryDTO {
+  id: string;
+  name: string;
+  number: string | null;
+}
+
+export interface CredentialNotificationDTO {
+  id: string;
+  notified_user_id: string;
+  credential_id: string;
+  type: CredentialNotificationType;
+  created_at: string;
+  read_at: string | null;
+  credential?: CredentialNotificationSummaryDTO | null;
+}
+
+export interface CredentialNotificationListResponse {
+  items: CredentialNotificationDTO[];
+  total: number;
+  next_cursor: string | null;
+}
+
+export interface CredentialNotificationUnreadCountResponse {
+  unread_count: number;
+}
+
+export interface CredentialNotificationReadAllResponse {
+  updated_count: number;
 }

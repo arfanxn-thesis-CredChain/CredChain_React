@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,8 +11,8 @@ import { server } from "@/test/msw/server";
 import { IssuerOrganizationsPage } from "./IssuerOrganizationsPage";
 
 const organizations = [
-  { id: "iorg_01", name: "University of Indonesia", active: true },
-  { id: "iorg_02", name: "Tech Academy", active: false },
+  { id: "iorg_01", name: "University of Indonesia", active: true, status: "approved" as const },
+  { id: "iorg_02", name: "Tech Academy", active: false, status: "approved" as const },
 ];
 
 const mockNotify = vi.hoisted(() => ({
@@ -221,5 +221,73 @@ describe("IssuerOrganizationsPage", () => {
 
     expect(screen.queryByRole("textbox", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.getByText("University of Indonesia")).toBeInTheDocument();
+  });
+
+  it("allows a holder to request a new issuer organization via submit", async () => {
+    useStore.setState({
+      user: makeUser({ id: "usr_holder", role: Role.HOLDER }),
+      isAuthenticated: true,
+    });
+
+    let recordedBody: unknown;
+    server.use(
+      http.get("*/api/issuer-organizations", () => paginated(organizations)),
+      http.post("*/api/issuer-organizations/submit", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({
+          code: 400904,
+          message: "ok",
+          data: { id: "iorg_pending", name: "MIT", status: "pending", active: false },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("University of Indonesia");
+    await user.click(screen.getByRole("button", { name: "Request New Organization" }));
+    await user.type(screen.getByPlaceholderText("Organization name"), "MIT");
+    await user.click(screen.getByRole("button", { name: "Request" }));
+
+    await waitFor(() => expect(recordedBody).toEqual({ name: "MIT" }));
+  });
+
+  it("allows issuer+ to approve or reject a pending issuer organization", async () => {
+    useStore.setState({
+      user: makeUser({ id: "usr_issuer", role: Role.ISSUER }),
+      isAuthenticated: true,
+    });
+
+    const pendingRow = {
+      id: "iorg_pending_01",
+      name: "Stanford University",
+      status: "pending" as const,
+      active: false,
+    };
+
+    let approveCalled = false;
+    server.use(
+      http.get("*/api/issuer-organizations", () => paginated([pendingRow])),
+      http.post("*/api/issuer-organizations/:id/approve", () => {
+        approveCalled = true;
+        return HttpResponse.json({ code: 400905, message: "ok", data: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Status: Active" }));
+    await user.click(screen.getByRole("menuitem", { name: "Pending Review" }));
+
+    await screen.findByText("Stanford University");
+    expect(screen.getByText("Pending")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    expect(approveCalled).toBe(false);
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Approve" }),
+    );
+
+    await waitFor(() => expect(approveCalled).toBe(true));
   });
 });

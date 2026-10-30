@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,8 +11,8 @@ import { server } from "@/test/msw/server";
 import { CompetenciesPage } from "./CompetenciesPage";
 
 const competencies = [
-  { id: "comp_01", name: "Machine Learning", active: true },
-  { id: "comp_02", name: "Data Analysis", active: false },
+  { id: "comp_01", name: "Machine Learning", active: true, status: "approved" as const },
+  { id: "comp_02", name: "Data Analysis", active: false, status: "approved" as const },
 ];
 
 const mockNotify = vi.hoisted(() => ({
@@ -195,5 +195,73 @@ describe("CompetenciesPage", () => {
 
     expect(screen.queryByRole("textbox", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.getByText("Machine Learning")).toBeInTheDocument();
+  });
+
+  it("allows a holder to request a new competency via submit", async () => {
+    useStore.setState({
+      user: makeUser({ id: "usr_holder", role: Role.HOLDER }),
+      isAuthenticated: true,
+    });
+
+    let recordedBody: unknown;
+    server.use(
+      http.get("*/api/competencies", () => paginated(competencies)),
+      http.post("*/api/competencies/submit", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({
+          code: 401004,
+          message: "ok",
+          data: { id: "comp_pending", name: "Problem Solving", status: "pending", active: false },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Machine Learning");
+    await user.click(screen.getByRole("button", { name: "Request New Competency" }));
+    await user.type(screen.getByPlaceholderText("Competency name"), "Problem Solving");
+    await user.click(screen.getByRole("button", { name: "Request" }));
+
+    await waitFor(() => expect(recordedBody).toEqual({ name: "Problem Solving" }));
+  });
+
+  it("allows issuer+ to approve or reject a pending competency", async () => {
+    useStore.setState({
+      user: makeUser({ id: "usr_issuer", role: Role.ISSUER }),
+      isAuthenticated: true,
+    });
+
+    const pendingRow = {
+      id: "comp_pending_01",
+      name: "Cybersecurity",
+      status: "pending" as const,
+      active: false,
+    };
+
+    let approveCalled = false;
+    server.use(
+      http.get("*/api/competencies", () => paginated([pendingRow])),
+      http.post("*/api/competencies/:id/approve", () => {
+        approveCalled = true;
+        return HttpResponse.json({ code: 401005, message: "ok", data: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Status: Active" }));
+    await user.click(screen.getByRole("menuitem", { name: "Pending Review" }));
+
+    await screen.findByText("Cybersecurity");
+    expect(screen.getByText("Pending")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    expect(approveCalled).toBe(false);
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Approve" }),
+    );
+
+    await waitFor(() => expect(approveCalled).toBe(true));
   });
 });

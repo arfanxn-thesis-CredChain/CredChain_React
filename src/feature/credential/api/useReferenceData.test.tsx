@@ -9,9 +9,65 @@ import {
   useIssuerOrganizations,
   useReferenceByIds,
   useUpsertReference,
+  useReferencePage,
+  referenceKeys,
+  type ReferenceQuery,
 } from "./useReferenceData";
 
 describe("useReferenceData", () => {
+  it("distinguishes omitted, true and false active filters and normalizes activeOnly", () => {
+    const resource = "credential-types";
+    expect(referenceKeys.page(resource, { active: false })).not.toEqual(
+      referenceKeys.page(resource),
+    );
+    expect(referenceKeys.page(resource, { active: false })).not.toEqual(
+      referenceKeys.page(resource, { active: true }),
+    );
+    expect(referenceKeys.page(resource, { activeOnly: true })).toEqual(
+      referenceKeys.page(resource, { active: true }),
+    );
+    expect(referenceKeys.page(resource, { activeOnly: true, active: false })).toEqual(
+      referenceKeys.page(resource, { active: false }),
+    );
+    expect(referenceKeys.page(resource, { activeOnly: false })).toEqual(
+      referenceKeys.page(resource),
+    );
+  });
+
+  it.each([
+    {
+      query: { status: "approved", active: false, search: " inactive " },
+      filters: ["status=approved", "active=false"],
+    },
+    { query: { activeOnly: true }, filters: ["active=true"] },
+    { query: { activeOnly: true, active: false }, filters: ["active=false"] },
+    { query: { status: "approved" }, filters: ["status=approved"] },
+  ] satisfies { query: ReferenceQuery; filters: string[] }[])(
+    "serializes explicit active filters: $filters",
+    async ({ query, filters }) => {
+      let seen: URL | undefined;
+      server.use(
+        http.get("*/api/credential-types", ({ request }) => {
+          seen = new URL(request.url);
+          return HttpResponse.json({
+            code: 400600,
+            message: "ok",
+            data: {
+              items: [],
+              total: 0,
+              page: 1,
+              limit: 100,
+              last_page: 1,
+            },
+          });
+        }),
+      );
+      renderHook(() => useReferencePage("credential-types", query), { wrapper: TestProviders });
+      await waitFor(() => expect(seen?.searchParams.getAll("filters")).toEqual(filters));
+      if (query.search) expect(seen?.searchParams.get("search")).toBe("inactive");
+    },
+  );
+
   it("fetches credential types", async () => {
     const { result } = renderHook(() => useCredentialTypes(), { wrapper: TestProviders });
 

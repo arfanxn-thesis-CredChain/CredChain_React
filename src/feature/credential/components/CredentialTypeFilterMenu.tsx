@@ -14,6 +14,10 @@ export function CredentialTypeFilterMenu({ value, onChange }: CredentialTypeFilt
   // The selection is not in `options` once a search narrows the page, so its
   // name comes from a by-id lookup rather than from the loaded rows.
   const selected = useReferenceByIds("credential-types", value ? [value] : []);
+  const hasSelectedInOptions = list.items.some((o) => o.id === value);
+  const isUnavailable = Boolean(
+    value && selected.isSuccess && !selected.data?.length && !hasSelectedInOptions,
+  );
 
   return (
     <CredentialFilterMenu
@@ -28,6 +32,8 @@ export function CredentialTypeFilterMenu({ value, onChange }: CredentialTypeFilt
       onLoadMore={list.loadMore}
       isFetchingNextPage={list.isFetchingNextPage}
       selectedName={selected.data?.[0]?.name}
+      isLoadingSelected={Boolean(value && selected.isLoading && !hasSelectedInOptions)}
+      isUnavailable={isUnavailable}
     />
   );
 }

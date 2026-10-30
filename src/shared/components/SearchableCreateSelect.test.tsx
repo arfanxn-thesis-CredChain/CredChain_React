@@ -693,4 +693,74 @@ describe("SearchableCreateSelect", () => {
     });
     expect(onProposeChange).not.toHaveBeenCalled();
   });
+
+  it("renders a single unavailable selection with localized fallback and keeps it removable", async () => {
+    server.use(
+      http.get("*/api/credential-types", ({ request }) => {
+        const url = new URL(request.url);
+        const idFilter = url.searchParams.getAll("filters").find((f) => f.startsWith("id$"));
+        // Backend omitted the inactive/withheld ID
+        if (idFilter) return paginated([]);
+        return paginated([{ id: "ctype_01", name: "Bachelor's Degree" }]);
+      }),
+    );
+
+    const onChange = vi.fn();
+    render(
+      <SearchableCreateSelect
+        resource="credential-types"
+        value="ctype_unavailable"
+        onChange={onChange}
+      />,
+      { wrapper: TestProviders },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox")).toHaveTextContent("Unavailable");
+    });
+
+    const removeBtn = screen.getByRole("button", { name: /Remove Unavailable/i });
+    expect(removeBtn).toBeInTheDocument();
+    await userEvent.click(removeBtn);
+    expect(onChange).toHaveBeenCalledWith("");
+  });
+
+  it("renders multi-select unavailable chips alongside available ones and keeps them removable", async () => {
+    server.use(
+      http.get("*/api/competencies", ({ request }) => {
+        const url = new URL(request.url);
+        const idFilter = url.searchParams.getAll("filters").find((f) => f.startsWith("id$"));
+        if (idFilter) {
+          // Backend returns only the available item; omitted comp_unavailable
+          return paginated([{ id: "comp_01", name: "Machine Learning" }]);
+        }
+        return paginated([
+          { id: "comp_01", name: "Machine Learning" },
+          { id: "comp_02", name: "Data Analysis" },
+        ]);
+      }),
+    );
+
+    const onChange = vi.fn();
+    render(
+      <SearchableCreateSelect
+        multiple
+        resource="competencies"
+        value={["comp_01", "comp_unavailable"]}
+        onChange={onChange}
+      />,
+      { wrapper: TestProviders },
+    );
+
+    await screen.findByText("Machine Learning");
+    await waitFor(() => {
+      expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    });
+
+    const removeUnavailableBtn = screen.getByRole("button", {
+      name: /Remove Unavailable/i,
+    });
+    await userEvent.click(removeUnavailableBtn);
+    expect(onChange).toHaveBeenCalledWith(["comp_01"]);
+  });
 });

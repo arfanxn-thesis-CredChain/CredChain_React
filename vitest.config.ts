@@ -12,7 +12,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     testTimeout: 10000,
-    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
+    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**", ".claude/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],

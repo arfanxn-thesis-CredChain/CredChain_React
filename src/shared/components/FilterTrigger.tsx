@@ -19,7 +19,7 @@ export const FilterTrigger = forwardRef<HTMLButtonElement, FilterTriggerProps>(
       ref={ref}
       variant="outline"
       size="sm"
-      className={cn("rounded-lg", active && "border-gold bg-gold/10 text-navy", className)}
+      className={cn("rounded-xl", active && "border-gold bg-gold/10 text-navy", className)}
       {...props}
     >
       {children}

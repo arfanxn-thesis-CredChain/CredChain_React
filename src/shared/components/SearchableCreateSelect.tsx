@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Check, ChevronDown, CircleDashed, Loader2, Plus, Search, X } from "lucide-react";
 import { cn } from "@shared/lib/cn";
@@ -28,11 +29,10 @@ interface SearchableCreateSelectBaseProps {
   /**
    * "create" (default) POSTs a new taxonomy row when the user picks the
    * create row — Issuer+ only, since taxonomy writes are role-guarded.
-   * "propose" emits the typed name via onProposeChange instead, for holders
-   * submitting a credential: the name is staged on the credential and a
-   * reviewer resolves it later.
+   * "select" restricts options to approved references only with no inline create/propose.
+   * "propose" emits the typed name via onProposeChange instead.
    */
-  mode?: "create" | "propose";
+  mode?: "create" | "propose" | "select";
   /** The currently proposed free-text name (propose mode, single only). */
   proposed?: string;
   onProposeChange?: (name: string) => void;
@@ -53,9 +53,16 @@ export type SearchableCreateSelectProps =
       onChange: (ids: string[]) => void;
     });
 
+const RESOURCE_PAGE_ROUTE: Record<ReferenceResource, string> = {
+  "credential-types": "/credential-types",
+  "credential-issuer-organizations": "/credential-issuer-organizations",
+  competencies: "/competencies",
+};
+
 export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   const { t } = useTranslation();
   const multiple = props.multiple === true;
+  const isSelectOnly = props.mode === "select";
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const trimmed = query.trim();
@@ -63,7 +70,10 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   // The option list is one server-searched page, so filtering happens in SQL.
   // Debounced to avoid a request per keystroke.
   const debouncedQuery = useDebouncedValue(trimmed, 300);
-  const list = useReferencePage(props.resource, { search: debouncedQuery });
+  const list = useReferencePage(props.resource, {
+    search: debouncedQuery,
+    ...(isSelectOnly ? { status: "approved" as const } : {}),
+  });
   const upsert = useUpsertReference(props.resource);
 
   const rows = list.items;
@@ -81,7 +91,7 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
   // value, and mixing the two lets the label say "AK" while the click sends "AKU".
   const term = debouncedQuery;
   const hasExact = rows.some((r) => r.name.trim().toLowerCase() === term.toLowerCase());
-  const showCreateRow = term.length > 0 && !list.isLoading && !hasExact;
+  const showCreateRow = !isSelectOnly && term.length > 0 && !list.isLoading && !hasExact;
 
   const close = () => {
     setOpen(false);
@@ -209,61 +219,83 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
         // proposed (not yet real) value gets an inline marker instead: a
         // gray glyph + status text, never a chip and never gold — gold means
         // confirmed, and a proposal is the opposite of confirmed.
-        <>
-          {!hasRealSelection && (
-            <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
-          )}
-          <span className="min-w-0 flex-1 truncate">
-            {selectedRows[0]?.name ?? props.proposed}
-          </span>
-          {!hasRealSelection && (
-            <span className="shrink-0 text-xs text-gray-400">{t("cred.submit.proposed")}</span>
-          )}
-          <button
-            type="button"
-            aria-label={t("cred.submit.removeSelection", {
-              name: selectedRows[0]?.name ?? props.proposed,
-            })}
-            // Radix opens the trigger on pointerdown, before React's click
-            // handler runs — stopPropagation there too, or the panel flashes
-            // open on the way to clearing.
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (hasRealSelection) {
-                deselect(selectedIds[0]);
-              } else {
-                props.onProposeChange?.("");
-              }
-            }}
-            className="shrink-0 rounded-full text-navy/60 hover:text-navy"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </>
-      ) : (
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-          {selectedRows.map((row) => (
-            <Badge
-              key={row.id}
-              tone="gold"
-              className="inline-flex items-center gap-1 text-xs font-medium normal-case tracking-normal"
-            >
-              <span className="max-w-40 truncate">{row.name}</span>
+        (() => {
+          const singleRow = selectedRows[0];
+          const singleUnavailable = hasRealSelection && selected.isSuccess && !singleRow;
+          const singleLabel =
+            singleRow?.name ??
+            (singleUnavailable
+              ? t("cred.submit.unavailable")
+              : selected.isLoading && hasRealSelection
+                ? t("cred.submit.loading")
+                : (props.proposed ?? ""));
+
+          return (
+            <>
+              {!hasRealSelection && (
+                <CircleDashed className="h-4 w-4 shrink-0 text-gray-400" aria-hidden="true" />
+              )}
+              <span className="min-w-0 flex-1 truncate">{singleLabel}</span>
+              {!hasRealSelection && (
+                <span className="shrink-0 text-xs text-gray-400">{t("cred.submit.proposed")}</span>
+              )}
               <button
                 type="button"
-                aria-label={t("cred.submit.removeSelection", { name: row.name })}
+                aria-label={t("cred.submit.removeSelection", { name: singleLabel })}
+                // Radix opens the trigger on pointerdown, before React's click
+                // handler runs — stopPropagation there too, or the panel flashes
+                // open on the way to clearing.
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
-                  deselect(row.id);
+                  if (hasRealSelection) {
+                    deselect(selectedIds[0]);
+                  } else {
+                    props.onProposeChange?.("");
+                  }
                 }}
-                className="rounded-full text-navy/60 hover:text-navy"
+                className="shrink-0 rounded-full text-navy/60 hover:text-navy"
               >
-                <X className="h-3 w-3" aria-hidden="true" />
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
-            </Badge>
-          ))}
+            </>
+          );
+        })()
+      ) : (
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+          {selectedIds.map((id) => {
+            const row = selectedRows.find((r) => r.id === id);
+            const isUnavailable = selected.isSuccess && !row;
+            const name =
+              row?.name ??
+              (isUnavailable
+                ? t("cred.submit.unavailable")
+                : selected.isLoading
+                  ? t("cred.submit.loading")
+                  : id);
+
+            return (
+              <Badge
+                key={id}
+                tone={row ? "gold" : "gray"}
+                className="inline-flex items-center gap-1 text-xs font-medium normal-case tracking-normal"
+              >
+                <span className="max-w-40 truncate">{name}</span>
+                <button
+                  type="button"
+                  aria-label={t("cred.submit.removeSelection", { name })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deselect(id);
+                  }}
+                  className="rounded-full text-navy/60 hover:text-navy"
+                >
+                  <X className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </Badge>
+            );
+          })}
           {proposedList.map((name) => (
             <Badge
               key={`proposed:${name}`}
@@ -412,6 +444,18 @@ export function SearchableCreateSelect(props: SearchableCreateSelectProps) {
                   : t("cred.submit.create", { name: term })}
               </span>
             </DropdownMenuItem>
+          </div>
+        )}
+        {isSelectOnly && (
+          <div className="border-t border-gray-100 px-3 py-2 text-center text-xs text-gray-500">
+            <span>{t("cred.submit.missingReferenceHint")} </span>
+            <Link
+              to={RESOURCE_PAGE_ROUTE[props.resource]}
+              className="font-medium text-gold hover:underline"
+              onClick={close}
+            >
+              {t(`cred.submit.requestPrompt.${props.resource}`)}
+            </Link>
           </div>
         )}
       </DropdownMenuContent>

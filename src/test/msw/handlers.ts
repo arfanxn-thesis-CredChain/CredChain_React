@@ -1,22 +1,22 @@
 import { http, HttpResponse } from "msw";
 import { Role } from "@shared/auth/role";
-import type { HolderUnitDTO, ReferenceRow, UserDTO } from "@shared/types/api";
+import type { CredentialNotificationDTO, HolderUnitDTO, ReferenceRow, UserDTO } from "@shared/types/api";
 import { makeUser, mockUsers } from "../fixtures";
 
 const envelope = <T>(code: number, message: string, data?: T) =>
   HttpResponse.json({ code, message, ...(data !== undefined ? { data } : {}) });
 
 const mockCredentialTypes: ReferenceRow[] = [
-  { id: "ctype_01", name: "Bachelor's Degree", active: true },
-  { id: "ctype_02", name: "Professional Certificate", active: true },
+  { id: "ctype_01", name: "Bachelor's Degree", active: true, status: "approved", activated_at: "2026-01-01T00:00:00Z" },
+  { id: "ctype_02", name: "Professional Certificate", active: true, status: "approved", activated_at: "2026-01-01T00:00:00Z" },
 ];
 const mockIssuerOrganizations: ReferenceRow[] = [
-  { id: "iorg_01", name: "University of Indonesia", active: true },
-  { id: "iorg_02", name: "Tech Academy", active: true },
+  { id: "iorg_01", name: "University of Indonesia", active: true, status: "approved", activated_at: "2026-01-01T00:00:00Z" },
+  { id: "iorg_02", name: "Tech Academy", active: true, status: "approved", activated_at: "2026-01-01T00:00:00Z" },
 ];
 const mockCompetencies: ReferenceRow[] = [
-  { id: "comp_01", name: "Machine Learning", active: true },
-  { id: "comp_02", name: "Data Analysis", active: true },
+  { id: "comp_01", name: "Machine Learning", active: true, status: "approved", activated_at: "2026-01-01T00:00:00Z" },
+  { id: "comp_02", name: "Data Analysis", active: true, status: "approved", activated_at: "2026-01-01T00:00:00Z" },
 ];
 
 const mockUserUnits: HolderUnitDTO[] = [
@@ -59,6 +59,10 @@ function referencePage(store: ReferenceRow[], request: Request) {
     const s = search.toLowerCase();
     rows = rows.filter((r) => r.name.toLowerCase().includes(s));
   }
+  const status = url.searchParams.get("status");
+  if (status) {
+    rows = rows.filter((r) => (r.status ?? "approved") === status);
+  }
 
   const total = rows.length;
   const items = rows.slice((page - 1) * limit, page * limit);
@@ -80,9 +84,47 @@ function referencePage(store: ReferenceRow[], request: Request) {
 function upsertRow(store: ReferenceRow[], prefix: string, name: string): ReferenceRow {
   const existing = store.find((r) => r.name.toLowerCase() === name.toLowerCase());
   if (existing) return existing;
-  const created: ReferenceRow = { id: `${prefix}_${store.length + 1}`, name };
+  const created: ReferenceRow = {
+    id: `${prefix}_${store.length + 1}`,
+    name,
+    active: true,
+    status: "approved",
+    activated_at: "2026-01-01T00:00:00Z",
+  };
   store.push(created);
   return created;
+}
+
+function submitRow(store: ReferenceRow[], prefix: string, name: string): ReferenceRow {
+  const created: ReferenceRow = {
+    id: `${prefix}_${store.length + 1}`,
+    name,
+    active: false,
+    status: "pending",
+  };
+  store.push(created);
+  return created;
+}
+
+function approveRow(store: ReferenceRow[], id: string): ReferenceRow | null {
+  const row = store.find((r) => r.id === id);
+  if (!row) return null;
+  row.status = "approved";
+  row.active = true;
+  row.activated_at = "2026-01-01T00:00:00Z";
+  row.rejected_at = null;
+  row.rejection_reason = null;
+  return row;
+}
+
+function rejectRow(store: ReferenceRow[], id: string, reason: string): ReferenceRow | null {
+  const row = store.find((r) => r.id === id);
+  if (!row) return null;
+  row.status = "rejected";
+  row.active = false;
+  row.rejected_at = "2026-01-01T00:00:00Z";
+  row.rejection_reason = reason;
+  return row;
 }
 
 // Mirrors backend filter syntax: column<operator><value>.
@@ -136,6 +178,35 @@ function applySorts(users: UserDTO[], sorts: string[]): UserDTO[] {
   });
   return out;
 }
+
+const mockNotifications: CredentialNotificationDTO[] = [
+  {
+    id: "notif_01",
+    notified_user_id: "usr_01",
+    credential_id: "cred_01HX",
+    type: "registered",
+    created_at: "2026-06-20T10:00:00Z",
+    read_at: null,
+    credential: {
+      id: "cred_01HX",
+      name: "Bachelor's Degree",
+      number: "CERT-001",
+    },
+  },
+  {
+    id: "notif_02",
+    notified_user_id: "usr_01",
+    credential_id: "cred_02HY",
+    type: "approved",
+    created_at: "2026-06-19T10:00:00Z",
+    read_at: "2026-06-19T12:00:00Z",
+    credential: {
+      id: "cred_02HY",
+      name: "Employment Certificate",
+      number: null,
+    },
+  },
+];
 
 export const handlers = [
   http.get("*/api/health", () => envelope(100000, "OK", { status: "ok" })),
@@ -546,6 +617,26 @@ export const handlers = [
     );
   }),
 
+  http.post("*/api/credential-types/submit", async ({ request }) => {
+    const body = (await request.json()) as { name?: string };
+    return envelope(
+      400804,
+      "Credential type submitted",
+      submitRow(mockCredentialTypes, "ctype", body.name ?? ""),
+    );
+  }),
+
+  http.post("*/api/credential-types/:id/approve", ({ params }) => {
+    const approved = approveRow(mockCredentialTypes, params.id as string);
+    return envelope(400805, "Credential type approved", approved);
+  }),
+
+  http.post("*/api/credential-types/:id/reject", async ({ params, request }) => {
+    const body = (await request.json()) as { reason?: string };
+    const rejected = rejectRow(mockCredentialTypes, params.id as string, body.reason ?? "");
+    return envelope(400806, "Credential type rejected", rejected);
+  }),
+
   http.put("*/api/credential-types/:id", async ({ request, params }) => {
     const row = mockCredentialTypes.find((r) => r.id === params.id);
     if (!row) {
@@ -583,6 +674,26 @@ export const handlers = [
     );
   }),
 
+  http.post("*/api/issuer-organizations/submit", async ({ request }) => {
+    const body = (await request.json()) as { name?: string };
+    return envelope(
+      400904,
+      "Issuer organization submitted",
+      submitRow(mockIssuerOrganizations, "iorg", body.name ?? ""),
+    );
+  }),
+
+  http.post("*/api/issuer-organizations/:id/approve", ({ params }) => {
+    const approved = approveRow(mockIssuerOrganizations, params.id as string);
+    return envelope(400905, "Issuer organization approved", approved);
+  }),
+
+  http.post("*/api/issuer-organizations/:id/reject", async ({ params, request }) => {
+    const body = (await request.json()) as { reason?: string };
+    const rejected = rejectRow(mockIssuerOrganizations, params.id as string, body.reason ?? "");
+    return envelope(400906, "Issuer organization rejected", rejected);
+  }),
+
   http.put("*/api/issuer-organizations/:id", async ({ request, params }) => {
     const row = mockIssuerOrganizations.find((r) => r.id === params.id);
     if (!row) {
@@ -614,6 +725,26 @@ export const handlers = [
       "Competency stored",
       upsertRow(mockCompetencies, "comp", body.name ?? ""),
     );
+  }),
+
+  http.post("*/api/competencies/submit", async ({ request }) => {
+    const body = (await request.json()) as { name?: string };
+    return envelope(
+      401004,
+      "Competency submitted",
+      submitRow(mockCompetencies, "comp", body.name ?? ""),
+    );
+  }),
+
+  http.post("*/api/competencies/:id/approve", ({ params }) => {
+    const approved = approveRow(mockCompetencies, params.id as string);
+    return envelope(401005, "Competency approved", approved);
+  }),
+
+  http.post("*/api/competencies/:id/reject", async ({ params, request }) => {
+    const body = (await request.json()) as { reason?: string };
+    const rejected = rejectRow(mockCompetencies, params.id as string, body.reason ?? "");
+    return envelope(401006, "Competency rejected", rejected);
   }),
 
   http.put("*/api/competencies/:id", async ({ request, params }) => {
@@ -916,5 +1047,55 @@ export const handlers = [
         },
       },
     });
+  }),
+
+  http.get("*/api/credential-notifications/unread-count", () => {
+    const unread_count = mockNotifications.filter((n) => n.read_at === null).length;
+    return envelope(400100, "Unread count retrieved", { unread_count });
+  }),
+
+  http.get("*/api/credential-notifications", ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status") ?? "all";
+    const limit = Number(url.searchParams.get("limit") ?? 20);
+    const cursor = url.searchParams.get("cursor");
+
+    let rows = mockNotifications;
+    if (status === "unread") {
+      rows = rows.filter((n) => n.read_at === null);
+    }
+    const startIndex = cursor ? rows.findIndex((r) => r.id === cursor) + 1 : 0;
+    const pageItems = rows.slice(startIndex, startIndex + limit);
+    const nextItem = rows[startIndex + limit];
+    const next_cursor = nextItem ? pageItems[pageItems.length - 1]?.id ?? null : null;
+
+    return envelope(400100, "Notifications retrieved", {
+      items: pageItems,
+      total: rows.length,
+      next_cursor,
+    });
+  }),
+
+  http.put("*/api/credential-notifications/read-all", () => {
+    let updated_count = 0;
+    const now = new Date().toISOString();
+    for (const notif of mockNotifications) {
+      if (notif.read_at === null) {
+        notif.read_at = now;
+        updated_count++;
+      }
+    }
+    return envelope(400100, "All notifications marked as read", { updated_count });
+  }),
+
+  http.put("*/api/credential-notifications/:id/read", ({ params }) => {
+    const notif = mockNotifications.find((n) => n.id === params.id);
+    if (!notif) {
+      return HttpResponse.json({ code: 400404, message: "Notification not found" }, { status: 404 });
+    }
+    if (notif.read_at === null) {
+      notif.read_at = new Date().toISOString();
+    }
+    return envelope(400100, "Notification marked as read", notif);
   }),
 ];

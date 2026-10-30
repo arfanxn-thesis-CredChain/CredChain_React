@@ -29,6 +29,13 @@ function renderMenu(props: Partial<React.ComponentProps<typeof CredentialFilterM
 }
 
 describe("CredentialFilterMenu", () => {
+  it("renders trigger button with rounded-xl border radius and compact h-9 height", () => {
+    renderMenu();
+    const trigger = screen.getByRole("button", { name: /all/i });
+    expect(trigger).toHaveClass("rounded-xl", "h-9");
+    expect(trigger).not.toHaveClass("rounded-lg");
+  });
+
   it("shows the all label when no option is selected", () => {
     renderMenu();
     expect(screen.getByRole("button", { name: /all/i })).toBeInTheDocument();
@@ -101,5 +108,25 @@ describe("CredentialFilterMenu", () => {
     expect(onLoadMore).toHaveBeenCalled();
     // Radix closes on select; the preventDefault is what keeps the list up.
     expect(screen.getByRole("menuitem", { name: /alpha/i })).toBeInTheDocument();
+  });
+
+  it("does not masquerade as All when selected option is unavailable, and allows resetting to All", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderMenu({ value: "opt_withheld", isUnavailable: true, onChange });
+
+    const trigger = screen.getByRole("button", { name: /unavailable/i });
+    expect(trigger).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /all/i })).not.toBeInTheDocument();
+
+    await user.click(trigger);
+    await user.click(await screen.findByRole("menuitem", { name: /all/i }));
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it("indicates loading when resolving selectedName past loaded page", () => {
+    renderMenu({ value: "opt_loading", isLoadingSelected: true });
+    expect(screen.getByRole("button", { name: /loading/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /all/i })).not.toBeInTheDocument();
   });
 });

@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useStore } from "@app/store";
 import { Role } from "@shared/auth/role";
 import { i18n } from "@shared/i18n/config";
-import { makeCredential } from "@/test/fixtures";
+import { makeCredential, makeUser } from "@/test/fixtures";
 import { TestProviders } from "@/test/TestProviders";
 import { server } from "@/test/msw/server";
 import { notify } from "@shared/lib/notify";
@@ -1086,6 +1086,31 @@ describe("CredentialList", () => {
       }),
     );
     expect(dialog).toBeDefined();
+  });
+
+  it("orders holder header actions as Submit, Verify, References and keeps Submit gold", async () => {
+    useStore.setState({ user: makeUser({ role: Role.HOLDER }), isAuthenticated: true });
+    server.use(http.get("*/api/users/self/credentials", () => pageResponse(0)));
+    const user = userEvent.setup();
+    renderList();
+
+    const submit = await screen.findByRole("link", { name: "Submit" });
+    const verify = screen.getByRole("link", { name: "Verify" });
+    const references = screen.getByRole("button", { name: "References" });
+    expect(Array.from(submit.parentElement!.children)).toEqual([submit, verify, references]);
+    expect(submit).toHaveClass("bg-gold");
+    expect(verify).toHaveClass("border", "bg-surface");
+    expect(references).toHaveClass("border", "bg-surface");
+    expect(submit).toHaveAttribute("href", "/credentials/submit");
+    expect(verify).toHaveAttribute("href", "/credentials/verify");
+
+    await user.click(references);
+    const menu = await screen.findByRole("menu");
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((item) => item.getAttribute("href")),
+    ).toEqual(["/credential-types", "/credential-issuer-organizations", "/competencies"]);
   });
 
   it("requests /users/self/credentials for a holder and keeps the credentials query-key namespace", async () => {

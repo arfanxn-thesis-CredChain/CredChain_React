@@ -4,23 +4,33 @@ import { Label } from "@ui/label";
 
 interface FormFieldProps {
   label: string;
+  htmlFor?: string;
+  errorId?: string;
   hint?: string;
   error?: string;
   optional?: boolean;
   children: React.ReactNode;
 }
 
-export function FormField({ label, hint, error, optional, children }: FormFieldProps) {
+export function FormField({
+  label,
+  htmlFor,
+  errorId,
+  hint,
+  error,
+  optional,
+  children,
+}: FormFieldProps) {
   const { t } = useTranslation();
   return (
     <div className="space-y-1">
-      <Label>
+      <Label htmlFor={htmlFor}>
         {label}
         {optional && <span className="ml-1 font-normal text-gray-400">{t("common.optional")}</span>}
       </Label>
       {children}
       {error ? (
-        <p className={cn("mt-1 text-xs text-error")} role="alert">
+        <p id={errorId} className={cn("mt-1 text-xs text-error")} role="alert">
           {t(error)}
         </p>
       ) : hint ? (

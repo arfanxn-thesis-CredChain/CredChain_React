@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import {
   Ban,
   CheckCircle2,
@@ -25,13 +24,18 @@ import { CredentialRevokeReasonModal } from "./components/CredentialRevokeReason
 import { CredentialDetailModal } from "./CredentialDetailModal";
 import { useStore } from "@app/store";
 import { useUserUnits } from "@shared/api/useUserUnits";
+import { usePendingReviewCount, PENDING_REVIEW_FILTERS } from "@shared/api/usePendingReviewCount";
 import { Role, canAccessAny } from "@shared/auth/role";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { useLoadMore } from "@shared/hooks/useLoadMore";
 import { api } from "@shared/api/client";
 import { notify } from "@shared/lib/notify";
-import { isEligibleFor, ineligibilityReason, type BulkMode } from "@shared/lib/credentialEligibility";
-import type { CredentialDTO, PaginatedResponse } from "@shared/types/api";
+import {
+  isEligibleFor,
+  ineligibilityReason,
+  type BulkMode,
+} from "@shared/lib/credentialEligibility";
+import type { CredentialDTO } from "@shared/types/api";
 
 import { PageHeader } from "@shared/components/PageHeader";
 import { EmptyState } from "@shared/components/EmptyState";
@@ -62,8 +66,6 @@ import { CredentialCompetencyFilterMenu } from "./components/CredentialCompetenc
 import { HolderUnitFilterMenu } from "./components/HolderUnitFilterMenu";
 
 const MAX_SELECTION = 100;
-
-const PENDING_REVIEW_FILTERS = ["activated_at_", "rejected_at_"];
 
 function getReviewFilters(review: CredentialReviewStatus, nowISO: string): string[] {
   switch (review) {
@@ -204,16 +206,7 @@ export function CredentialList() {
     ...(unitId ? [`holder_unit_id=${unitId}`] : []),
   ];
 
-  const pendingCountQuery = useQuery({
-    queryKey: ["credentials", "pending-count"],
-    queryFn: async () => {
-      const endpoint = isHolder ? "/users/self/credentials" : "/credentials";
-      const response = await api.get<PaginatedResponse<CredentialDTO>>(endpoint, {
-        params: { limit: 1, filters: PENDING_REVIEW_FILTERS },
-      });
-      return response.data.total;
-    },
-  });
+  const pendingCountQuery = usePendingReviewCount();
 
   const {
     items: credentials,
@@ -567,6 +560,28 @@ export function CredentialList() {
               {t("cred.list.verifyCta")}
             </Link>
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Library className="h-4 w-4" />
+                {t("cred.references.label")}
+                <ChevronDown className="ml-1 h-3 w-3 text-gray-400" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to="/credential-types">{t("cred.references.types")}</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/credential-issuer-organizations">
+                  {t("cred.references.organizations")}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/competencies">{t("cred.references.competencies")}</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       );
     }

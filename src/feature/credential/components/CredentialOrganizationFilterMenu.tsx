@@ -18,6 +18,10 @@ export function CredentialOrganizationFilterMenu({
     "credential-issuer-organizations",
     value ? [value] : [],
   );
+  const hasSelectedInOptions = list.items.some((o) => o.id === value);
+  const isUnavailable = Boolean(
+    value && selected.isSuccess && !selected.data?.length && !hasSelectedInOptions,
+  );
 
   return (
     <CredentialFilterMenu
@@ -32,6 +36,8 @@ export function CredentialOrganizationFilterMenu({
       onLoadMore={list.loadMore}
       isFetchingNextPage={list.isFetchingNextPage}
       selectedName={selected.data?.[0]?.name}
+      isLoadingSelected={Boolean(value && selected.isLoading && !hasSelectedInOptions)}
+      isUnavailable={isUnavailable}
     />
   );
 }

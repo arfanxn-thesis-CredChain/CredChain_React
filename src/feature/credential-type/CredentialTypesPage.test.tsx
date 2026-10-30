@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,8 +20,8 @@ const mockNotify = vi.hoisted(() => ({
 vi.mock("@shared/lib/notify", () => ({ notify: mockNotify }));
 
 const types = [
-  { id: "ctype_01", name: "Bachelor's Degree", active: true },
-  { id: "ctype_02", name: "Professional Certificate", active: false },
+  { id: "ctype_01", name: "Bachelor's Degree", active: true, status: "approved" as const },
+  { id: "ctype_02", name: "Professional Certificate", active: false, status: "approved" as const },
 ];
 
 function paginated<T>(items: T[]) {
@@ -197,5 +197,78 @@ describe("CredentialTypesPage", () => {
 
     expect(screen.queryByRole("textbox", { name: "Edit" })).not.toBeInTheDocument();
     expect(screen.getByText("Bachelor's Degree")).toBeInTheDocument();
+  });
+
+  it("allows a holder to request a new credential type via submit", async () => {
+    useStore.setState({
+      user: makeUser({ id: "usr_holder", role: Role.HOLDER }),
+      isAuthenticated: true,
+    });
+
+    let recordedBody: unknown;
+    server.use(
+      http.get("*/api/credential-types", () => paginated(types)),
+      http.post("*/api/credential-types/submit", async ({ request }) => {
+        recordedBody = await request.json();
+        return HttpResponse.json({
+          code: 400804,
+          message: "ok",
+          data: {
+            id: "ctype_pending",
+            name: "High School Diploma",
+            status: "pending",
+            active: false,
+          },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText("Bachelor's Degree");
+    await user.click(screen.getByRole("button", { name: "Request New Type" }));
+    await user.type(screen.getByPlaceholderText("Type name"), "High School Diploma");
+    await user.click(screen.getByRole("button", { name: "Request" }));
+
+    await waitFor(() => expect(recordedBody).toEqual({ name: "High School Diploma" }));
+  });
+
+  it("allows issuer+ to approve or reject a pending credential type", async () => {
+    useStore.setState({
+      user: makeUser({ id: "usr_issuer", role: Role.ISSUER }),
+      isAuthenticated: true,
+    });
+
+    const pendingRow = {
+      id: "ctype_pending_01",
+      name: "Vocational Certificate",
+      status: "pending" as const,
+      active: false,
+    };
+
+    let approveCalled = false;
+    server.use(
+      http.get("*/api/credential-types", () => paginated([pendingRow])),
+      http.post("*/api/credential-types/:id/approve", () => {
+        approveCalled = true;
+        return HttpResponse.json({ code: 400805, message: "ok", data: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole("button", { name: "Status: Active" }));
+    await user.click(screen.getByRole("menuitem", { name: "Pending Review" }));
+
+    await screen.findByText("Vocational Certificate");
+    expect(screen.getByText("Pending")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    expect(approveCalled).toBe(false);
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Approve" }),
+    );
+
+    await waitFor(() => expect(approveCalled).toBe(true));
   });
 });

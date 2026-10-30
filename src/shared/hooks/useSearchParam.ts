@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 
@@ -6,7 +6,7 @@ import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
  * Reads and writes a single URL query parameter, so a search term survives a
  * reload and can be shared as a link.
  *
- * Writes use `replace` — a search box calls this on every debounced keystroke,
+ * Writes use `replace` — a search box calls this on every keystroke,
  * and pushing each one would turn the browser Back button into an undo of the
  * user's typing instead of a way off the page. The key is deleted rather than
  * set to an empty string so a cleared field leaves a clean URL.
@@ -36,18 +36,11 @@ export function useSearchParam(key = "search") {
 /**
  * A search box backed by `useSearchParam`.
  *
- * Returns the raw input (so typing stays responsive) and the debounced term
- * (what the query and the URL follow). Deep-links work because the input seeds
- * itself from the URL on mount.
+ * The URL owns the input, including history navigation. Typing replaces it
+ * immediately; only the API search term is debounced.
  */
 export function useDebouncedSearchParam(key = "search", delay = 300) {
-  const [param, setParam] = useSearchParam(key);
-  const [input, setInput] = useState(param);
-  const debounced = useDebouncedValue(input, delay);
-
-  useEffect(() => {
-    setParam(debounced);
-  }, [debounced, setParam]);
-
-  return { input, setInput, search: debounced };
+  const [input, setInput] = useSearchParam(key);
+  const search = useDebouncedValue(input, delay);
+  return { input, setInput, search };
 }

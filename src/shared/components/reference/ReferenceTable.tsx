@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { SearchX, type LucideIcon } from "lucide-react";
+import { CircleDashed, SearchX, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { EmptyState } from "@shared/components/EmptyState";
-import type { ReferenceRow } from "@shared/types/api";
+import type { ReferenceRow, ReferenceStatus } from "@shared/types/api";
+import { cn } from "@shared/lib/cn";
 import { Skeleton } from "@ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ui/table";
 
@@ -19,9 +20,48 @@ export interface ReferenceTableProps {
   /** True when a search term is active — swaps "nothing here yet" for "no results". */
   searchActive?: boolean;
   errorText?: string;
+  renderRowContent?: (row: ReferenceRow) => ReactNode;
   renderName?: (row: ReferenceRow) => ReactNode;
   renderActive?: (row: ReferenceRow) => ReactNode;
   actions?: (row: ReferenceRow) => ReactNode;
+}
+
+export function getReferenceStatus(row: ReferenceRow): ReferenceStatus {
+  if (row.status) return row.status;
+  if (row.rejected_at) return "rejected";
+  if (row.activated_at) return "approved";
+  return "pending";
+}
+
+export function ReferenceName({ row }: { row: ReferenceRow }) {
+  const { t } = useTranslation();
+  const status = getReferenceStatus(row);
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {status === "pending" && (
+        <span
+          title={t("cred.references.status.pending")}
+          className="inline-flex shrink-0 text-gray-500"
+        >
+          <CircleDashed className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="sr-only">{t("cred.references.status.pending")}</span>
+        </span>
+      )}
+      {status === "rejected" && (
+        <span className="sr-only">{t("cred.references.status.rejected")}</span>
+      )}
+      <span
+        className={cn(
+          "min-w-0 text-sm font-medium text-navy",
+          status === "approved" && row.active === false && "line-through opacity-60",
+          status === "rejected" && "text-error",
+        )}
+      >
+        {row.name}
+      </span>
+    </span>
+  );
 }
 
 export function ReferenceTable({
@@ -37,6 +77,7 @@ export function ReferenceTable({
   searchActive = false,
   errorText,
   renderName,
+  renderRowContent,
   renderActive,
   actions,
 }: ReferenceTableProps) {
@@ -94,19 +135,43 @@ export function ReferenceTable({
                   )}
                 </TableRow>
               ))
-            : rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    {renderName ? (
-                      renderName(row)
-                    ) : (
-                      <span className="text-sm font-medium text-navy">{row.name}</span>
-                    )}
-                  </TableCell>
-                  {hasActive && <TableCell>{renderActive?.(row)}</TableCell>}
-                  {hasActions && <TableCell className="text-right">{actions?.(row)}</TableCell>}
-                </TableRow>
-              ))}
+            : rows.map((row) => {
+                const content = renderRowContent?.(row);
+                if (content != null) {
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell
+                        colSpan={1 + Number(hasActive) + Number(hasActions)}
+                        className="min-w-0 whitespace-normal"
+                      >
+                        {content}
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+                return (
+                  <TableRow key={row.id}>
+                    <TableCell>
+                      {renderName ? (
+                        renderName(row)
+                      ) : (
+                        <div>
+                          <ReferenceName row={row} />
+                          {row.rejection_reason && (
+                            <p className="mt-0.5 text-xs text-error">
+                              {t("cred.references.rejectionReason", {
+                                reason: row.rejection_reason,
+                              })}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                    {hasActive && <TableCell>{renderActive?.(row)}</TableCell>}
+                    {hasActions && <TableCell className="text-right">{actions?.(row)}</TableCell>}
+                  </TableRow>
+                );
+              })}
         </TableBody>
       </Table>
     </div>
