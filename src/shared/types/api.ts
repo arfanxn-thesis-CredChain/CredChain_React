@@ -193,6 +193,9 @@ export interface CredentialRecap {
 export interface OverviewCredentialCounts {
   total: number;
   active: number;
+  pending_review: number;
+  rejected: number;
+  expired: number;
   revoked: number;
   pending: number;
   failed: number;

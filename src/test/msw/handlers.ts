@@ -971,7 +971,16 @@ export const handlers = [
     return HttpResponse.json({
       code: 100100,
       data: {
-        credential_counts: { total: 500, active: 450, revoked: 40, pending: 10, failed: 3 },
+        credential_counts: {
+          total: 500,
+          active: 450,
+          pending_review: 6,
+          rejected: 2,
+          expired: 2,
+          revoked: 40,
+          pending: 10,
+          failed: 3,
+        },
         user_counts: {
           total: 150,
           holder: 120,

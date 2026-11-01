@@ -49,6 +49,112 @@ describe("Overview", () => {
     expect(screen.getByText("500")).toBeDefined();
   });
 
+  it.each([Role.HOLDER, Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN])(
+    "renders role-specific ordered credential stats for %s",
+    async (role) => {
+      server.use(
+        http.get("*/api/overview", () =>
+          HttpResponse.json({
+            code: 100100,
+            data: {
+              credential_counts: {
+                active: 11,
+                total: 42,
+                pending_review: 12,
+                rejected: 13,
+                expired: 14,
+                revoked: 15,
+                pending: 16,
+                failed: 17,
+              },
+              recents: {},
+            },
+          }),
+        ),
+      );
+      useStore.setState({ user: makeUser({ role }) });
+      renderOverview();
+      const heading = await screen.findByRole("heading", { name: "Credentials", level: 2 });
+      const card = heading.parentElement!;
+      const links = within(card).getAllByRole("link");
+      const showExtraction = role !== Role.HOLDER;
+      expect(links.map((link) => link.textContent)).toEqual([
+        "11Active",
+        "42Total",
+        "12Pending review",
+        "13Rejected",
+        "14Expired",
+        "15Revoked",
+        ...(showExtraction ? ["16Extraction pending", "17Extraction failed"] : []),
+      ]);
+      if (!showExtraction) {
+        expect(within(card).queryByText("Extraction pending")).not.toBeInTheDocument();
+        expect(within(card).queryByText("Extraction failed")).not.toBeInTheDocument();
+      }
+      expect(links.map((link) => link.getAttribute("href"))).toEqual([
+        "/credentials?review=approved",
+        "/credentials",
+        "/credentials?review=pending",
+        "/credentials?review=rejected",
+        "/credentials?review=expired",
+        "/credentials?review=revoked",
+        ...(showExtraction ? ["/credentials?extract=pending", "/credentials?extract=failed"] : []),
+      ]);
+      expect(links[0]).toHaveClass("bg-gold/10");
+      expect(links[0]).not.toHaveClass("col-span-2");
+      expect(card.querySelector(".grid")).toHaveClass(
+        "grid-cols-2",
+        showExtraction ? "lg:grid-cols-4" : "lg:grid-cols-3",
+      );
+    },
+  );
+
+  it("renders all six Holder zero counts", async () => {
+    server.use(
+      http.get("*/api/overview", () =>
+        HttpResponse.json({
+          code: 100100,
+          data: {
+            credential_counts: {
+              total: 0,
+              active: 0,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 0,
+              pending: 0,
+              failed: 0,
+            },
+            recents: {},
+          },
+        }),
+      ),
+    );
+    useStore.setState({ user: makeUser({ role: Role.HOLDER }) });
+    renderOverview();
+    const card = (await screen.findByRole("heading", { name: "Credentials", level: 2 }))
+      .parentElement!;
+    expect(within(card).getAllByRole("link")).toHaveLength(6);
+    expect(within(card).getAllByText("0")).toHaveLength(6);
+  });
+
+  it.each([Role.HOLDER, Role.ISSUER, Role.ADMIN, Role.SUPER_ADMIN])(
+    "renders matching credential skeletons for %s",
+    (role) => {
+      server.use(http.get("*/api/overview", () => new Promise(() => {})));
+      useStore.setState({ user: makeUser({ role }) });
+      const { container } = renderOverview();
+      const grids = container.querySelectorAll(".grid");
+      const grid = grids[grids.length - 1];
+      expect(grid).toHaveClass(
+        "grid-cols-2",
+        role === Role.HOLDER ? "lg:grid-cols-3" : "lg:grid-cols-4",
+      );
+      expect(grid?.children).toHaveLength(role === Role.HOLDER ? 6 : 8);
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    },
+  );
+
   it("renders user counts for Issuer+", async () => {
     useStore.setState({ user: makeUser({ role: Role.ISSUER }) });
     renderOverview();
@@ -124,7 +230,16 @@ describe("Overview", () => {
         HttpResponse.json({
           code: 100100,
           data: {
-            credential_counts: { total: 0, active: 0, revoked: 0, pending: 0, failed: 0 },
+            credential_counts: {
+              total: 0,
+              active: 0,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 0,
+              pending: 0,
+              failed: 0,
+            },
             recents: {},
           },
         }),
@@ -146,7 +261,16 @@ describe("Overview", () => {
         HttpResponse.json({
           code: 100100,
           data: {
-            credential_counts: { total: 1, active: 1, revoked: 0, pending: 0, failed: 0 },
+            credential_counts: {
+              total: 1,
+              active: 1,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 0,
+              pending: 0,
+              failed: 0,
+            },
             user_counts: {
               total: 0,
               holder: 0,
@@ -371,7 +495,16 @@ describe("Overview", () => {
         HttpResponse.json({
           code: 100100,
           data: {
-            credential_counts: { total: 1, active: 1, revoked: 0, pending: 0, failed: 0 },
+            credential_counts: {
+              total: 1,
+              active: 1,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 0,
+              pending: 0,
+              failed: 0,
+            },
             recents: {
               active_credentials: [
                 { id: "01J4", name: "Certificate", issued_at: "2026-06-20T10:00:00Z" },
@@ -398,7 +531,16 @@ describe("Overview", () => {
         HttpResponse.json({
           code: 100100,
           data: {
-            credential_counts: { total: 1, active: 0, revoked: 1, pending: 0, failed: 0 },
+            credential_counts: {
+              total: 1,
+              active: 0,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 1,
+              pending: 0,
+              failed: 0,
+            },
             recents: {
               active_credentials: [],
               revoked_credentials: [
@@ -434,7 +576,16 @@ describe("Overview", () => {
         return HttpResponse.json({
           code: 100100,
           data: {
-            credential_counts: { total: 0, active: 0, revoked: 0, pending: 0, failed: 0 },
+            credential_counts: {
+              total: 0,
+              active: 0,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 0,
+              pending: 0,
+              failed: 0,
+            },
             recents: {},
           },
         });
@@ -542,7 +693,16 @@ describe("Overview", () => {
         HttpResponse.json({
           code: 100100,
           data: {
-            credential_counts: { total: 0, active: 0, revoked: 0, pending: 0, failed: 0 },
+            credential_counts: {
+              total: 0,
+              active: 0,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 0,
+              pending: 0,
+              failed: 0,
+            },
             recents: {},
           },
         }),
@@ -605,7 +765,16 @@ describe("Overview", () => {
         return HttpResponse.json({
           code: 100100,
           data: {
-            credential_counts: { total: 0, active: 0, revoked: 0, pending: 0, failed: 0 },
+            credential_counts: {
+              total: 0,
+              active: 0,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 0,
+              pending: 0,
+              failed: 0,
+            },
             recents: {},
           },
         });
@@ -650,7 +819,16 @@ describe("Overview", () => {
         HttpResponse.json({
           code: 100100,
           data: {
-            credential_counts: { total: 10, active: 8, revoked: 2, pending: 0, failed: 0 },
+            credential_counts: {
+              total: 10,
+              active: 8,
+              pending_review: 0,
+              rejected: 0,
+              expired: 0,
+              revoked: 2,
+              pending: 0,
+              failed: 0,
+            },
             user_counts: {
               total: 5,
               holder: 3,

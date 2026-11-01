@@ -12,7 +12,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useSearchParams, Link } from "react-router-dom";
 import { useStore } from "@app/store";
-import { Role } from "@shared/auth/role";
+import { Role, canAccess } from "@shared/auth/role";
 import { useOverview } from "./api/useOverview";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { PageHeader } from "@shared/components/PageHeader";
@@ -272,9 +272,11 @@ function UserRow({
 function CredentialCountsCard({
   counts,
   compact,
+  showExtraction = false,
 }: {
   counts: OverviewCredentialCounts;
   compact?: boolean;
+  showExtraction?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -284,10 +286,9 @@ function CredentialCountsCard({
       </h2>
       <div
         className={cn(
-          "grid gap-3 sm:gap-4",
-          compact
-            ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
-            : "grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-5",
+          "grid grid-cols-2 gap-3 sm:gap-4",
+          showExtraction ? "lg:grid-cols-4" : "lg:grid-cols-3",
+          !compact && "gap-6",
         )}
       >
         <StatItem
@@ -295,7 +296,6 @@ function CredentialCountsCard({
           label={t("overview.counts.active")}
           accent="gold"
           compact={compact}
-          className={compact ? "col-span-2 lg:col-span-1" : undefined}
           to="/credentials?review=approved"
         />
         <StatItem
@@ -305,23 +305,45 @@ function CredentialCountsCard({
           to="/credentials"
         />
         <StatItem
+          value={counts.pending_review}
+          label={t("cred.review.pendingReview")}
+          compact={compact}
+          to="/credentials?review=pending"
+        />
+        <StatItem
+          value={counts.rejected}
+          label={t("cred.review.rejected")}
+          compact={compact}
+          to="/credentials?review=rejected"
+        />
+        <StatItem
+          value={counts.expired}
+          label={t("cred.review.expired")}
+          compact={compact}
+          to="/credentials?review=expired"
+        />
+        <StatItem
           value={counts.revoked}
           label={t("overview.counts.revoked")}
           compact={compact}
           to="/credentials?review=revoked"
         />
-        <StatItem
-          value={counts.pending}
-          label={t("overview.counts.pending")}
-          compact={compact}
-          to="/credentials?extract=pending"
-        />
-        <StatItem
-          value={counts.failed}
-          label={t("overview.counts.failed")}
-          compact={compact}
-          to="/credentials?extract=failed"
-        />
+        {showExtraction && (
+          <>
+            <StatItem
+              value={counts.pending}
+              label={t("overview.counts.pending")}
+              compact={compact}
+              to="/credentials?extract=pending"
+            />
+            <StatItem
+              value={counts.failed}
+              label={t("overview.counts.failed")}
+              compact={compact}
+              to="/credentials?extract=failed"
+            />
+          </>
+        )}
       </div>
     </Card>
   );
@@ -589,6 +611,7 @@ function ChainInfoCard({ details }: { details: OverviewChainDetails }) {
 
 export function Overview() {
   const user = useStore((s) => s.user);
+  const showExtraction = canAccess(user?.role, Role.ISSUER);
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [, setTick] = useState(0);
@@ -683,8 +706,13 @@ export function Overview() {
           )}
           <Card className="p-5 sm:p-6">
             <Skeleton className="mb-4 h-6 w-32" />
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
-              {Array.from({ length: 5 }, (_, index) => (
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-3 sm:gap-4",
+                showExtraction ? "lg:grid-cols-4" : "lg:grid-cols-3",
+              )}
+            >
+              {Array.from({ length: showExtraction ? 8 : 6 }, (_, index) => (
                 <StatSkeleton key={index} compact />
               ))}
             </div>
@@ -695,13 +723,21 @@ export function Overview() {
         user?.role === Role.HOLDER ? (
           <div className="space-y-6">
             <RecentActivityCard recents={data.recents} showHolder={false} />
-            <CredentialCountsCard counts={data.credential_counts} compact />
+            <CredentialCountsCard
+              counts={data.credential_counts}
+              compact
+              showExtraction={showExtraction}
+            />
           </div>
         ) : (
           <>
             <RecentActivityCard recents={data.recents} showUsers />
             {data.user_counts && <UserCountsCard counts={data.user_counts} compact />}
-            <CredentialCountsCard counts={data.credential_counts} compact />
+            <CredentialCountsCard
+              counts={data.credential_counts}
+              compact
+              showExtraction={showExtraction}
+            />
             <CredentialRecapCard />
             {data.chain_details && <ChainInfoCard details={data.chain_details} />}
           </>

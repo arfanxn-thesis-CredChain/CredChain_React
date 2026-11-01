@@ -9,7 +9,16 @@ import { useOverview } from "./useOverview";
 import type { OverviewDTO } from "@shared/types/api";
 
 const mockData: OverviewDTO = {
-  credential_counts: { total: 10, active: 8, revoked: 2, pending: 0, failed: 0 },
+  credential_counts: {
+    total: 10,
+    active: 8,
+    pending_review: 3,
+    rejected: 4,
+    expired: 5,
+    revoked: 2,
+    pending: 0,
+    failed: 0,
+  },
   user_counts: { total: 5, holder: 3, issuer: 1, admin: 1, super_admin: 0, active: 5, trashed: 0 },
   recents: {
     active_credentials: [

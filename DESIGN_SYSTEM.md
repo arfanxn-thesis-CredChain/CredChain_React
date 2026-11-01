@@ -587,6 +587,8 @@ These are the things that make CredChain visually distinct. Touch them only with
 7. **Display serif for headings** - Fraunces optical-size headings. Sans-serif headings would lose the editorial weight.
 8. **Asymmetric stat cards on dashboard** - One gold card sits among neutral cards. The chromatic anchor draws the eye. Never four identical cards.
 
+**Overview credential statistics:** One Credentials panel contains compact, equal-span cards ordered Active, Total, Pending review, Rejected, Expired, Revoked. Holders see these six cards in `grid-cols-2 lg:grid-cols-3`. Issuer/Admin/Super Admin also see Extraction pending and Extraction failed at the end, using `grid-cols-2 lg:grid-cols-4` for eight cards. Loading skeletons match each role's card count and columns. Both layouts use `gap-3 sm:gap-4`. Active alone uses gold; the others stay neutral. Keep existing compact padding and typography, natural label wrapping, native filter links, and gold keyboard-focus rings. No subgroup headings, dividers, or extra panels.
+
 #### Anti-Patterns (Forbidden)
 
 These signal AI-generated UI and are explicitly prohibited:
