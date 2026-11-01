@@ -1,5 +1,10 @@
 import { Role, type Role as RoleType } from "@shared/auth/role";
-import type { CredentialDTO, UserDTO } from "@shared/types/api";
+import type {
+  CredentialDTO,
+  CredentialNotificationDTO,
+  CredentialNotificationType,
+  UserDTO,
+} from "@shared/types/api";
 
 export function makeUser(overrides: Partial<UserDTO> = {}): UserDTO {
   const role: RoleType = overrides.role ?? Role.HOLDER;
@@ -60,6 +65,25 @@ export function makeCredential(overrides: Partial<CredentialDTO> = {}): Credenti
     updated_at: null,
     holder: makeUser({ id: "usr_test_1", role: Role.HOLDER, name: "Test Holder" }),
     issuer: makeUser({ id: "usr_test_2", role: Role.ISSUER, name: "Test Issuer" }),
+    ...overrides,
+  };
+}
+
+export function makeCredentialNotification(
+  overrides: Partial<CredentialNotificationDTO> = {},
+): CredentialNotificationDTO {
+  return {
+    id: "notif_test_1",
+    notified_user_id: "usr_test_1",
+    credential_id: "cred_test_1",
+    type: "registered" as CredentialNotificationType,
+    created_at: "2026-01-01T00:00:00Z",
+    read_at: null,
+    credential: {
+      id: "cred_test_1",
+      name: "Test Credential",
+      number: "CERT-001",
+    },
     ...overrides,
   };
 }

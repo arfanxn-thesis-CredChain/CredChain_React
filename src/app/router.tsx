@@ -103,6 +103,13 @@ export const router = createBrowserRouter([
             ...lazyRoute(() => import("@feature/credential/CredentialSubmit"), "CredentialSubmit"),
           },
           {
+            path: "/notifications",
+            ...lazyRoute(
+              () => import("@feature/credential/CredentialNotificationsPage"),
+              "CredentialNotificationsPage",
+            ),
+          },
+          {
             path: "/account/profile",
             ...lazyRoute(() => import("@feature/user/UserSelfProfile"), "UserSelfProfile"),
           },

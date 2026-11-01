@@ -179,7 +179,7 @@ function applySorts(users: UserDTO[], sorts: string[]): UserDTO[] {
   return out;
 }
 
-const mockNotifications: CredentialNotificationDTO[] = [
+export const mockNotifications: CredentialNotificationDTO[] = [
   {
     id: "notif_01",
     notified_user_id: "usr_01",

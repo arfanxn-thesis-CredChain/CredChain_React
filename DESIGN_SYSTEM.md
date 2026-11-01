@@ -617,6 +617,8 @@ Density choice depends on screen purpose:
 
 **Rule:** Never let a list view feel like a hero, and never let a hero feel like a database admin tool.
 
+**Notifications:** Use compact neutral `py-4` rows with a plain muted icon, a normal-weight sentence (only the credential name is bold), and a muted timestamp beneath. Keep the separate mark-as-read action vertically centered at the right on every breakpoint: a 44×44 ghost icon button below `sm`, then icon plus a single-line label at `sm` and wider. Give it a localized accessible label and title; never wrap its visible label or place it on a second action row. No status badges, colored icon tiles, unread dots, credential numbers, or row shadows. Rejected and revoked notifications share `FileX2`. Show localized relative time below seven days; at seven days and older show localized date and time, with the full timestamp available on hover. Place `BackLink` above `PageHeader`. Row activation opens `/credentials?search=<credential ID>`; marking read never navigates.
+
 #### Asymmetry and Grid-Breaking
 
 The demo's dashboard splits 2:1 (`lg:col-span-2`) and inserts a single gold card among three neutrals. Continue this pattern - **deliberate imbalance signals design intent**. Grid-breaking moves to use sparingly:

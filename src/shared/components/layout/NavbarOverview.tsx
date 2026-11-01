@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Menu, Search, User, Mail, LogOut, HelpCircle, Info } from "lucide-react";
+import { Bell, Menu, Search, User, Mail, LogOut, HelpCircle, Info } from "lucide-react";
 import { useStore } from "@app/store";
 import { ROLE_LABEL_KEY } from "@shared/auth/role";
 import { UserAvatar } from "@shared/components/UserAvatar";
@@ -9,6 +9,7 @@ import { useLogout } from "@feature/auth/api/useLogout";
 import { useConfirm } from "@ui/confirm-dialog";
 import { useNavSearch } from "@shared/hooks/useNavSearch";
 import { LanguageSwitcher } from "@shared/components/LanguageSwitcher";
+import { useCredentialUnreadCount } from "@shared/api/useCredentialNotifications";
 import { cn } from "@shared/lib/cn";
 import {
   DropdownMenu,
@@ -34,6 +35,12 @@ export function NavbarOverview({ onMenuClick }: NavbarOverviewProps) {
   const navigate = useNavigate();
   const searchResults = useNavSearch(searchQuery);
   const showDropdown = searchQuery.length > 0;
+  const { data: unreadCount } = useCredentialUnreadCount();
+
+  const hasUnread = typeof unreadCount === "number" && unreadCount > 0;
+  const unreadLabel = hasUnread
+    ? t("notifications.unreadAria", { count: unreadCount })
+    : t("notifications.bellAria");
 
   const handleLogout = async () => {
     const ok = await confirm({
@@ -117,117 +124,139 @@ export function NavbarOverview({ onMenuClick }: NavbarOverviewProps) {
               </div>
             </div>
 
-            <div className="hidden md:block">
-              <LanguageSwitcher />
-            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="hidden md:block">
+                <LanguageSwitcher />
+              </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="group flex items-center gap-3 rounded-xl p-1 focus-visible:[outline:none]"
-                  aria-label="User menu"
+              {user && (
+                <Link
+                  to="/notifications"
+                  className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-2 text-surface transition-colors hover:text-gold focus-visible:ring-2 focus-visible:ring-gold focus-visible:outline-none sm:h-10 sm:w-10 sm:text-navy sm:hover:text-gold"
+                  aria-label={unreadLabel}
                 >
-                  <div className="hidden text-right sm:block">
-                    <div className="text-sm font-semibold text-surface lg:text-navy">
-                      {user?.name?.split(" ")[0] ?? user?.email?.split("@")[0]}
-                    </div>
-                    <div className="text-xs text-gray-300 capitalize lg:text-gray-500">
-                      {user?.role ? t(ROLE_LABEL_KEY[user.role]) : ""}
-                    </div>
-                  </div>
-                  {user && (
-                    <UserAvatar
-                      user={user}
-                      size="md"
-                      className="ring-2 ring-surface transition-shadow group-focus-visible:ring-gold sm:ring-gray-200"
-                    />
+                  <Bell className="h-5 w-5" aria-hidden="true" />
+                  {hasUnread && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute top-1 right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-gold px-1 text-[9px] font-bold text-navy shadow-sm ring-2 ring-navy sm:ring-surface"
+                    >
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
                   )}
-                </button>
-              </DropdownMenuTrigger>
+                </Link>
+              )}
 
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel inset>
-                  <div className="truncate font-bold tracking-normal text-navy normal-case">
-                    {user?.name ?? "Account"}
-                  </div>
-                  <div className="truncate text-xs font-normal tracking-normal text-gray-400 normal-case">
-                    {user?.email}
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/account/profile" className="flex cursor-pointer items-center gap-2">
-                    <User className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                    {t("nav.profile")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/account/email" className="flex cursor-pointer items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                    {t("user.email.update.title")}
-                  </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/help" className="flex cursor-pointer items-center gap-2">
-                    <HelpCircle className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                    {t("nav.help")}
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/about" className="flex cursor-pointer items-center gap-2">
-                    <Info className="h-4 w-4 text-gray-400" aria-hidden="true" />
-                    {t("nav.about")}
-                  </Link>
-                </DropdownMenuItem>
-
-                <div className="md:hidden">
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel
-                    inset
-                    className="text-xs font-bold tracking-wider text-gray-400 uppercase"
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="group flex items-center gap-3 rounded-xl p-1 focus-visible:[outline:none]"
+                    aria-label="User menu"
                   >
-                    {t("settings.language.heading")}
+                    <div className="hidden text-right sm:block">
+                      <div className="text-sm font-semibold text-surface lg:text-navy">
+                        {user?.name?.split(" ")[0] ?? user?.email?.split("@")[0]}
+                      </div>
+                      <div className="text-xs text-gray-300 capitalize lg:text-gray-500">
+                        {user?.role ? t(ROLE_LABEL_KEY[user.role]) : ""}
+                      </div>
+                    </div>
+                    {user && (
+                      <UserAvatar
+                        user={user}
+                        size="md"
+                        className="ring-2 ring-surface transition-shadow group-focus-visible:ring-gold sm:ring-gray-200"
+                      />
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel inset>
+                    <div className="truncate font-bold tracking-normal text-navy normal-case">
+                      {user?.name ?? "Account"}
+                    </div>
+                    <div className="truncate text-xs font-normal tracking-normal text-gray-400 normal-case">
+                      {user?.email}
+                    </div>
                   </DropdownMenuLabel>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      changeLocale("en");
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <span className={cn("flex-1", currentLocale === "en" && "font-bold")}>
-                      English
-                    </span>
-                    <span className="font-mono text-xs text-gray-400">EN</span>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/profile" className="flex cursor-pointer items-center gap-2">
+                      <User className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                      {t("nav.profile")}
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      changeLocale("id");
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <span className={cn("flex-1", currentLocale === "id" && "font-bold")}>
-                      Bahasa Indonesia
-                    </span>
-                    <span className="font-mono text-xs text-gray-400">ID</span>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account/email" className="flex cursor-pointer items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                      {t("user.email.update.title")}
+                    </Link>
                   </DropdownMenuItem>
-                </div>
 
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  destructive
-                  onClick={handleLogout}
-                  disabled={logout.isPending}
-                  className="flex cursor-pointer items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" aria-hidden="true" />
-                  {logout.isPending ? t("auth.logout.signingOut") : t("auth.logout.confirm.action")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/help" className="flex cursor-pointer items-center gap-2">
+                      <HelpCircle className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                      {t("nav.help")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/about" className="flex cursor-pointer items-center gap-2">
+                      <Info className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                      {t("nav.about")}
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <div className="md:hidden">
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel
+                      inset
+                      className="text-xs font-bold tracking-wider text-gray-400 uppercase"
+                    >
+                      {t("settings.language.heading")}
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        changeLocale("en");
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <span className={cn("flex-1", currentLocale === "en" && "font-bold")}>
+                        English
+                      </span>
+                      <span className="font-mono text-xs text-gray-400">EN</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        changeLocale("id");
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <span className={cn("flex-1", currentLocale === "id" && "font-bold")}>
+                        Bahasa Indonesia
+                      </span>
+                      <span className="font-mono text-xs text-gray-400">ID</span>
+                    </DropdownMenuItem>
+                  </div>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    destructive
+                    onClick={handleLogout}
+                    disabled={logout.isPending}
+                    className="flex cursor-pointer items-center gap-2"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden="true" />
+                    {logout.isPending
+                      ? t("auth.logout.signingOut")
+                      : t("auth.logout.confirm.action")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </header>
