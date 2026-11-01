@@ -104,18 +104,17 @@ describe("CredentialDetailModal", () => {
     expect(await screen.findByText("Dokumen buram")).toBeInTheDocument();
   });
 
-  it("renders unstaged competencies alongside visual indicator", async () => {
+  it("renders competencies", async () => {
     server.use(
       http.get("*/api/credentials/:id", () =>
         credentialResponse({
-          competencies: [],
-          submitted_competencies: [{ name: "Raw Staged Competency", resolved_id: null }],
+          competencies: [{ id: "comp_01", name: "Backend Development", active: true }],
         }),
       ),
     );
     renderModal();
 
-    expect(await screen.findByText("Raw Staged Competency")).toBeInTheDocument();
+    expect(await screen.findByText("Backend Development")).toBeInTheDocument();
   });
 
   it("renders read-only system facts at the bottom", async () => {

@@ -122,49 +122,46 @@ function makeSubmitRow() {
 }
 
 describe("credentialSubmitRowSchema", () => {
-  it("accepts a proposed type name with no id", () => {
-    const result = credentialSubmitRowSchema.safeParse({
-      ...makeSubmitRow(),
-      type_id: undefined,
-      issuer_organization_id: undefined,
-      submitted_type_name: "Micro-credential",
-      submitted_issuer_organization_name: "Cyfrin Updraft",
-    });
+  it("accepts a fully valid row with required fields", () => {
+    const result = credentialSubmitRowSchema.safeParse(makeSubmitRow());
     expect(result.success).toBe(true);
   });
 
-  it("rejects a row with neither type id nor type name", () => {
+  it("rejects a missing type_id", () => {
     const result = credentialSubmitRowSchema.safeParse({
       ...makeSubmitRow(),
       type_id: undefined,
-      submitted_issuer_organization_name: "Cyfrin Updraft",
     });
     expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toBe("zod.credential.submitTypeRequired");
-    }
   });
 
-  it("rejects a row carrying both a type id and a type name", () => {
+  it("rejects an empty string type_id", () => {
     const result = credentialSubmitRowSchema.safeParse({
       ...makeSubmitRow(),
-      submitted_type_name: "Micro-credential",
-      submitted_issuer_organization_name: "Cyfrin Updraft",
+      type_id: "",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe("zod.credential.submitTypeRequired");
+      expect(result.error.issues[0].message).toBe("zod.credential.typeRequired");
     }
   });
 
-  it("rejects a row with neither organization id nor organization name", () => {
+  it("rejects a missing issuer_organization_id", () => {
     const result = credentialSubmitRowSchema.safeParse({
       ...makeSubmitRow(),
       issuer_organization_id: undefined,
     });
     expect(result.success).toBe(false);
+  });
+
+  it("rejects an empty string issuer_organization_id", () => {
+    const result = credentialSubmitRowSchema.safeParse({
+      ...makeSubmitRow(),
+      issuer_organization_id: "",
+    });
+    expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe("zod.credential.submitOrganizationRequired");
+      expect(result.error.issues[0].message).toBe("zod.credential.issuerOrganizationRequired");
     }
   });
 });

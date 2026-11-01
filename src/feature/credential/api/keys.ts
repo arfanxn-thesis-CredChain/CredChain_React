@@ -6,5 +6,4 @@ export const credentialKeys = {
   detail: (id: string, includes?: string[]) => ["credentials", "detail", id, includes] as const,
   mine: (params?: PaginationParams) => ["credentials", "mine", params] as const,
   file: (id: string) => ["credentials", "file", id] as const,
-  metadataSuggestions: (id: string) => ["credentials", "metadata-suggestions", id] as const,
 };

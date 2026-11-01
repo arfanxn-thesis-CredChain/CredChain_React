@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, CircleDashed, XCircle, Ban } from "lucide-react";
+import { AlertCircle, XCircle, Ban } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@ui/dialog";
 import { Input } from "@ui/input";
 import { Badge } from "@ui/badge";
@@ -28,7 +28,6 @@ import { useCredential } from "./api/useCredential";
 import { useUpdateCredentials, type CredentialUpdateItem } from "./api/useUpdateCredentials";
 import { useLinkCompetencies } from "./api/useLinkCompetencies";
 import { credentialEditRowSchema, type CredentialEditRowInput } from "./schemas/credential";
-import { CredentialMetadataResolver } from "./components/CredentialMetadataResolver";
 import { CredentialSystemFacts } from "./components/CredentialSystemFacts";
 import { CredentialViewFilePreview } from "./components/CredentialViewFilePreview";
 
@@ -89,7 +88,6 @@ export function CredentialDetailModal({
   }, [cred, form]);
 
   const isPendingReview = cred?.status === "pending";
-  const hasUnresolvedMetadata = (cred?.unresolved_metadata?.length ?? 0) > 0;
 
   const handleSave = async (): Promise<boolean> => {
     if (!cred) return false;
@@ -235,22 +233,17 @@ export function CredentialDetailModal({
           key: "competencies",
           label: t("cred.competency.title"),
           readValue: (() => {
-            const list = [
-              ...(cred.competencies ?? []).map((c) => ({ name: c.name, staged: false })),
-              ...(cred.submitted_competencies ?? [])
-                .filter((c) => c.resolved_id === null)
-                .map((c) => ({ name: c.name, staged: true })),
-            ];
+            const list = (cred.competencies ?? []).map((c) => ({ name: c.name }));
 
             if (list.length === 0 && cred.meta) {
               const raw = cred.meta.competencies || cred.meta.competency;
               if (Array.isArray(raw)) {
                 raw.forEach((c) => {
                   if (typeof c === "string" && c.trim())
-                    list.push({ name: c.trim(), staged: true });
+                    list.push({ name: c.trim() });
                 });
               } else if (typeof raw === "string" && raw.trim()) {
-                list.push({ name: raw.trim(), staged: true });
+                list.push({ name: raw.trim() });
               }
             }
 
@@ -263,8 +256,7 @@ export function CredentialDetailModal({
                 {list.map((c, idx) => (
                   <Badge
                     key={`${c.name}-${idx}`}
-                    tone={c.staged ? "gray" : "gold"}
-                    icon={c.staged ? CircleDashed : undefined}
+                    tone="gold"
                     className="max-w-full truncate"
                   >
                     {c.name}
@@ -372,11 +364,6 @@ export function CredentialDetailModal({
                   <p className="mt-1 whitespace-pre-wrap">{cred.revocation_reason}</p>
                 </div>
               </div>
-            )}
-
-            {/* Unresolved staged metadata resolver */}
-            {canManage && isPendingReview && hasUnresolvedMetadata && (
-              <CredentialMetadataResolver credentialId={cred.id} />
             )}
 
             {/* 2. Detail Section with Read / Edit toggle */}
