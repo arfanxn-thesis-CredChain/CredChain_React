@@ -8,6 +8,7 @@ interface CredentialFileModalProps {
   file: File | Blob;
   open: boolean;
   onClose: () => void;
+  onCloseAutoFocus?: (event: Event) => void;
   /** Display name for the file (Blob has no .name). Falls back to "Credential File". */
   name?: string;
 }
@@ -18,7 +19,13 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function CredentialFileModal({ file, open, onClose, name }: CredentialFileModalProps) {
+export function CredentialFileModal({
+  file,
+  open,
+  onClose,
+  name,
+  onCloseAutoFocus,
+}: CredentialFileModalProps) {
   const { t } = useTranslation();
   const isPdf = file.type === "application/pdf";
 
@@ -29,7 +36,7 @@ export function CredentialFileModal({ file, open, onClose, name }: CredentialFil
         if (!next) onClose();
       }}
     >
-      <DialogContent className="max-w-5xl">
+      <DialogContent className="max-w-5xl" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>
             {name || (file instanceof File ? file.name : "Credential File")}

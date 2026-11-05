@@ -9,7 +9,7 @@ const MAX_CACHE = 256;
 
 interface UserAvatarProps {
   user: {
-    id: string;
+    id?: string;
     wallet_address?: string | null;
     name?: string | null;
     email?: string | null;

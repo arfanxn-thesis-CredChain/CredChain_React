@@ -20,8 +20,32 @@ import { UserRoleBadge } from "@shared/components/UserRoleBadge";
 import { UserStatusBadge } from "@shared/components/UserStatusBadge";
 import type { UserDTO } from "@shared/types/api";
 
+type ContactUser = Omit<
+  Pick<
+    UserDTO,
+    | "name"
+    | "number"
+    | "joined_year"
+    | "email"
+    | "gender"
+    | "role"
+    | "wallet_address"
+    | "created_at"
+    | "updated_at"
+    | "deleted_at"
+  >,
+  "updated_at"
+> & {
+  id?: string;
+  unit_id?: string | null;
+  unit_name?: string | null;
+  updated_at: string | null;
+  phone_number?: string | null;
+};
+
 interface UserContactBlockProps {
-  user?: UserDTO;
+  user?: ContactUser | null;
+  resolveUnits?: boolean;
   fallbackId: string;
   copyPrefix: "holder" | "issuer" | "revoker" | "rejecter" | "user";
   labelType: "full" | "compact";
@@ -40,16 +64,19 @@ export function UserContactBlock({
   blockLinks,
   layout = "flex",
   children,
+  resolveUnits = true,
 }: UserContactBlockProps) {
   const { t, i18n } = useTranslation();
-  const { data: units } = useUserUnits();
-  const unitName = units?.find((u) => u.id === user?.unit_id)?.name;
+  const { data: units } = useUserUnits(undefined, { enabled: resolveUnits });
+  const unitName = resolveUnits
+    ? units?.find((u) => u.id === user?.unit_id)?.name
+    : user?.unit_name;
+  const updatedAt = user?.updated_at ?? user?.created_at;
 
   const name = user?.name ?? user?.email ?? fallbackId;
   const userId = user?.id ?? fallbackId;
   const isDeleted = !!user?.deleted_at;
-  const phoneNumber = (user as (UserDTO & { phone_number?: string | null }) | undefined)
-    ?.phone_number;
+  const phoneNumber = user?.phone_number;
 
   const textColor = tone === "error" ? "text-error" : "text-navy";
   const nameWeight = labelType === "full" ? "font-bold" : "font-semibold";
@@ -59,7 +86,7 @@ export function UserContactBlock({
       <UserAvatar user={user ?? null} size="sm" className="mt-0.5 shrink-0" />
       <div className="flex min-w-0 flex-1 flex-col space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          {blockLinks ? (
+          {blockLinks || !userId ? (
             <span
               className={cn(
                 "line-clamp-2 text-left text-sm",
@@ -85,7 +112,7 @@ export function UserContactBlock({
             </Link>
           )}
           {user?.role && <UserRoleBadge role={user.role} />}
-          <UserStatusBadge deletedAt={user?.deleted_at ?? null} />
+          {user && <UserStatusBadge deletedAt={user.deleted_at} />}
         </div>
 
         {labelType === "full" && (
@@ -97,7 +124,7 @@ export function UserContactBlock({
                 : "flex flex-col",
             )}
           >
-            {user?.unit_id && (
+            {(user?.unit_id || unitName) && (
               <div className="flex items-center gap-1 sm:col-span-2 lg:col-span-3">
                 <Building2 className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden="true" />
                 <span className="truncate">{unitName ?? "—"}</span>
@@ -174,9 +201,9 @@ export function UserContactBlock({
                 <span>
                   {user.deleted_at
                     ? t("user.list.trashed", { time: relativeTime(user.deleted_at, i18n.language) })
-                    : user.updated_at !== user.created_at
+                    : updatedAt && updatedAt !== user.created_at
                       ? t("user.list.updated", {
-                          time: relativeTime(user.updated_at, i18n.language),
+                          time: relativeTime(updatedAt, i18n.language),
                         })
                       : t("user.list.created", {
                           time: relativeTime(user.created_at, i18n.language),

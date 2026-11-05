@@ -79,8 +79,12 @@ describe("CODE_TO_MESSAGE_KEY", () => {
 
   it("maps the step-3 competency link and credential update codes", () => {
     expect(CODE_TO_MESSAGE_KEY[401300]).toBe("success_credential_competency_link");
-    expect(CODE_TO_MESSAGE_KEY[401340]).toBe("error_credential_competency_link_credential_not_found");
-    expect(CODE_TO_MESSAGE_KEY[401341]).toBe("error_credential_competency_link_competency_not_found");
+    expect(CODE_TO_MESSAGE_KEY[401340]).toBe(
+      "error_credential_competency_link_credential_not_found",
+    );
+    expect(CODE_TO_MESSAGE_KEY[401341]).toBe(
+      "error_credential_competency_link_competency_not_found",
+    );
     expect(CODE_TO_MESSAGE_KEY[401400]).toBe("success_credential_update");
     expect(CODE_TO_MESSAGE_KEY[401440]).toBe("error_credential_update_not_found");
     expect(CODE_TO_MESSAGE_KEY[401441]).toBe("error_credential_update_not_pending");
@@ -95,6 +99,10 @@ describe("CODE_TO_MESSAGE_KEY", () => {
     expect(CODE_TO_MESSAGE_KEY[401544]).toBe("error_credential_metadata_resolve_target_inactive");
     expect(CODE_TO_MESSAGE_KEY[401545]).toBe("error_credential_metadata_resolve_number_duplicate");
     expect(CODE_TO_MESSAGE_KEY[401546]).toBe("error_credential_approve_unresolved_metadata");
+  });
+
+  it("maps an inconclusive chain read separately from verdicts", () => {
+    expect(CODE_TO_MESSAGE_KEY[400447]).toBe("error_credential_verify_chain_unavailable");
   });
 
   it("maps the expired verify verdict", () => {

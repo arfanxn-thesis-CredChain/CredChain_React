@@ -16,10 +16,11 @@ export const userUnitKeys = {
  * Never paginated: a truncated branch renders a structurally broken tree, and
  * the endpoint already defaults to a page size large enough for whole org charts.
  */
-export function useUserUnits(search?: string) {
+export function useUserUnits(search?: string, { enabled = true }: { enabled?: boolean } = {}) {
   const term = search?.trim() || undefined;
   return useQuery({
     queryKey: userUnitKeys.list(term),
+    enabled,
     queryFn: async () => {
       const response = await api.get<HolderUnitDTO[]>("/user-units", {
         params: term ? { search: term } : undefined,

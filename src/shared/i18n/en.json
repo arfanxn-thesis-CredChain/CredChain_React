@@ -137,7 +137,7 @@
   "user.filter.year": "Joined year",
   "user.filter.year.from": "From",
   "user.filter.year.to": "To",
-  "user.filter.year.range": "{{from}}\u2013{{to}}",
+  "user.filter.year.range": "{{from}}–{{to}}",
   "user.filter.year.fromOnly": "{{from}} onwards",
   "user.filter.year.toOnly": "up to {{to}}",
   "user.filter.year.reset": "Reset",
@@ -404,11 +404,11 @@
   "credential.verify.credential_not_found": "Credential not found for verification",
   "credential.verify.verdict.authentic": "This document is authentic.",
   "credential.verify.verdict.revoked": "This credential has been revoked.",
-  "credential.verify.verdict.integrity_warning": "Blockchain record mismatch.",
-  "credential.verify.verdict.tampered": "This document may have been altered.",
-  "credential.verify.verdict.suspicious": "This document is suspiciously similar to another credential.",
-  "credential.verify.verdict.low_similarity": "Partial match found.",
-  "credential.verify.verdict.not_similar": "No matching credential found.",
+  "credential.verify.verdict.integrity_warning": "Credential data does not match the credential data on the blockchain.",
+  "credential.verify.verdict.tampered": "High text similarity found—not an exact file match.",
+  "credential.verify.verdict.suspicious": "Similar text found—not an exact file match.",
+  "credential.verify.verdict.low_similarity": "Limited text similarity found—not an exact file match.",
+  "credential.verify.verdict.not_similar": "No close text match found.",
   "credential.verify.verdict.no_identifiers": "Could not read identity data from this document.",
   "credential.verify.verdict.no_match": "No matching credential found.",
   "credential.verify.verdict.holder_disabled": "The holder's account is disabled. Manual review needed.",
@@ -468,11 +468,15 @@
   "cred.status.pending_extraction": "Pending",
   "cred.status.extraction_failed": "Extraction Failed",
   "cred.verify.verifying": "Verifying document...",
-  "cred.verify.similarityLabel": "Similarity",
+  "cred.verify.similarityLabel": "Text similarity",
+  "cred.verify.similarityLimitation": "Text similarity does not establish authenticity or prove alteration. Verify the original file or contact the issuing organization.",
+  "cred.verify.matchedStatus": "Matched credential status",
+  "error_credential_verify_chain_unavailable": "Blockchain verification could not be completed. Try again later.",
   "cred.verify.tokenId": "Token ID",
   "cred.verify.viewCredential": "View Credential",
-  "cred.verify.method.hash": "Verified via cryptographic hash match",
-  "cred.verify.method.fuzzy": "Verified via AI similarity analysis",
+  "cred.verify.method.hash": "Exact-file hash check",
+  "cred.verify.method.fuzzy": "AI text similarity comparison",
+  "cred.verify.method.identifiers": "AI identifier search",
   "cred.verify.issuedBy": "Issued by {{organization}}",
   "cred.verify.signInNudge": "Sign in to view full credential details",
   "cred.verify.signInNudgeDesc": "Including holder info, issuer details, and blockchain data",
@@ -575,8 +579,6 @@
   "validation_update_role_same_role_update_forbidden": "Cannot update user with the same role",
   "validation_update_role_super_admin_batch_forbidden": "Cannot assign SuperAdmin role in batch operation",
   "validation_delete_admin_forbidden": "Admins cannot delete Admin or SuperAdmin users",
-  "validation_file_max_size": "File must be 10 MB or less",
-  "validation_file_type_invalid": "File must be PDF, JPEG, PNG, WebP, or TIFF",
   "validation_store_email_duplicate_batch": "This email appears multiple times in this batch.",
   "validation_store_email_duplicate_db": "This email is already registered.",
   "validation_unit_inactive": "The selected unit is inactive and cannot be assigned.",
@@ -680,10 +682,10 @@
   "success_credential_verify_authentic": "The document is authentic and matches an issued credential.",
   "success_credential_verify_revoked": "The document matches an issued credential that has been revoked.",
   "warning_credential_verify_integrity": "The document matches a credential in the database but not on the blockchain — integrity warning.",
-  "success_credential_verify_tampered": "The document is suspiciously similar to an issued credential and may have been tampered.",
-  "success_credential_verify_suspicious": "The document is highly similar to an issued credential.",
-  "success_credential_verify_low_similarity": "The document has low similarity to an issued credential.",
-  "success_credential_verify_not_similar": "The document is not similar to the matched credential.",
+  "success_credential_verify_tampered": "High text similarity found—not an exact file match.",
+  "success_credential_verify_suspicious": "Similar text found—not an exact file match.",
+  "success_credential_verify_low_similarity": "Limited text similarity found—not an exact file match.",
+  "success_credential_verify_not_similar": "No close text match found.",
   "success_credential_verify_no_identifiers": "No identifiable IDs were found in the document.",
   "success_credential_verify_no_match": "No matching issued credential was found for the IDs in this document.",
   "success_credential_verify_holder_disabled": "The credential holder has been deactivated. Credential validity requires manual review.",
@@ -947,10 +949,10 @@
     },
     "verify": {
       "title": "Credential Verification",
-      "description": "Upload a document to check if it matches the blockchain record.",
+      "description": "Upload a document to check it against credentials in CredChain.",
       "loading": "Loading...",
       "notFound": {
-        "title": "Record Not Found",
+        "title": "Credential not found",
         "body": "This credential doesn't exist or has been permanently removed.",
         "returnHome": "Return Home"
       },
@@ -962,14 +964,142 @@
       "verificationDisabled": "Verification Disabled",
       "revokedDesc": "This credential has been revoked and is no longer valid.",
       "verifyDoc": "Verify Source Document",
-      "verifyDocDesc": "Upload the original file to compare its hash against the blockchain record.",
+      "verifyDocDesc": "Upload the original file to compare its fingerprint with the registered-file fingerprint.",
       "selectFile": "Select File for Verification",
-      "processing": "Processing...",
+      "processing": "Checking document…",
       "uploadAriaLabel": "Upload file for verification",
       "success": "Verification Successful",
-      "successDesc": "This document is authentic. Its hash matches the blockchain record.",
+      "successDesc": "The uploaded file matches the registered file. Review the credential status and verification evidence.",
       "failed": "Verification Failed",
-      "failedDesc": "This document doesn't match the blockchain record. It may have been altered, or it's the wrong file.",
+      "failedDesc": "An exact match with the registered file could not be confirmed. This alone does not prove alteration or forgery.",
+      "report": {
+        "exact": {
+          "title": "File matches the registered file",
+          "description": "Your uploaded file is identical to the registered file, and credential data on the blockchain matches.",
+          "next": "Review the credential details and status. Contact the issuing organization if you need confirmation of issuance."
+        },
+        "legacy": {
+          "title": "CredChain returned a verification result",
+          "description": "This result does not confirm that an identical registered file was checked during this request.",
+          "next": "Verify the original file or contact the issuing organization."
+        },
+        "revoked": {
+          "title": "Credential revoked",
+          "description": "This credential is revoked. A matching file does not make it currently valid.",
+          "next": "Contact the issuing organization for clarification or a replacement."
+        },
+        "expired": {
+          "title": "Credential expired",
+          "description": "The recorded validity period has ended. This does not mean the document was forged.",
+          "next": "Request a current credential from the issuing organization."
+        },
+        "integrity": {
+          "title": "Credential verification could not be confirmed",
+          "description": "CredChain could not confirm that its registered credential data matches the credential data on the blockchain. This does not prove the uploaded document was altered.",
+          "next": "Contact the platform administrator to check the credential data."
+        },
+        "highSimilarity": {
+          "title": "Similar text found",
+          "description": "Text in your uploaded file resembles text in a credential in CredChain, but this does not confirm the document's authenticity.",
+          "next": "Try the original digital file or confirm with the issuing organization."
+        },
+        "similar": {
+          "title": "Similar text found",
+          "description": "Text in your uploaded file resembles text in a credential in CredChain, but this does not confirm the document's authenticity.",
+          "next": "Try the original digital file or confirm with the issuing organization."
+        },
+        "lowSimilarity": {
+          "title": "Limited text similarity found",
+          "description": "Text in your uploaded file has little in common with text in the compared credential. This does not confirm whether the document is authentic.",
+          "next": "Try the original digital file or confirm with the issuing organization."
+        },
+        "notSimilar": {
+          "title": "No close text match found",
+          "description": "Text in your uploaded file is not closely similar to text in the compared credential. This alone does not prove forgery.",
+          "next": "Try the original digital file or contact the issuing organization."
+        },
+        "noIdentifiers": {
+          "title": "Not enough identifying information",
+          "description": "CredChain could not find enough information, such as a credential name or number, to search for a credential.",
+          "next": "Use a clearer or original supported file."
+        },
+        "noMatch": {
+          "title": "No matching credential found",
+          "description": "This search did not find a matching credential in CredChain. That does not prove the document is fake.",
+          "next": "Try the original file or contact the issuing organization."
+        },
+        "unknown": {
+          "title": "Result could not be interpreted",
+          "description": "CredChain returned a result this page cannot display. No verification conclusion is available.",
+          "next": "Try again or contact the platform administrator."
+        },
+        "holderDisabled": {
+          "title": "Verification requires follow-up",
+          "description": "The holder account is disabled in CredChain. This alone does not mean the document is forged.",
+          "next": "Contact the platform administrator or issuing organization."
+        },
+        "issuerDisabled": {
+          "title": "Verification requires follow-up",
+          "description": "The issuer account that registered or approved this credential is disabled in CredChain. This alone does not mean the document is forged or the issuing organization committed fraud.",
+          "next": "Contact the platform administrator or issuing organization."
+        },
+        "partyDisabled": {
+          "title": "Verification requires follow-up",
+          "description": "The holder account and the issuer account that registered or approved this credential are disabled in CredChain. This alone does not mean the document is forged or the issuing organization committed fraud.",
+          "next": "Contact the platform administrator or issuing organization."
+        },
+        "record": "Credential data",
+        "possibleRecord": "Possible related credential found.",
+        "comparedRecord": "This credential was considered during comparison.",
+        "comparedCredential": "Compared credential",
+        "credentialName": "Credential name",
+        "credentialNumber": "Credential number",
+        "unavailable": "Unavailable",
+        "next": "What to do next",
+        "technical": "Technical evidence",
+        "comparison": "Comparison details",
+        "score": "Text similarity",
+        "scoreLimit": "Text similarity does not establish authenticity or prove alteration, even at 100%.",
+        "hashLimit": "This fingerprint belongs to the returned credential, not necessarily your uploaded file.",
+        "recordId": "Credential ID",
+        "fileHash": "Registered-file fingerprint",
+        "organization": "Issuer organization",
+        "type": "Credential type",
+        "number": "Document number",
+        "issued": "Issued on",
+        "expires": "Expires on",
+        "revokedOn": "Revoked on",
+        "status": "Credential status",
+        "route": "Registration route",
+        "submitted": "Submitted and approved in CredChain",
+        "registered": "Directly registered in CredChain",
+        "notRecorded": "Not recorded",
+        "noExpiry": "No expiry recorded",
+        "details": "Open credential details",
+        "privateRecord": "Open private credential",
+        "another": "Verify another document",
+        "metadataLimit": "Organization and credential type names reflect current CredChain data and may differ from their names at issuance.",
+        "recipientLimit": "This check does not verify the recipient's identity or confirm issuance directly with the issuer organization.",
+        "snapshot": "Details reflect this verification response. Reverify to check again.",
+        "verified": "Your uploaded file is identical to the registered file, and credential data on the blockchain matches. The warning above still applies.",
+        "limits": "Verification limits",
+        "modalTitle": "Credential details",
+        "resultTitle": "Verification result",
+        "preview": "Preview",
+        "retry": "Retry verification",
+        "scope": "CredChain looks for an identical registered file. If none is found, it may compare text with a credential in CredChain. CredChain does not contact the issuer organization.",
+        "candidateStatus": "The name, number, status, type and issuer organization below describe the compared credential, not confirmed details of your uploaded file.",
+        "close": "Close",
+        "change": "Change document",
+        "viewCredentialDetails": "View credential details",
+        "viewComparedCredential": "View compared credential",
+        "uploadedFile": "Uploaded file",
+        "method": "Verification method",
+        "methodExact": "Exact file match",
+        "methodText": "Text comparison",
+        "methodUnknown": "Not confirmed",
+        "provenance": "Holder account details reflect current CredChain data and may differ from details at issuance."
+      },
       "computedHash": "File Check Hash"
     },
     "mine": {
@@ -1016,7 +1146,11 @@
       "completeDetails": "Complete details",
       "competencyOverflow": "+{{count}}"
     },
-    "status": { "active": "Active", "revoked": "Revoked", "menuLabel": "Status" },
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "menuLabel": "Status"
+    },
     "field": {
       "recipient": "Recipient (holder)",
       "type": "Credential type",
@@ -1157,7 +1291,10 @@
   "credType": {
     "title": "Credential Types",
     "description": "Manage credential types used when issuing credentials.",
-    "column": { "name": "Name", "active": "Active" },
+    "column": {
+      "name": "Name",
+      "active": "Active"
+    },
     "createAction": "Add type",
     "editTitle": "Edit credential type",
     "activeToggle": "Toggle active state for {{name}}",
@@ -1176,7 +1313,10 @@
   "issuerOrg": {
     "title": "Issuer Organizations",
     "description": "Manage organizations that can issue credentials.",
-    "column": { "name": "Name", "active": "Active" },
+    "column": {
+      "name": "Name",
+      "active": "Active"
+    },
     "createAction": "Add organization",
     "editTitle": "Edit issuer organization",
     "activeToggle": "Toggle active state for {{name}}",
@@ -1195,7 +1335,10 @@
   "competency": {
     "title": "Competencies",
     "description": "Manage competencies that can be linked to credentials.",
-    "column": { "name": "Name", "active": "Active" },
+    "column": {
+      "name": "Name",
+      "active": "Active"
+    },
     "createAction": "Add competency",
     "editTitle": "Edit competency",
     "activeToggle": "Toggle active state for {{name}}",
@@ -1385,11 +1528,9 @@
   "overview.dateFilter.thisMonth": "This month",
   "overview.dateFilter.custom": "Custom range",
   "overview.dateFilter.apply": "Apply",
-
   "fileDropzone.dragDrop": "Drag & drop or click to browse",
   "fileDropzone.notAvailable": "N/A",
   "fileDropzone.removeAriaLabel": "Remove file",
-
   "userImport.title": "Import Users from File",
   "userImport.description": "Upload a CSV, XLS, or XLSX file to bulk import users.",
   "userImport.supportedFormats": "CSV, XLS, or XLSX",
@@ -1401,7 +1542,7 @@
   "userImport.toRow": "Import to row",
   "userImport.previewRow": "Row {{row}}",
   "userImport.maxRows": "Maximum 100 rows per import",
-  "userImport.invalidRange": "End row must be \u2265 start row and range must be \u2264 100",
+  "userImport.invalidRange": "End row must be ≥ start row and range must be ≤ 100",
   "userImport.missingColumns": "Missing required columns: {{columns}}",
   "userImport.parseError": "Could not parse file. Ensure it is a valid CSV/XLS/XLSX with a header row and at least one data row.",
   "userImport.invalidExtension": "Only .csv, .xls, and .xlsx files are accepted",

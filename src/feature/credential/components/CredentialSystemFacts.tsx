@@ -4,10 +4,10 @@ import { CopyInlineButton } from "@shared/components/CopyInlineButton";
 import { formatDateTime, truncateAddress, truncateId } from "@shared/lib/format";
 import { lifecycleDateLines } from "@shared/lib/credentialDate";
 import { cn } from "@shared/lib/cn";
-import type { CredentialDTO } from "@shared/types/api";
+import type { CredentialFacts } from "@shared/lib/credentialDate";
 
 interface CredentialSystemFactsProps {
-  credential: CredentialDTO;
+  credential: CredentialFacts;
 }
 
 /**

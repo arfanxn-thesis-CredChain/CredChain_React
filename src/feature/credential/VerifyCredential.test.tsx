@@ -1,20 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TestProviders } from "@/test/TestProviders";
+import { makeCredential, makeUser } from "@/test/fixtures";
+import { Role } from "@shared/auth/role";
 import { i18n } from "@shared/i18n/config";
 import { useStore } from "@app/store";
 import { VerifyCredential } from "./VerifyCredential";
 
 const mockMutateAsync = vi.fn();
-
-vi.mock("./api/useVerifyCredential", () => ({
-  useVerifyCredential: () => ({
-    mutateAsync: mockMutateAsync,
-    isPending: false,
-  }),
+const mockUseCredential = vi.fn();
+vi.mock("./CredentialDetailModal", () => ({
+  CredentialDetailModal: ({ credentialId }: { credentialId: string }) => (
+    <div role="dialog" aria-label="Private credential details">
+      Private record {credentialId}
+    </div>
+  ),
 }));
-
+vi.mock("./api/useCredential", () => ({
+  useCredential: (...args: unknown[]) => mockUseCredential(...args),
+}));
+vi.mock("./api/useVerifyCredential", () => ({
+  useVerifyCredential: () => ({ mutateAsync: mockMutateAsync }),
+}));
 vi.mock("./components/CredentialFileInput", () => ({
   CredentialFileInput: ({
     file,
@@ -23,190 +31,335 @@ vi.mock("./components/CredentialFileInput", () => ({
     error,
   }: {
     file: File | null;
-    onChange: (f: File | null) => void;
+    onChange: (file: File | null) => void;
     onExpand: () => void;
     error?: string;
   }) => (
-    <div data-testid="credential-file-input">
+    <div>
       {file ? (
-        <div>
-          <span data-testid="file-name">{file.name}</span>
-          <button onClick={onExpand} aria-label="Preview">
-            Preview
+        <>
+          <span>{file.name}</span>
+          <button
+            onClick={() =>
+              onChange(new File(["replacement"], "other.pdf", { type: "application/pdf" }))
+            }
+          >
+            Replace
           </button>
-          <button onClick={() => onChange(null)} aria-label="Remove">
-            Remove
+          <button
+            onClick={() =>
+              onChange(new File(["bad"], "bad.exe", { type: "application/octet-stream" }))
+            }
+          >
+            Invalid replacement
           </button>
-        </div>
+          <button onClick={onExpand}>Preview upload</button>
+          <button onClick={() => onChange(null)}>Remove</button>
+        </>
       ) : (
-        <div>
+        <>
           <span>Drag &amp; drop</span>
           <button
             onClick={() => onChange(new File(["test"], "test.pdf", { type: "application/pdf" }))}
           >
             Select file
           </button>
-        </div>
+        </>
       )}
       {error && <p role="alert">{error}</p>}
     </div>
   ),
 }));
-
 vi.mock("./components/CredentialFileModal", () => ({
-  CredentialFileModal: () => null,
+  CredentialFileModal: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog" aria-label="File preview" /> : null,
 }));
 
-function renderVerify(initialEntries?: string[]) {
-  return render(<VerifyCredential />, {
-    wrapper: ({ children }) => (
-      <TestProviders initialEntries={initialEntries ?? ["/credentials/verify"]}>
-        {children}
-      </TestProviders>
-    ),
-  });
+const credential = {
+  id: "matched",
+  name: "Public Certificate",
+  status: "approved" as const,
+  is_submission: false,
+  issuer_organization_id: "org",
+  issuer_organization_name: "Actual School",
+  number: "D-2026",
+  file_hash: "0xabc",
+  issued_at: "2026-01-01",
+  expires_at: null,
+};
+const exact = {
+  verdict_code: 400401,
+  description: "server text",
+  similarity_score: null,
+  similarity_percent: null,
+  credential,
+  exact_match_confirmed: true,
+  public_details: {
+    ...credential,
+    issuer_organization_name: "Actual School",
+    credential_type_name: "Diploma",
+    revoked_at: null,
+    holder: null,
+    competencies: [],
+    meta: null,
+    token_id: "42",
+    created_at: "2026-01-01",
+    activated_at: "2026-01-02",
+    rejected_at: null,
+  },
+};
+function renderVerify() {
+  return render(<VerifyCredential />, { wrapper: TestProviders });
+}
+async function verifyFile() {
+  const user = userEvent.setup();
+  await user.click(screen.getByText("Select file"));
+  await user.click(screen.getByRole("button", { name: /Verify Document/i }));
+  return user;
 }
 
 describe("VerifyCredential", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    mockUseCredential.mockReturnValue({ data: undefined });
     await i18n.changeLanguage("en");
     useStore.setState({ user: null, isAuthenticated: false });
   });
 
-  it("renders the page heading and description", () => {
+  it.each(["en", "id"])(
+    "renders specific upload context in %s without a file",
+    async (language) => {
+      await i18n.changeLanguage(language);
+      const { container } = renderVerify();
+      expect(
+        screen.getByText(language === "en" ? "Credential Verification" : "Verifikasi Kredensial"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          language === "en"
+            ? "Upload a document to check it against credentials in CredChain."
+            : "Unggah dokumen untuk diperiksa terhadap kredensial di CredChain.",
+        ),
+      ).toBeInTheDocument();
+      expect(container.textContent).not.toMatch(
+        /\b(records?|catatan|rekaman|entries|entry|entri|registry)\b/i,
+      );
+      expect(screen.getByText("Drag & drop")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: i18n.t("cred.verify.verifyNow") })).toBeDisabled();
+    },
+  );
+  it("enables verification after selecting a file", async () => {
     renderVerify();
-    expect(screen.getByText("Credential Verification")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Upload a document to check if it matches the blockchain record/),
-    ).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Select file"));
+    expect(screen.getByRole("button", { name: /Verify Document/i })).toBeEnabled();
+    expect(screen.getByText("test.pdf")).toBeInTheDocument();
   });
 
-  it("renders drag-drop zone in empty state", () => {
+  it("opens anonymous public details without protected lookup or global branding", async () => {
+    mockMutateAsync.mockResolvedValueOnce(exact);
     renderVerify();
-    expect(screen.getByText(/Drag & drop/)).toBeInTheDocument();
-    expect(screen.getByText("Select file")).toBeInTheDocument();
+    const user = await verifyFile();
+    expect(screen.getByRole("heading", { name: "Verification result" })).toHaveFocus();
+    expect(screen.getByText("Actual School")).toBeInTheDocument();
+    expect(mockUseCredential).toHaveBeenLastCalledWith("");
+    expect(screen.queryByText("University of Indonesia")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "View credential details" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Actual School");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Diploma");
+    expect(screen.queryByRole("link", { name: "Open private record" })).not.toBeInTheDocument();
+    await act(() => i18n.changeLanguage("id"));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Organisasi penerbit");
+    await act(() => i18n.changeLanguage("en"));
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View credential details" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Preview upload" }));
+    expect(screen.getByRole("dialog", { name: "File preview" })).toBeInTheDocument();
   });
 
-  it("renders verify button disabled when no file", () => {
+  it.each([
+    { role: Role.HOLDER, owner: true, allowed: true },
+    { role: Role.HOLDER, owner: false, allowed: false },
+    { role: Role.ISSUER, owner: false, allowed: true },
+  ])(
+    "keeps private action authorized for $role / owner $owner",
+    async ({ role, owner, allowed }) => {
+      useStore.setState({ user: makeUser({ id: "viewer", role }), isAuthenticated: true });
+      mockUseCredential.mockReturnValue({
+        data: makeCredential({ id: "matched", holder_user_id: owner ? "viewer" : "other" }),
+      });
+      mockMutateAsync.mockResolvedValueOnce(exact);
+      renderVerify();
+      const user = await verifyFile();
+      expect(mockUseCredential).toHaveBeenLastCalledWith("matched");
+      expect(screen.queryByRole("link", { name: "Open private record" })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "View credential details" }));
+      expect(screen.getByRole("dialog")).toHaveTextContent(
+        allowed ? "Private record matched" : "Actual School",
+      );
+    },
+  );
+
+  it.each(["Forbidden", "Not found"])(
+    "retains public details after protected lookup %s",
+    async (message) => {
+      useStore.setState({ user: makeUser({ role: Role.HOLDER }), isAuthenticated: true });
+      mockUseCredential.mockReturnValue({ data: undefined, error: new Error(message) });
+      mockMutateAsync.mockResolvedValueOnce(exact);
+      renderVerify();
+      const user = await verifyFile();
+      await user.click(screen.getByRole("button", { name: "View credential details" }));
+      expect(screen.getByRole("dialog")).toHaveTextContent("Actual School");
+      expect(screen.queryByRole("link", { name: "Open private record" })).not.toBeInTheDocument();
+    },
+  );
+  it("closes private details on logout and does not reopen them after reauthentication", async () => {
+    useStore.setState({ user: makeUser({ role: Role.ISSUER }), isAuthenticated: true });
+    mockUseCredential.mockReturnValue({ data: makeCredential({ id: "matched" }) });
+    mockMutateAsync.mockResolvedValueOnce(exact);
     renderVerify();
-    const btn = screen.getByRole("button", { name: /Verify Document/i });
-    expect(btn).toBeDisabled();
+    const user = await verifyFile();
+    await user.click(screen.getByRole("button", { name: "View credential details" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Private record matched");
+    await act(() => useStore.setState({ user: null, isAuthenticated: false }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await act(() =>
+      useStore.setState({ user: makeUser({ role: Role.ISSUER }), isAuthenticated: true }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await act(() => useStore.setState({ user: null, isAuthenticated: false }));
+    await user.click(screen.getByRole("button", { name: "View credential details" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Actual School");
   });
 
-  it("enables verify button after file is selected", async () => {
-    const user = userEvent.setup();
-    renderVerify();
-    await user.click(screen.getByText("Select file"));
-    const btn = screen.getByRole("button", { name: /Verify Document/i });
-    expect(btn).toBeEnabled();
-  });
+  it.each([
+    { code: 400404, confirmed: false },
+    { code: 400401, confirmed: false },
+    { code: 400403, confirmed: false },
+    { code: 400404, confirmed: true },
+  ])(
+    "denies public details for $code / evidence $confirmed even at AI score 1",
+    async ({ code, confirmed }) => {
+      mockMutateAsync.mockResolvedValueOnce({
+        ...exact,
+        verdict_code: code,
+        exact_match_confirmed: confirmed,
+        similarity_score: 1,
+      });
+      renderVerify();
+      await verifyFile();
+      expect(
+        screen.queryByRole("button", { name: "View credential details" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Actual School")).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByText("server text")).not.toBeInTheDocument();
+    },
+  );
+  it.each([400402, 400413, 400410, 400411, 400412])(
+    "retains lifecycle warning on result without adding a modal verification strip for %s",
+    async (code) => {
+      mockMutateAsync.mockResolvedValueOnce({ ...exact, verdict_code: code });
+      renderVerify();
+      const user = await verifyFile();
+      const title = within(screen.getByRole("region", { name: "Verification result" }))
+        .getAllByRole("heading", { level: 2 })
+        .find((heading) => heading.id !== "verification-result-heading")!.textContent!;
+      await user.click(screen.getByRole("button", { name: "View credential details" }));
+      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.getByRole("dialog")).not.toHaveTextContent(
+        "registry consistency checks passed",
+      );
+      expect(screen.getByRole("dialog")).toHaveTextContent("Details");
+    },
+  );
 
-  it("shows file name in preview after selection", async () => {
-    const user = userEvent.setup();
-    renderVerify();
-    await user.click(screen.getByText("Select file"));
-    expect(screen.getByTestId("file-name")).toHaveTextContent("test.pdf");
-  });
-
-  it("calls mutateAsync and shows result on verify click", async () => {
-    const user = userEvent.setup();
-    mockMutateAsync.mockResolvedValueOnce({
-      verdict_code: 400404,
-      similarity_score: 0.92,
-      similarity_percent: "92%",
-      description: "This document may have been altered.",
-      credential: {
-        id: "cred-123",
-        name: "Test Credential",
-        holder_user_id: "user-1",
-        issuer_user_id: "user-2",
-        holder: null,
-        issuer: null,
-        revoked_at: null,
-        token_id: 1,
-        issued_at: "2026-01-01",
-      },
-    });
-
-    renderVerify();
-    await user.click(screen.getByText("Select file"));
-    await user.click(screen.getByRole("button", { name: /Verify Document/i }));
-
-    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("This document may have been altered.")).toBeInTheDocument();
-  });
-
-  it("renders expired verdict with date line, org id, number, and disclaimer", async () => {
-    const user = userEvent.setup();
-    mockMutateAsync.mockResolvedValueOnce({
-      verdict_code: 400413,
-      similarity_score: 1,
-      similarity_percent: "100%",
-      description: "This credential has expired.",
-      credential: {
-        id: "cred-exp-1",
-        name: "Expired Certificate",
-        holder_user_id: "user-1",
-        issuer_user_id: "user-2",
-        issuer_organization_id: "org-123",
-        number: "NIP-2026-001",
-        revoked_at: null,
-        token_id: 1,
-        file_hash: "0xabc123",
-        issued_at: "2024-01-01T12:00:00Z",
-        expires_at: "2025-12-31T12:00:00Z",
-        holder: null,
-        issuer: null,
-      },
-    });
-
-    renderVerify();
-    await user.click(screen.getByText("Select file"));
-    await user.click(screen.getByRole("button", { name: /Verify Document/i }));
-
-    expect(screen.getByText("This credential has expired.")).toBeInTheDocument();
-    expect(screen.getByText(/Expired on Dec 31, 2025/)).toBeInTheDocument();
-    expect(screen.getByText(/org-123/)).toBeInTheDocument();
-    expect(screen.getByText(/NIP-2026-001/)).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "The credential number has NOT been verified against the issuing organization.",
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("shows error on verification failure", async () => {
-    const user = userEvent.setup();
-    mockMutateAsync.mockRejectedValueOnce(new Error("Network error"));
-
-    renderVerify();
-    await user.click(screen.getByText("Select file"));
-    await user.click(screen.getByRole("button", { name: /Verify Document/i }));
-
-    expect(screen.getByRole("alert")).toBeInTheDocument();
-  });
-
-  it("disables verify button during verification", async () => {
-    const user = userEvent.setup();
-    let resolveVerify!: (value: unknown) => void;
+  it.each(["resolve", "reject"])("ignores late %s from replaced upload", async (completion) => {
+    let resolveOld!: (value: unknown) => void;
+    let rejectOld!: (error: Error) => void;
     mockMutateAsync.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveVerify = resolve;
+      new Promise((resolve, reject) => {
+        resolveOld = resolve;
+        rejectOld = reject;
       }),
     );
-
-    renderVerify();
-    await user.click(screen.getByText("Select file"));
-    await user.click(screen.getByRole("button", { name: /Verify Document/i }));
-
-    expect(screen.getByRole("button", { name: /Processing/i })).toBeDisabled();
-    resolveVerify({
-      verdict_code: 400408,
-      similarity_score: null,
-      similarity_percent: null,
-      description: "Could not read identity data from this document.",
-      credential: null,
+    mockMutateAsync.mockResolvedValueOnce({
+      ...exact,
+      credential: { ...credential, name: "Replacement record" },
+      public_details: { ...exact.public_details, name: "Replacement record" },
     });
+    renderVerify();
+    const user = await verifyFile();
+    await user.click(screen.getByText("Replace"));
+    await user.click(screen.getByRole("button", { name: /Verify Document/i }));
+    await user.click(screen.getByRole("button", { name: "View credential details" }));
+    await act(async () => {
+      if (completion === "resolve")
+        resolveOld({ ...exact, credential: { ...credential, name: "Old record" } });
+      else rejectOld(new Error("Old error"));
+    });
+    expect(screen.getByRole("dialog")).toHaveTextContent("Replacement record");
+    expect(screen.queryByText("Old record")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+  it("ignores completion after pending upload removal", async () => {
+    let resolveOld!: (value: unknown) => void;
+    mockMutateAsync.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveOld = resolve;
+      }),
+    );
+    renderVerify();
+    const user = await verifyFile();
+    await user.click(screen.getByText("Remove"));
+    await act(async () => resolveOld(exact));
+    expect(screen.queryByText("Public Certificate")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Verify Document/i })).toBeDisabled();
+  });
+  it("retains result on invalid replacement; clears result and details on accepted replacement", async () => {
+    mockMutateAsync.mockResolvedValueOnce(exact);
+    renderVerify();
+    const user = await verifyFile();
+    await user.click(screen.getByText("Invalid replacement"));
+    expect(screen.getByRole("button", { name: "View credential details" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    await user.click(screen.getByText("Replace"));
+    expect(screen.queryByText("Public Certificate")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText("other.pdf")).toBeInTheDocument();
+  });
+  it("resets completed verification", async () => {
+    mockMutateAsync.mockResolvedValueOnce(exact);
+    renderVerify();
+    const user = await verifyFile();
+    await user.click(screen.getByRole("button", { name: "Verify another document" }));
+    expect(screen.queryByText("Public Certificate")).not.toBeInTheDocument();
+    expect(screen.getByText("Select file")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Verify Document/i })).toBeDisabled();
+  });
+  it("keeps selected file and retry action after operational error", async () => {
+    mockMutateAsync.mockRejectedValueOnce(new Error("Network error"));
+    renderVerify();
+    await verifyFile();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("test.pdf")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry verification" })).toBeEnabled();
+    await act(() => i18n.changeLanguage("id"));
+    expect(screen.getByRole("alert")).not.toHaveTextContent("Verification failed");
+  });
+  it("disables verification during request and renders neutral unknown result", async () => {
+    let resolve!: (value: unknown) => void;
+    mockMutateAsync.mockReturnValueOnce(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
+    renderVerify();
+    await verifyFile();
+    expect(screen.getByRole("button", { name: "Checking document…" })).toBeDisabled();
+    await act(async () => resolve({ verdict_code: 999999, description: "Untrusted server claim" }));
+    expect(screen.getByText("Result could not be interpreted")).toBeInTheDocument();
+    expect(screen.queryByText("Untrusted server claim")).not.toBeInTheDocument();
   });
 });

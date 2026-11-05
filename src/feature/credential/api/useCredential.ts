@@ -10,12 +10,12 @@ export function useCredential(id: string, includes?: string[]) {
   const isHolder = user?.role === Role.HOLDER;
 
   return useQuery({
-    queryKey: credentialKeys.detail(id, includes),
-    queryFn: async () => {
+    queryKey: [...credentialKeys.detail(id, includes), user?.id, user?.role],
+    queryFn: async ({ signal }) => {
       const params: Record<string, unknown> = {};
       if (includes?.length) params.includes = includes;
       const endpoint = isHolder ? `/users/self/credentials/${id}` : `/credentials/${id}`;
-      const response = await api.get<CredentialDTO>(endpoint, { params });
+      const response = await api.get<CredentialDTO>(endpoint, { params, signal });
       return response.data;
     },
     enabled: !!id,

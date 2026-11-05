@@ -13,8 +13,24 @@ export interface LifecycleDateLine {
  * the system event date instead — when it was submitted, approved, rejected,
  * or (for revoked) both approved and revoked.
  */
-export function lifecycleDateLines(c: Pick<CredentialDTO, "status" | "created_at" | "activated_at" | "rejected_at" | "revoked_at" | "expires_at" | "submitter_user_id" | "holder_user_id">): LifecycleDateLine[] {
-  const isSubmission = Boolean(c.submitter_user_id && c.submitter_user_id === c.holder_user_id);
+export type CredentialFacts = Pick<
+  CredentialDTO,
+  | "id"
+  | "file_hash"
+  | "token_id"
+  | "status"
+  | "created_at"
+  | "activated_at"
+  | "rejected_at"
+  | "revoked_at"
+  | "expires_at"
+> & { is_submission?: boolean; holder_user_id?: string; submitter_user_id?: string };
+
+export function lifecycleDateLines(
+  c: Omit<CredentialFacts, "id" | "file_hash" | "token_id">,
+): LifecycleDateLine[] {
+  const isSubmission =
+    c.is_submission ?? Boolean(c.submitter_user_id && c.submitter_user_id === c.holder_user_id);
   const approvedLabel = isSubmission ? "cred.lifecycle.approved" : "cred.card.registered";
 
   switch (c.status) {

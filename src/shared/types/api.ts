@@ -86,12 +86,54 @@ export interface CredentialDTO {
   issuer_organization?: ReferenceRow;
 }
 
+export interface VerificationCredentialDTO {
+  issuer_organization_name: string | null;
+  credential_type_name: string | null;
+  id: string;
+  name: string;
+  status: CredentialStatus;
+  is_submission: boolean;
+  issuer_organization_id: string;
+  number: string | null;
+  file_hash: string;
+  issued_at: string;
+  expires_at: string | null;
+}
+
+export interface VerificationHolderDTO {
+  name: string | null;
+  number: string | null;
+  unit_name: string | null;
+  joined_year: number | null;
+  email: string;
+  gender: Gender | null;
+  role: Role;
+  wallet_address: string;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface VerificationPublicDetailsDTO extends VerificationCredentialDTO {
+  credential_type_name: string | null;
+  revoked_at: string | null;
+  holder: VerificationHolderDTO | null;
+  competencies: { name: string }[];
+  meta: Record<string, unknown> | null;
+  token_id: string | null;
+  created_at: string;
+  activated_at: string | null;
+  rejected_at: string | null;
+}
+
 export interface CredentialVerifyDTO {
+  exact_match_confirmed?: boolean;
+  public_details?: VerificationPublicDetailsDTO | null;
   verdict_code: number;
   similarity_score: number | null;
   similarity_percent: string | null;
   description: string;
-  credential: CredentialDTO | null;
+  credential: VerificationCredentialDTO | null;
 }
 
 export type ReferenceStatus = "pending" | "approved" | "rejected";

@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { TestProviders } from "@/test/TestProviders";
@@ -139,6 +139,59 @@ describe("CredentialDetailModal", () => {
 
     expect((await screen.findAllByText(/disetujui/i)).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
+  it("cancels pending edits without mutation and restores original values", async () => {
+    let updates = 0;
+    server.use(
+      http.get("*/api/credentials/:id", () => credentialResponse()),
+      http.put("*/api/credentials/batch", () => {
+        updates++;
+        return HttpResponse.json({ code: 400100, data: [] });
+      }),
+    );
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    const name = screen.getByPlaceholderText("Nama kredensial");
+    await user.clear(name);
+    await user.type(name, "Discarded name");
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByPlaceholderText("Nama kredensial")).toHaveValue("Master of Science");
+    expect(updates).toBe(0);
+  });
+
+  it("saves only changed pending fields and preserves credential metadata", async () => {
+    const payloads: unknown[] = [];
+    let links = 0;
+    server.use(
+      http.get("*/api/credentials/:id", () =>
+        credentialResponse({ meta: { grade: "A", nested: { value: true } } }),
+      ),
+      http.put("*/api/credentials/batch", async ({ request }) => {
+        payloads.push(await request.json());
+        return HttpResponse.json({ code: 400100, data: [] });
+      }),
+      http.put("*/api/credentials/:id/competencies", () => {
+        links++;
+        return HttpResponse.json({ code: 400100 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    const name = screen.getByPlaceholderText("Nama kredensial");
+    await user.clear(name);
+    await user.type(name, "Updated synthetic name");
+    await user.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+    await waitFor(() =>
+      expect(payloads).toEqual([
+        { credentials: [{ id: "cred_modal_test", name: "Updated synthetic name" }] },
+      ]),
+    );
+    expect(await screen.findByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(links).toBe(0);
   });
 
   it("allows clicking Edit when pending to show inputs", async () => {

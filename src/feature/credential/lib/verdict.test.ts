@@ -10,12 +10,12 @@ describe("getVerdictTier", () => {
     expect(getVerdictTier(400402)).toBe("orange");
   });
 
-  it("returns red for tampered (400404)", () => {
-    expect(getVerdictTier(400404)).toBe("red");
+  it("returns neutral gray for high text similarity (400404)", () => {
+    expect(getVerdictTier(400404)).toBe("gray");
   });
 
   it("returns amber for suspicious (400405)", () => {
-    expect(getVerdictTier(400405)).toBe("amber");
+    expect(getVerdictTier(400405)).toBe("gray");
   });
 
   it("returns gray for low_similarity (400406)", () => {
@@ -77,11 +77,11 @@ describe("getMethodLabel", () => {
   });
 
   it("returns 'fuzzy' when verdict_code is no_identifiers (400408) even with null score", () => {
-    expect(getMethodLabel(null, 400408)).toBe("fuzzy");
+    expect(getMethodLabel(null, 400408)).toBe("identifiers");
   });
 
   it("returns 'fuzzy' when verdict_code is no_match (400409) even with null score", () => {
-    expect(getMethodLabel(null, 400409)).toBe("fuzzy");
+    expect(getMethodLabel(null, 400409)).toBe("identifiers");
   });
 
   it("returns 'hash' when similarity_score is null (no verdict_code)", () => {
@@ -98,6 +98,10 @@ describe("getMethodLabel", () => {
 });
 
 describe("isExactHashMatch", () => {
+  it.each([400410, 400411, 400412])("classifies disabled-party code %s as exact hash", (code) => {
+    expect(getMethodLabel(null, code)).toBe("hash");
+    expect(isExactHashMatch(code)).toBe(true);
+  });
   it("returns true for authentic (400401)", () => {
     expect(isExactHashMatch(400401)).toBe(true);
   });

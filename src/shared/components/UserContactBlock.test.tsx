@@ -8,6 +8,27 @@ import type { UserDTO } from "@shared/types/api";
 import { UserContactBlock } from "./UserContactBlock";
 
 describe("UserContactBlock", () => {
+  it("renders a resolved public unit without a profile link", () => {
+    const publicUser = {
+      ...makeUser({ name: "Public Holder", unit_id: null }),
+      unit_name: "Engineering",
+      updated_at: null,
+    };
+    render(
+      <UserContactBlock
+        user={publicUser}
+        fallbackId=""
+        copyPrefix="holder"
+        labelType="full"
+        blockLinks
+        resolveUnits={false}
+      />,
+      { wrapper: TestProviders },
+    );
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByText(/invalid date/i)).not.toBeInTheDocument();
+  });
   beforeEach(async () => {
     await i18n.changeLanguage("en");
   });

@@ -37,18 +37,40 @@ export function CredentialViewFilePreview({
   hasFileUri,
   statusSlot,
 }: CredentialViewFilePreviewProps) {
-  const { t } = useTranslation();
   const { data: blob, isLoading } = useCredentialFile(credentialId, hasFileUri);
-  const [modalOpen, setModalOpen] = useState(false);
-
   if (!hasFileUri) return null;
+  return (
+    <CredentialFilePreview
+      blob={blob}
+      isLoading={isLoading}
+      name={`${toKebabCase(credentialName)}${getFileExtension(blob?.type ?? "")}`}
+      statusSlot={statusSlot}
+    />
+  );
+}
 
+export function CredentialFilePreview({
+  blob,
+  isLoading = false,
+  name: downloadName,
+  statusSlot,
+  allowDownload = true,
+  sourceLabel,
+}: {
+  blob?: Blob;
+  isLoading?: boolean;
+  name: string;
+  statusSlot?: React.ReactNode;
+  allowDownload?: boolean;
+  sourceLabel?: string;
+}) {
+  const { t } = useTranslation();
+  const [modalOpen, setModalOpen] = useState(false);
+  const viewTrigger = useRef<HTMLButtonElement>(null);
   const mimeType = blob?.type ?? "";
   const isPdf = mimeType === "application/pdf";
   const isImage = ALLOWED_IMAGE_MIME_PREFIXES.some((prefix) => mimeType.startsWith(prefix));
   const size = blob?.size ?? 0;
-  const ext = getFileExtension(mimeType);
-  const downloadName = `${toKebabCase(credentialName)}${ext}`;
 
   const handleDownload = () => {
     if (!blob) return;
@@ -85,6 +107,7 @@ export function CredentialViewFilePreview({
             </div>
           ) : (
             <>
+              {sourceLabel && <p className="text-xs text-gray-500">{sourceLabel}</p>}
               <p className="truncate text-sm font-semibold text-navy">{downloadName}</p>
               {size > 0 && <p className="text-xs text-gray-400">{formatFileSize(size)}</p>}
               {statusSlot && <div className="mt-2">{statusSlot}</div>}
@@ -93,22 +116,25 @@ export function CredentialViewFilePreview({
                   type="button"
                   variant="outline"
                   size="sm"
+                  ref={viewTrigger}
                   onClick={() => setModalOpen(true)}
                   disabled={!blob}
                 >
                   <Eye className="h-4 w-4" />
                   {t("cred.detail.view")}
                 </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  onClick={handleDownload}
-                  disabled={!blob}
-                >
-                  <Download className="h-4 w-4" />
-                  {t("cred.detail.download")}
-                </Button>
+                {allowDownload && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleDownload}
+                    disabled={!blob}
+                  >
+                    <Download className="h-4 w-4" />
+                    {t("cred.detail.download")}
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -121,6 +147,10 @@ export function CredentialViewFilePreview({
           name={downloadName}
           open={modalOpen}
           onClose={() => setModalOpen(false)}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (viewTrigger.current?.isConnected) viewTrigger.current.focus();
+          }}
         />
       )}
     </>

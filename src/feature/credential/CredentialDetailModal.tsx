@@ -3,24 +3,20 @@ import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, XCircle, Ban } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@ui/dialog";
+import { CredentialDetailLayout } from "./components/CredentialDetailLayout";
+import { buildCredentialReadFields } from "./lib/credential-detail-fields";
 import { Input } from "@ui/input";
-import { Badge } from "@ui/badge";
 import { Skeleton } from "@ui/skeleton";
 import { EmptyState } from "@shared/components/EmptyState";
 import { EyebrowLabel } from "@shared/components/EyebrowLabel";
 import { DetailEditForm, type DetailField } from "@shared/components/DetailEditForm";
-import { StagedValue } from "@shared/components/StagedValue";
-import { MetaDisplay } from "@shared/components/MetaDisplay";
 import { MetaEditor } from "@shared/components/MetaEditor";
-import { MonoId } from "@shared/components/MonoId";
 import { UserContactBlock } from "@shared/components/UserContactBlock";
 import { SearchableCreateSelect } from "@shared/components/SearchableCreateSelect";
 import { CredentialStatusBadge } from "@shared/components/CredentialStatusBadge";
 import { CredentialExtractNote } from "@shared/components/CredentialExtractNote";
 import { useStore } from "@app/store";
 import { Role, canAccessAny } from "@shared/auth/role";
-import { formatDate } from "@shared/lib/format";
 import { mergeMeta, metaEqual, splitMeta } from "@shared/lib/meta";
 import type { CredentialDTO } from "@shared/types/api";
 
@@ -35,6 +31,7 @@ interface CredentialDetailModalProps {
   credentialId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 function buildCredentialEditDefaults(cred: CredentialDTO): CredentialEditRowInput {
@@ -53,6 +50,7 @@ export function CredentialDetailModal({
   credentialId,
   open,
   onOpenChange,
+  onCloseAutoFocus,
 }: CredentialDetailModalProps) {
   const { t, i18n } = useTranslation();
   const currentUser = useStore((s) => s.user);
@@ -135,12 +133,10 @@ export function CredentialDetailModal({
     setCompetencyIds((cred.competencies ?? []).map((c) => c.id));
   };
 
-  const editFields: DetailField[] = cred
+  const editFields: Pick<DetailField, "key" | "editControl" | "error">[] = cred
     ? [
         {
           key: "name",
-          label: t("cred.submit.field.name"),
-          readValue: <span>{cred.name}</span>,
           editControl: (
             <Input
               placeholder={t("cred.submit.field.namePlaceholder")}
@@ -151,8 +147,6 @@ export function CredentialDetailModal({
         },
         {
           key: "number",
-          label: t("cred.submit.field.number"),
-          readValue: <span>{cred.number ?? t("common.notSet")}</span>,
           editControl: (
             <Input
               placeholder={t("cred.submit.field.numberPlaceholder")}
@@ -163,14 +157,6 @@ export function CredentialDetailModal({
         },
         {
           key: "type_id",
-          label: t("cred.submit.field.type"),
-          readValue: (
-            <StagedValue
-              resolved={cred.type?.name}
-              staged={cred.submitted_type_name}
-              fallback={cred.type_id ? <MonoId value={cred.type_id} mode="id" /> : undefined}
-            />
-          ),
           editControl: (
             <SearchableCreateSelect
               label={t("cred.submit.field.type")}
@@ -185,18 +171,6 @@ export function CredentialDetailModal({
         },
         {
           key: "issuer_organization_id",
-          label: t("cred.submit.field.issuerOrganization"),
-          readValue: (
-            <StagedValue
-              resolved={cred.issuer_organization?.name}
-              staged={cred.submitted_issuer_organization_name}
-              fallback={
-                cred.issuer_organization_id ? (
-                  <MonoId value={cred.issuer_organization_id} mode="id" />
-                ) : undefined
-              }
-            />
-          ),
           editControl: (
             <SearchableCreateSelect
               label={t("cred.submit.field.issuerOrganization")}
@@ -213,58 +187,16 @@ export function CredentialDetailModal({
         },
         {
           key: "issued_at",
-          label: t("cred.submit.field.issuedAt"),
-          readValue: <span>{formatDate(cred.issued_at, i18n.language)}</span>,
           editControl: <Input type="date" {...form.register("issued_at")} />,
           error: form.formState.errors.issued_at?.message,
         },
         {
           key: "expires_at",
-          label: t("cred.submit.field.expiresAt"),
-          readValue: (
-            <span>
-              {cred.expires_at ? formatDate(cred.expires_at, i18n.language) : t("common.notSet")}
-            </span>
-          ),
           editControl: <Input type="date" {...form.register("expires_at")} />,
           error: form.formState.errors.expires_at?.message,
         },
         {
           key: "competencies",
-          label: t("cred.competency.title"),
-          readValue: (() => {
-            const list = (cred.competencies ?? []).map((c) => ({ name: c.name }));
-
-            if (list.length === 0 && cred.meta) {
-              const raw = cred.meta.competencies || cred.meta.competency;
-              if (Array.isArray(raw)) {
-                raw.forEach((c) => {
-                  if (typeof c === "string" && c.trim())
-                    list.push({ name: c.trim() });
-                });
-              } else if (typeof raw === "string" && raw.trim()) {
-                list.push({ name: raw.trim() });
-              }
-            }
-
-            if (list.length === 0) {
-              return <span className="text-gray-500">{t("common.notSet")}</span>;
-            }
-
-            return (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {list.map((c, idx) => (
-                  <Badge
-                    key={`${c.name}-${idx}`}
-                    tone="gold"
-                    className="max-w-full truncate"
-                  >
-                    {c.name}
-                  </Badge>
-                ))}
-              </div>
-            );
-          })(),
           editControl: (
             <SearchableCreateSelect
               multiple
@@ -275,14 +207,10 @@ export function CredentialDetailModal({
               onChange={setCompetencyIds}
             />
           ),
-          fullWidth: true,
         },
         {
           key: "meta",
-          label: t("cred.field.meta"),
-          readValue: <MetaDisplay meta={cred.meta} />,
           editControl: <MetaEditor control={form.control} name="meta_entries" />,
-          fullWidth: true,
         },
       ]
     : [];
@@ -299,16 +227,13 @@ export function CredentialDetailModal({
   ) : null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-6 sm:max-w-5xl sm:p-8">
-        <DialogHeader className="mb-4 pr-10">
-          <DialogTitle className="font-display text-xl font-bold tracking-tight text-navy">
-            {cred?.name ?? t("cred.detail.title")}
-          </DialogTitle>
-          <DialogDescription className="sr-only">{t("cred.detail.cardTitle")}</DialogDescription>
-        </DialogHeader>
-
-        {isLoading ? (
+    <CredentialDetailLayout
+      open={open}
+      onOpenChange={onOpenChange}
+      onCloseAutoFocus={onCloseAutoFocus}
+      title={cred?.name ?? t("cred.detail.title")}
+      children={
+        isLoading ? (
           <div className="space-y-6">
             <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-5">
               <Skeleton className="h-[92px] w-full" />
@@ -326,26 +251,27 @@ export function CredentialDetailModal({
             title={t("cred.detail.notFound.title")}
             description={t("cred.detail.notFound.body")}
           />
+        ) : undefined
+      }
+      filePanel={
+        cred &&
+        (cred.file_uri != null ? (
+          <CredentialViewFilePreview
+            credentialId={cred.id}
+            credentialName={cred.name}
+            hasFileUri={true}
+            statusSlot={statusBadges}
+          />
         ) : (
-          <div className="space-y-6">
-            {/* 1. File Artifact & Status Section */}
-            <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-5">
-              {cred.file_uri != null ? (
-                <CredentialViewFilePreview
-                  credentialId={cred.id}
-                  credentialName={cred.name}
-                  hasFileUri={true}
-                  statusSlot={statusBadges}
-                />
-              ) : (
-                <div className="space-y-3">
-                  <h3 className="font-sans text-lg font-bold text-navy">{cred.name}</h3>
-                  {statusBadges}
-                </div>
-              )}
-            </div>
-
-            {/* Rejection notice banner */}
+          <div className="space-y-3">
+            <h3 className="font-sans text-lg font-bold text-navy">{cred.name}</h3>
+            {statusBadges}
+          </div>
+        ))
+      }
+      notices={
+        cred && (
+          <>
             {cred.status === "rejected" && cred.rejection_reason && (
               <div className="flex gap-3 rounded-xl border border-error/20 bg-error/5 p-4 text-sm text-error">
                 <XCircle className="h-5 w-5 shrink-0 text-error" aria-hidden="true" />
@@ -365,102 +291,107 @@ export function CredentialDetailModal({
                 </div>
               </div>
             )}
+          </>
+        )
+      }
+      details={
+        cred && (
+          <DetailEditForm
+            title={t("cred.detail.cardTitle")}
+            fields={buildCredentialReadFields(cred, t, i18n.language).map((field) => {
+              const edit = editFields.find((item) => item.key === field.key);
+              return { ...field, editControl: edit?.editControl, error: edit?.error };
+            })}
+            canEdit={canManage && isPendingReview}
+            editDisabledReason={
+              canManage && !isPendingReview ? t("cred.detail.editOnlyPending") : undefined
+            }
+            onSave={handleSave}
+            onCancel={handleCancel}
+            isSaving={update.isPending || link.isPending}
+          />
+        )
+      }
+      parties={
+        cred && (
+          <>
+            {/* Holder */}
+            <div className="space-y-2">
+              <EyebrowLabel as="span" className="block text-navy">
+                {t("cred.detail.holder")}
+              </EyebrowLabel>
+              <UserContactBlock
+                user={cred.holder}
+                fallbackId={cred.holder_user_id}
+                copyPrefix="holder"
+                labelType="full"
+                layout="grid"
+                blockLinks={!canManage}
+              >
+                {cred.holder_user_id === cred.submitter_user_id && (
+                  <p className="text-xs text-gray-500">{t("cred.parties.selfSubmitted")}</p>
+                )}
+              </UserContactBlock>
+            </div>
 
-            {/* 2. Detail Section with Read / Edit toggle */}
-            <DetailEditForm
-              title={t("cred.detail.cardTitle")}
-              fields={editFields}
-              canEdit={canManage && isPendingReview}
-              editDisabledReason={
-                canManage && !isPendingReview ? t("cred.detail.editOnlyPending") : undefined
-              }
-              onSave={handleSave}
-              onCancel={handleCancel}
-              isSaving={update.isPending || link.isPending}
-            />
-
-            {/* 3. Users Section (Holder, Issuer/Approver, Rejecter, Revoker) */}
-            <div className="space-y-6 border-t border-gray-100 pt-6">
-              {/* Holder */}
+            {/* Issuer / Approver */}
+            {cred.issuer_user_id && (
               <div className="space-y-2">
                 <EyebrowLabel as="span" className="block text-navy">
-                  {t("cred.detail.holder")}
+                  {cred.submitter_user_id === cred.holder_user_id
+                    ? t("cred.audit.approvedBy")
+                    : t("cred.audit.registeredBy")}
                 </EyebrowLabel>
                 <UserContactBlock
-                  user={cred.holder}
-                  fallbackId={cred.holder_user_id}
-                  copyPrefix="holder"
+                  user={cred.issuer}
+                  fallbackId={cred.issuer_user_id}
+                  copyPrefix="issuer"
                   labelType="full"
                   layout="grid"
                   blockLinks={!canManage}
-                >
-                  {cred.holder_user_id === cred.submitter_user_id && (
-                    <p className="text-xs text-gray-500">{t("cred.parties.selfSubmitted")}</p>
-                  )}
-                </UserContactBlock>
+                />
               </div>
+            )}
 
-              {/* Issuer / Approver */}
-              {cred.issuer_user_id && (
-                <div className="space-y-2">
-                  <EyebrowLabel as="span" className="block text-navy">
-                    {cred.submitter_user_id === cred.holder_user_id
-                      ? t("cred.audit.approvedBy")
-                      : t("cred.audit.registeredBy")}
-                  </EyebrowLabel>
-                  <UserContactBlock
-                    user={cred.issuer}
-                    fallbackId={cred.issuer_user_id}
-                    copyPrefix="issuer"
-                    labelType="full"
-                    layout="grid"
-                    blockLinks={!canManage}
-                  />
-                </div>
-              )}
+            {/* Rejecter */}
+            {cred.status === "rejected" && (cred.rejecter || cred.rejecter_user_id) && (
+              <div className="space-y-2">
+                <EyebrowLabel as="span" className="block text-error">
+                  {t("cred.audit.rejectedBy")}
+                </EyebrowLabel>
+                <UserContactBlock
+                  user={cred.rejecter}
+                  fallbackId={cred.rejecter_user_id ?? ""}
+                  copyPrefix="rejecter"
+                  labelType="full"
+                  layout="grid"
+                  tone="error"
+                  blockLinks={!canManage}
+                />
+              </div>
+            )}
 
-              {/* Rejecter */}
-              {cred.status === "rejected" && (cred.rejecter || cred.rejecter_user_id) && (
-                <div className="space-y-2">
-                  <EyebrowLabel as="span" className="block text-error">
-                    {t("cred.audit.rejectedBy")}
-                  </EyebrowLabel>
-                  <UserContactBlock
-                    user={cred.rejecter}
-                    fallbackId={cred.rejecter_user_id ?? ""}
-                    copyPrefix="rejecter"
-                    labelType="full"
-                    layout="grid"
-                    tone="error"
-                    blockLinks={!canManage}
-                  />
-                </div>
-              )}
-
-              {/* Revoker */}
-              {cred.status === "revoked" && (cred.revoker || cred.revoker_user_id) && (
-                <div className="space-y-2">
-                  <EyebrowLabel as="span" className="block text-error">
-                    {t("cred.audit.revokedBy")}
-                  </EyebrowLabel>
-                  <UserContactBlock
-                    user={cred.revoker}
-                    fallbackId={cred.revoker_user_id ?? ""}
-                    copyPrefix="revoker"
-                    labelType="full"
-                    layout="grid"
-                    tone="error"
-                    blockLinks={!canManage}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* 4. Bottom System Facts (ID, Hash, Dates) */}
-            <CredentialSystemFacts credential={cred} />
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+            {/* Revoker */}
+            {cred.status === "revoked" && (cred.revoker || cred.revoker_user_id) && (
+              <div className="space-y-2">
+                <EyebrowLabel as="span" className="block text-error">
+                  {t("cred.audit.revokedBy")}
+                </EyebrowLabel>
+                <UserContactBlock
+                  user={cred.revoker}
+                  fallbackId={cred.revoker_user_id ?? ""}
+                  copyPrefix="revoker"
+                  labelType="full"
+                  layout="grid"
+                  tone="error"
+                  blockLinks={!canManage}
+                />
+              </div>
+            )}
+          </>
+        )
+      }
+      footer={cred && <CredentialSystemFacts credential={cred} />}
+    />
   );
 }

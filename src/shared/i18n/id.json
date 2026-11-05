@@ -137,7 +137,7 @@
   "user.filter.year": "Tahun bergabung",
   "user.filter.year.from": "Dari",
   "user.filter.year.to": "Sampai",
-  "user.filter.year.range": "{{from}}\u2013{{to}}",
+  "user.filter.year.range": "{{from}}–{{to}}",
   "user.filter.year.fromOnly": "{{from}} ke atas",
   "user.filter.year.toOnly": "sampai {{to}}",
   "user.filter.year.reset": "Atur ulang",
@@ -372,7 +372,6 @@
   "landing.stamp.verified": "Terverifikasi",
   "landing.version": "Versi",
   "auth.welcome.prefix": "Selamat datang di",
-
   "auth.welcome.securedBy": "Diamankan oleh Google Sign-In",
   "auth.signin.title": "Masuk",
   "auth.signin.subtitle": "Akses dasbor platform dengan akun Google Anda.",
@@ -405,11 +404,11 @@
   "credential.verify.credential_not_found": "Kredensial tidak ditemukan untuk verifikasi",
   "credential.verify.verdict.authentic": "Dokumen ini asli.",
   "credential.verify.verdict.revoked": "Kredensial ini sudah dicabut.",
-  "credential.verify.verdict.integrity_warning": "Ketidaksesuaian catatan blockchain.",
-  "credential.verify.verdict.tampered": "Dokumen ini mungkin sudah diubah.",
-  "credential.verify.verdict.suspicious": "Dokumen ini mencurigakan mirip dengan kredensial lain.",
-  "credential.verify.verdict.low_similarity": "Ditemukan kecocokan sebagian.",
-  "credential.verify.verdict.not_similar": "Tidak ditemukan kredensial yang cocok.",
+  "credential.verify.verdict.integrity_warning": "Data kredensial tidak sesuai dengan data kredensial di blockchain.",
+  "credential.verify.verdict.tampered": "Kemiripan teks tinggi ditemukan—bukan kecocokan berkas identik.",
+  "credential.verify.verdict.suspicious": "Teks serupa ditemukan—bukan kecocokan berkas identik.",
+  "credential.verify.verdict.low_similarity": "Kemiripan teks terbatas ditemukan—bukan kecocokan berkas identik.",
+  "credential.verify.verdict.not_similar": "Tidak ditemukan kecocokan teks yang dekat.",
   "credential.verify.verdict.no_identifiers": "Tidak bisa membaca data identitas dari dokumen ini.",
   "credential.verify.verdict.no_match": "Tidak ditemukan kredensial dengan ID ini.",
   "credential.verify.verdict.holder_disabled": "Akun pemegang dinonaktifkan. Perlu peninjauan manual.",
@@ -469,11 +468,15 @@
   "cred.status.pending_extraction": "Tertunda",
   "cred.status.extraction_failed": "Ekstraksi Gagal",
   "cred.verify.verifying": "Memverifikasi dokumen...",
-  "cred.verify.similarityLabel": "Kemiripan",
+  "cred.verify.similarityLabel": "Kemiripan teks",
+  "cred.verify.similarityLimitation": "Kemiripan teks tidak memastikan keaslian atau membuktikan perubahan. Verifikasi berkas asli atau hubungi organisasi penerbit.",
+  "cred.verify.matchedStatus": "Status kredensial yang cocok",
+  "error_credential_verify_chain_unavailable": "Verifikasi blockchain belum dapat diselesaikan. Coba lagi nanti.",
   "cred.verify.tokenId": "ID Token",
   "cred.verify.viewCredential": "Lihat Kredensial",
-  "cred.verify.method.hash": "Terverifikasi melalui pencocokan hash kriptografi",
-  "cred.verify.method.fuzzy": "Terverifikasi melalui analisis kemiripan AI",
+  "cred.verify.method.hash": "Pemeriksaan hash berkas identik",
+  "cred.verify.method.fuzzy": "Perbandingan kemiripan teks dengan AI",
+  "cred.verify.method.identifiers": "Pencarian identitas dengan AI",
   "cred.verify.issuedBy": "Diterbitkan oleh {{organization}}",
   "cred.verify.signInNudge": "Masuk untuk melihat detail kredensial lengkap",
   "cred.verify.signInNudgeDesc": "Termasuk info pemegang, detail penerbit, dan data blockchain",
@@ -576,8 +579,6 @@
   "validation_update_role_same_role_update_forbidden": "Tidak dapat mengubah pengguna dengan peran yang sama",
   "validation_update_role_super_admin_batch_forbidden": "Tidak dapat memberikan peran SuperAdmin dalam operasi batch",
   "validation_delete_admin_forbidden": "Admin tidak dapat menghapus pengguna Admin atau SuperAdmin",
-  "validation_file_max_size": "File maksimal 10 MB",
-  "validation_file_type_invalid": "File harus berupa PDF, JPEG, PNG, WebP, atau TIFF",
   "validation_store_email_duplicate_batch": "Email ini muncul beberapa kali dalam batch ini.",
   "validation_store_email_duplicate_db": "Email ini sudah terdaftar.",
   "validation_unit_inactive": "Unit yang dipilih tidak aktif dan tidak dapat ditetapkan.",
@@ -681,10 +682,10 @@
   "success_credential_verify_authentic": "Dokumen otentik dan cocok dengan kredensial yang telah diterbitkan.",
   "success_credential_verify_revoked": "Dokumen cocok dengan kredensial yang telah dicabut.",
   "warning_credential_verify_integrity": "Dokumen cocok di database tetapi tidak di blockchain — peringatan integritas.",
-  "success_credential_verify_tampered": "Dokumen sangat mirip dengan kredensial yang diterbitkan dan mungkin telah dimanipulasi.",
-  "success_credential_verify_suspicious": "Dokumen sangat mirip dengan kredensial yang diterbitkan.",
-  "success_credential_verify_low_similarity": "Dokumen memiliki kemiripan rendah dengan kredensial yang diterbitkan.",
-  "success_credential_verify_not_similar": "Dokumen tidak mirip dengan kredensial yang cocok.",
+  "success_credential_verify_tampered": "Kemiripan teks tinggi ditemukan—bukan kecocokan berkas identik.",
+  "success_credential_verify_suspicious": "Teks serupa ditemukan—bukan kecocokan berkas identik.",
+  "success_credential_verify_low_similarity": "Kemiripan teks terbatas ditemukan—bukan kecocokan berkas identik.",
+  "success_credential_verify_not_similar": "Tidak ditemukan kecocokan teks yang dekat.",
   "success_credential_verify_no_identifiers": "Tidak ada ID yang dapat diidentifikasi dalam dokumen.",
   "success_credential_verify_no_match": "Tidak ada kredensial yang cocok ditemukan untuk ID dalam dokumen ini.",
   "success_credential_verify_holder_disabled": "Pemegang kredensial telah dinonaktifkan. Validitas kredensial memerlukan tinjauan manual.",
@@ -948,10 +949,10 @@
     },
     "verify": {
       "title": "Verifikasi Kredensial",
-      "description": "Unggah dokumen untuk memeriksa apakah cocok dengan catatan blockchain.",
+      "description": "Unggah dokumen untuk diperiksa terhadap kredensial di CredChain.",
       "loading": "Memuat...",
       "notFound": {
-        "title": "Data Tidak Ditemukan",
+        "title": "Kredensial tidak ditemukan",
         "body": "Kredensial ini tidak ada atau sudah dihapus permanen.",
         "returnHome": "Kembali ke Beranda"
       },
@@ -963,14 +964,142 @@
       "verificationDisabled": "Verifikasi Dinonaktifkan",
       "revokedDesc": "Kredensial ini sudah dicabut dan tidak berlaku lagi.",
       "verifyDoc": "Verifikasi Dokumen Sumber",
-      "verifyDocDesc": "Unggah file asli untuk membandingkan hash-nya dengan catatan blockchain.",
+      "verifyDocDesc": "Unggah berkas asli untuk membandingkan sidiknya dengan sidik berkas terdaftar.",
       "selectFile": "Pilih File untuk Verifikasi",
-      "processing": "Memproses...",
+      "processing": "Memeriksa dokumen…",
       "uploadAriaLabel": "Unggah file untuk verifikasi",
       "success": "Verifikasi Berhasil",
-      "successDesc": "Dokumen ini asli. Hash-nya cocok dengan catatan di blockchain.",
+      "successDesc": "Berkas unggahan cocok dengan berkas terdaftar. Periksa status kredensial dan bukti verifikasi.",
       "failed": "Verifikasi Gagal",
-      "failedDesc": "Dokumen ini tidak cocok dengan catatan blockchain. Mungkin sudah diubah, atau file yang salah.",
+      "failedDesc": "Kecocokan identik dengan berkas terdaftar belum dapat dipastikan. Hasil ini saja tidak membuktikan perubahan atau pemalsuan.",
+      "report": {
+        "exact": {
+          "title": "Berkas cocok dengan berkas terdaftar",
+          "description": "Berkas yang Anda unggah identik dengan berkas terdaftar, dan data kredensial di blockchain cocok.",
+          "next": "Periksa detail dan status kredensial. Hubungi organisasi penerbit jika Anda memerlukan konfirmasi penerbitan."
+        },
+        "legacy": {
+          "title": "CredChain mengembalikan hasil verifikasi",
+          "description": "Hasil ini belum memastikan bahwa kecocokan berkas identik diperiksa pada permintaan ini.",
+          "next": "Verifikasi berkas asli atau hubungi organisasi penerbit."
+        },
+        "revoked": {
+          "title": "Kredensial dicabut",
+          "description": "Kredensial ini telah dicabut. Kecocokan berkas tidak membuatnya berlaku kembali.",
+          "next": "Hubungi organisasi penerbit untuk penjelasan atau penggantian."
+        },
+        "expired": {
+          "title": "Kredensial kedaluwarsa",
+          "description": "Masa berlaku yang tercatat telah berakhir. Ini tidak berarti dokumen dipalsukan.",
+          "next": "Minta kredensial yang masih berlaku dari organisasi penerbit."
+        },
+        "integrity": {
+          "title": "Verifikasi kredensial belum dapat dipastikan",
+          "description": "CredChain belum dapat memastikan bahwa data kredensial terdaftar sesuai dengan data kredensial di blockchain. Hasil ini tidak membuktikan dokumen unggahan telah diubah.",
+          "next": "Hubungi administrator platform untuk memeriksa data kredensial."
+        },
+        "highSimilarity": {
+          "title": "Teks serupa ditemukan",
+          "description": "Teks dalam berkas unggahan mirip dengan teks pada kredensial di CredChain, tetapi kemiripan ini belum memastikan keaslian dokumen.",
+          "next": "Coba berkas digital asli atau konfirmasikan kepada organisasi penerbit."
+        },
+        "similar": {
+          "title": "Teks serupa ditemukan",
+          "description": "Teks dalam berkas unggahan mirip dengan teks pada kredensial di CredChain, tetapi kemiripan ini belum memastikan keaslian dokumen.",
+          "next": "Coba berkas digital asli atau konfirmasikan kepada organisasi penerbit."
+        },
+        "lowSimilarity": {
+          "title": "Kemiripan teks terbatas ditemukan",
+          "description": "Teks dalam berkas unggahan hanya sedikit mirip dengan teks pada kredensial pembanding. Hasil ini belum memastikan apakah dokumen asli.",
+          "next": "Coba berkas digital asli atau konfirmasikan kepada organisasi penerbit."
+        },
+        "notSimilar": {
+          "title": "Tidak ditemukan kecocokan teks yang dekat",
+          "description": "Teks dalam berkas unggahan tidak cukup mirip dengan teks pada kredensial pembanding. Hasil ini saja tidak membuktikan pemalsuan.",
+          "next": "Coba berkas digital asli atau hubungi organisasi penerbit."
+        },
+        "noIdentifiers": {
+          "title": "Informasi pengenal belum cukup",
+          "description": "CredChain belum menemukan informasi yang cukup, seperti nama atau nomor kredensial, untuk mencari kredensial.",
+          "next": "Gunakan berkas asli atau berkas yang lebih jelas dengan format yang didukung."
+        },
+        "noMatch": {
+          "title": "Kredensial yang cocok tidak ditemukan",
+          "description": "Pencarian ini tidak menemukan kredensial yang cocok di CredChain. Ini tidak membuktikan dokumen palsu.",
+          "next": "Coba berkas asli atau hubungi organisasi penerbit."
+        },
+        "unknown": {
+          "title": "Hasil belum dapat ditafsirkan",
+          "description": "CredChain mengembalikan hasil yang belum dapat ditampilkan halaman ini. Belum ada kesimpulan verifikasi.",
+          "next": "Coba lagi atau hubungi administrator platform."
+        },
+        "holderDisabled": {
+          "title": "Hasil verifikasi perlu ditindaklanjuti",
+          "description": "Akun pemegang dinonaktifkan di CredChain. Kondisi ini saja tidak berarti dokumen dipalsukan.",
+          "next": "Hubungi administrator platform atau organisasi penerbit."
+        },
+        "issuerDisabled": {
+          "title": "Hasil verifikasi perlu ditindaklanjuti",
+          "description": "Akun penerbit yang mendaftarkan atau menyetujui kredensial ini dinonaktifkan di CredChain. Kondisi ini saja tidak berarti dokumen dipalsukan atau organisasi penerbit melakukan pemalsuan.",
+          "next": "Hubungi administrator platform atau organisasi penerbit."
+        },
+        "partyDisabled": {
+          "title": "Hasil verifikasi perlu ditindaklanjuti",
+          "description": "Akun pemegang dan akun penerbit yang mendaftarkan atau menyetujui kredensial ini dinonaktifkan di CredChain. Kondisi ini saja tidak berarti dokumen dipalsukan atau organisasi penerbit melakukan pemalsuan.",
+          "next": "Hubungi administrator platform atau organisasi penerbit."
+        },
+        "record": "Data kredensial",
+        "possibleRecord": "Ditemukan kredensial yang mungkin terkait.",
+        "comparedRecord": "Kredensial ini dipertimbangkan dalam perbandingan.",
+        "comparedCredential": "Kredensial pembanding",
+        "credentialName": "Nama kredensial",
+        "credentialNumber": "Nomor kredensial",
+        "unavailable": "Tidak tersedia",
+        "next": "Langkah berikutnya",
+        "technical": "Bukti teknis",
+        "comparison": "Rincian perbandingan",
+        "score": "Kemiripan teks",
+        "scoreLimit": "Kemiripan teks tidak memastikan keaslian atau membuktikan perubahan, bahkan pada skor 100%.",
+        "hashLimit": "Sidik ini milik kredensial yang ditampilkan, belum tentu milik berkas unggahan Anda.",
+        "recordId": "ID kredensial",
+        "fileHash": "Sidik berkas terdaftar",
+        "organization": "Organisasi penerbit",
+        "type": "Tipe kredensial",
+        "number": "Nomor dokumen",
+        "issued": "Tanggal penerbitan",
+        "expires": "Tanggal kedaluwarsa",
+        "revokedOn": "Tanggal pencabutan",
+        "status": "Status kredensial",
+        "route": "Jalur pendaftaran",
+        "submitted": "Diajukan dan disetujui di CredChain",
+        "registered": "Didaftarkan langsung di CredChain",
+        "notRecorded": "Tidak tercatat",
+        "noExpiry": "Tidak ada tanggal kedaluwarsa tercatat",
+        "details": "Buka rincian kredensial",
+        "privateRecord": "Buka kredensial privat",
+        "another": "Verifikasi dokumen lain",
+        "metadataLimit": "Nama organisasi dan tipe kredensial mengikuti data CredChain saat ini dan dapat berbeda dari nama saat penerbitan.",
+        "recipientLimit": "Pemeriksaan ini tidak memastikan identitas penerima atau mengonfirmasi penerbitan langsung kepada organisasi penerbit.",
+        "snapshot": "Rincian berasal dari respons verifikasi ini. Verifikasi ulang untuk memeriksa kembali.",
+        "verified": "Berkas yang Anda unggah identik dengan berkas terdaftar, dan data kredensial di blockchain cocok. Peringatan di atas tetap berlaku.",
+        "limits": "Batas verifikasi",
+        "modalTitle": "Rincian kredensial",
+        "resultTitle": "Hasil verifikasi",
+        "preview": "Pratinjau",
+        "retry": "Coba verifikasi lagi",
+        "scope": "CredChain mencari berkas terdaftar yang identik. Jika tidak ditemukan, teks dapat dibandingkan dengan kredensial di CredChain. CredChain tidak menghubungi organisasi penerbit.",
+        "candidateStatus": "Nama, nomor, status, tipe, dan organisasi penerbit di bawah menjelaskan kredensial pembanding, bukan rincian terkonfirmasi dari berkas unggahan Anda.",
+        "close": "Tutup",
+        "change": "Ganti dokumen",
+        "viewCredentialDetails": "Lihat detail kredensial",
+        "viewComparedCredential": "Lihat kredensial pembanding",
+        "uploadedFile": "Berkas unggahan",
+        "method": "Metode verifikasi",
+        "methodExact": "Kecocokan berkas identik",
+        "methodText": "Perbandingan teks",
+        "methodUnknown": "Belum dipastikan",
+        "provenance": "Informasi akun pemegang mengikuti data CredChain saat ini dan dapat berbeda dari informasi saat penerbitan."
+      },
       "computedHash": "Hash Pemeriksaan File"
     },
     "mine": {
@@ -982,7 +1111,10 @@
         "title": "Belum ada kredensial",
         "body": "Kredensial yang ditautkan ke dompet Anda akan muncul di sini."
       },
-      "error": { "title": "Gagal memuat kredensial", "body": "Silakan coba lagi nanti." }
+      "error": {
+        "title": "Gagal memuat kredensial",
+        "body": "Silakan coba lagi nanti."
+      }
     },
     "card": {
       "registered": "Didaftarkan",
@@ -1014,7 +1146,11 @@
       "completeDetails": "Lengkapi data",
       "competencyOverflow": "+{{count}}"
     },
-    "status": { "active": "Aktif", "revoked": "Dicabut", "menuLabel": "Status" },
+    "status": {
+      "active": "Aktif",
+      "revoked": "Dicabut",
+      "menuLabel": "Status"
+    },
     "field": {
       "recipient": "Penerima (pemegang)",
       "type": "Tipe kredensial",
@@ -1155,7 +1291,10 @@
   "credType": {
     "title": "Tipe Kredensial",
     "description": "Kelola tipe kredensial yang digunakan saat menerbitkan kredensial.",
-    "column": { "name": "Nama", "active": "Aktif" },
+    "column": {
+      "name": "Nama",
+      "active": "Aktif"
+    },
     "createAction": "Tambah tipe",
     "editTitle": "Ubah tipe kredensial",
     "activeToggle": "Alihkan status aktif untuk {{name}}",
@@ -1174,7 +1313,10 @@
   "issuerOrg": {
     "title": "Organisasi Penerbit",
     "description": "Kelola organisasi yang dapat menerbitkan kredensial.",
-    "column": { "name": "Nama", "active": "Aktif" },
+    "column": {
+      "name": "Nama",
+      "active": "Aktif"
+    },
     "createAction": "Tambah organisasi",
     "editTitle": "Ubah organisasi penerbit",
     "activeToggle": "Alihkan status aktif untuk {{name}}",
@@ -1193,7 +1335,10 @@
   "competency": {
     "title": "Kompetensi",
     "description": "Kelola kompetensi yang dapat dihubungkan ke kredensial.",
-    "column": { "name": "Nama", "active": "Aktif" },
+    "column": {
+      "name": "Nama",
+      "active": "Aktif"
+    },
     "createAction": "Tambah kompetensi",
     "editTitle": "Ubah kompetensi",
     "activeToggle": "Alihkan status aktif untuk {{name}}",
@@ -1383,11 +1528,9 @@
   "overview.dateFilter.thisMonth": "Bulan ini",
   "overview.dateFilter.custom": "Rentang kustom",
   "overview.dateFilter.apply": "Terapkan",
-
   "fileDropzone.dragDrop": "Seret & lepas atau klik untuk memilih",
   "fileDropzone.notAvailable": "N/A",
   "fileDropzone.removeAriaLabel": "Hapus file",
-
   "userImport.title": "Impor Pengguna dari File",
   "userImport.description": "Unggah file CSV, XLS, atau XLSX untuk impor pengguna secara massal.",
   "userImport.supportedFormats": "CSV, XLS, atau XLSX",
@@ -1399,7 +1542,7 @@
   "userImport.toRow": "Impor sampai baris",
   "userImport.previewRow": "Baris {{row}}",
   "userImport.maxRows": "Maksimal 100 baris per impor",
-  "userImport.invalidRange": "Baris akhir harus \u2265 baris awal dan rentang harus \u2264 100",
+  "userImport.invalidRange": "Baris akhir harus ≥ baris awal dan rentang harus ≤ 100",
   "userImport.missingColumns": "Kolom wajib tidak ditemukan: {{columns}}",
   "userImport.parseError": "Tidak dapat membaca file. Pastikan file adalah CSV/XLS/XLSX yang valid dengan baris header dan minimal satu baris data.",
   "userImport.invalidExtension": "Hanya file .csv, .xls, dan .xlsx yang diterima",
