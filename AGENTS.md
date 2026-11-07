@@ -491,7 +491,7 @@ See the **Required env vars** table under [Critical Commands](#critical-commands
 | Integration | Vitest + MSW | Feature flows with mocked `/api`                            |
 | E2E         | Playwright   | Auth flow, public routes, a11y smoke                        |
 
-**Current count:** **1,370 unit/component tests across 118 spec files** under `src/`, plus **~85 Playwright tests across 6 e2e specs** (`guest-flow.spec.ts`, `holder-flow.spec.ts`, `issuer-flow.spec.ts`, `admin-flow.spec.ts`, `super-admin-flow.spec.ts`, `a11y.spec.ts`).
+**Current count:** **1,395 unit/component tests across 120 spec files** under `src/`, plus **~85 Playwright tests across 6 e2e specs** (`guest-flow.spec.ts`, `holder-flow.spec.ts`, `issuer-flow.spec.ts`, `admin-flow.spec.ts`, `super-admin-flow.spec.ts`, `a11y.spec.ts`).
 
 
 **Coverage** (in `vitest.config.ts`): the `coverage` config uses a **selective `include` allowlist** (NOT global). Per-file thresholds of 90% lines / 85% branches / 90% functions / 90% statements apply only to the curated paths:
@@ -618,6 +618,13 @@ Before pushing, run the repo's canonical verification command and confirm it pas
 - `CredChain_React`: `make lint && make build && make test && npm run check-locales`
 
 ## Change Log
+
+- **2026-11-07 — Credential list lifecycle sorting unification.** Fixed reversed Newest/Oldest credential sorting by unifying sorting around credential lifecycle milestones instead of physical certificate printing dates (`issued_at`):
+  - Added virtual sort column `lifecycle_at` in Go backend `gorm_credential_repository.go` mapping to `COALESCE(credentials.revoked_at, credentials.rejected_at, credentials.activated_at, credentials.created_at)` with `credentials.id ASC` tiebreaker.
+  - Added shared `@shared/lib/credentialSort.ts` defining canonical sort keys (`-lifecycle_at`, `lifecycle_at`, `name`, `-name`), legacy parameter normalization (`±issued_at`, `±revoked_at`, `±expires_at`), and canonical URL synchronization.
+  - Updated `CredentialSortMenu.tsx` to remove status-dependent sort swapping and consume canonical options directly.
+  - Updated `CredentialList.tsx` and `UserDetail.tsx` to synchronize canonical sort parameters, preserving user sort direction across review/status filter changes.
+  - Tests 1,370→1,395 (118→120 spec files). Modified: `credentialSort.ts`, `credentialSort.test.ts`, `CredentialSortMenu.tsx`, `CredentialSortMenu.test.tsx`, `CredentialList.tsx`, `CredentialList.test.tsx`, `UserDetail.tsx`, `UserDetail.test.tsx`, `DESIGN_SYSTEM.md`, `AGENTS.md`.
 
 - **2026-09-19 — System registration i18n key alignment & certificate issue date preservation.** Aligned system registration lifecycle terminology and i18n keys while preserving physical certificate issue date fields:
   - Renamed platform registration keys: `cred.card.issued` → `cred.card.registered` ("Didaftarkan" / "Registered", dropping unnecessary prepositions "pada" and "at" to match sibling lifecycle states) and `cred.audit.issuedBy` → `cred.audit.registeredBy` ("Didaftarkan oleh" / "Registered by").

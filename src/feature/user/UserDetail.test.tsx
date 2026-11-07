@@ -20,9 +20,9 @@ function setCurrentUser(role: Role) {
   });
 }
 
-function renderPage(id = "usr_4") {
+function renderPage(id = "usr_4", search = "") {
   return render(
-    <TestProviders initialEntries={[`/users/${id}`]} routePath="/users/:id">
+    <TestProviders initialEntries={[`/users/${id}${search}`]} routePath="/users/:id">
       <UserDetail />
     </TestProviders>,
   );
@@ -287,9 +287,7 @@ describe("UserDetail (D2)", () => {
     renderPage("usr_5");
     await waitFor(() => expect(screen.getAllByText("Trashed User").length).toBeGreaterThan(0));
     expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Trashed User must be restored before editing."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Trashed User must be restored before editing.")).toBeInTheDocument();
   });
 
   it("deletes a live target via DELETE /users/batch", async () => {
@@ -369,5 +367,68 @@ describe("UserDetail (D2)", () => {
     expect(screen.getAllByText("Registered by").length).toBeGreaterThan(0);
     expect(screen.queryByText("Issuer")).not.toBeInTheDocument();
     expect(screen.queryByText("John Doe")).not.toBeInTheDocument();
+  });
+
+  it("requests credentials with default lifecycle sort -lifecycle_at", async () => {
+    const recordedSorts: string[][] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recordedSorts.push(new URL(request.url).searchParams.getAll("sorts"));
+        return HttpResponse.json({
+          code: 400100,
+          message: "Credentials retrieved",
+          data: { items: [], total: 0, page: 1, limit: 50, last_page: 1, from: 0, to: 0 },
+        });
+      }),
+    );
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
+    await waitFor(() => {
+      expect(recordedSorts.some((sorts) => sorts.includes("-lifecycle_at"))).toBe(true);
+    });
+  });
+
+  it("normalizes legacy ?credential_sort=issued_at to lifecycle_at sort request", async () => {
+    const recordedSorts: string[][] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recordedSorts.push(new URL(request.url).searchParams.getAll("sorts"));
+        return HttpResponse.json({
+          code: 400100,
+          message: "Credentials retrieved",
+          data: { items: [], total: 0, page: 1, limit: 50, last_page: 1, from: 0, to: 0 },
+        });
+      }),
+    );
+    renderPage("usr_4", "?credential_sort=issued_at");
+    await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
+    await waitFor(() => {
+      expect(recordedSorts.some((sorts) => sorts.includes("lifecycle_at"))).toBe(true);
+    });
+  });
+
+  it("updates credential sort when user selects Oldest option in credential sort menu", async () => {
+    const recordedSorts: string[][] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recordedSorts.push(new URL(request.url).searchParams.getAll("sorts"));
+        return HttpResponse.json({
+          code: 400100,
+          message: "Credentials retrieved",
+          data: { items: [], total: 0, page: 1, limit: 50, last_page: 1, from: 0, to: 0 },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText("Jane Doe").length).toBeGreaterThan(0));
+
+    const sortButton = await screen.findByRole("button", { name: /sort/i });
+    await user.click(sortButton);
+    await user.click(await screen.findByRole("menuitem", { name: /^oldest$/i }));
+
+    await waitFor(() => {
+      expect(recordedSorts.some((sorts) => sorts.includes("lifecycle_at"))).toBe(true);
+    });
   });
 });

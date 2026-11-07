@@ -1109,6 +1109,22 @@ Form pickers and **filter pills are deliberately two looks, not a drift to be un
 
 `HolderSearchDropdown` is single-select only (one holder per credential) and stays on plain text for the same YAGNI reason, but is built on the identical `DropdownMenu` shell — search input with `onKeyDown` stopPropagation, gold `Check` on the selected row — so it no longer diverges from the other three as the one hand-rolled `absolute`-div dropdown with no keyboard support.
 
+#### 7.13.1 Credential list sorting & URL contract
+
+Credential list sorting on `/credentials` (`CredentialList.tsx`) and the credentials table on `/users/:id` (`UserDetail.tsx`) is driven by `@shared/lib/credentialSort.ts` and `CredentialSortMenu.tsx`:
+
+- **Canonical sort keys:**
+  - Newest: `-lifecycle_at` (default; canonical URL omits `sort` / `credential_sort`)
+  - Oldest: `lifecycle_at` (URL: `?sort=lifecycle_at` or `?credential_sort=lifecycle_at`)
+  - Name A–Z: `name`
+  - Name Z–A: `-name`
+- **Status-independent:** Changing review status or user credential status filters preserves the selected sorting direction. Sort keys never dynamically swap to `revoked_at` or `expires_at`.
+- **Legacy URL normalization:** Legacy URL parameters (`±issued_at`, `±revoked_at`, `±expires_at`, and uncanonical aliases) are normalized via `normalizeCredentialSortParam`:
+  - `±issued_at`, `±revoked_at`, `±expires_at` in descending form map to `-lifecycle_at` and the non-canonical parameter is removed with `replace: true`.
+  - Ascending forms (`issued_at`, `+issued_at`, etc.) map to canonical `sort=lifecycle_at` (or `credential_sort=lifecycle_at`).
+  - Unsupported values fall back to `-lifecycle_at`.
+- **Backend mapping:** The backend GORM repository maps `lifecycle_at` to `COALESCE(credentials.revoked_at, credentials.rejected_at, credentials.activated_at, credentials.created_at)` with `credentials.id ASC` tiebreaker.
+
 ---
 
 ### 7.14 Reference management tables

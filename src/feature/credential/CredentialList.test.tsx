@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { vi } from "vitest";
 import userEvent from "@testing-library/user-event";
@@ -95,17 +96,23 @@ beforeEach(async () => {
 });
 
 let activeQueryClient: ReturnType<typeof useQueryClient> | undefined;
+let activeLocation: ReturnType<typeof useLocation> | undefined;
 
 function QueryClientCapture() {
   const queryClient = useQueryClient();
+  const location = useLocation();
   useEffect(() => {
     activeQueryClient = queryClient;
   }, [queryClient]);
+  useEffect(() => {
+    activeLocation = location;
+  }, [location]);
   return null;
 }
 
 function renderList(initialEntry = "/") {
   activeQueryClient = undefined;
+  activeLocation = undefined;
   return render(
     <>
       <QueryClientCapture />
@@ -302,7 +309,7 @@ describe("CredentialList", () => {
     });
   });
 
-  it("adjusts the sort to revoked_at when the revoked review filter is active", async () => {
+  it("preserves the lifecycle sort when the revoked review filter is active", async () => {
     const recorded: string[] = [];
     server.use(
       http.get("*/api/credentials", ({ request }) => {
@@ -322,7 +329,101 @@ describe("CredentialList", () => {
       expect(
         requests.some(
           (url) =>
-            url.searchParams.getAll("sorts").includes("-revoked_at") &&
+            url.searchParams.getAll("sorts").includes("-lifecycle_at") &&
+            url.searchParams.getAll("filters").includes("revoked_at!_"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it("normalizes legacy ?sort=issued_at to ?sort=lifecycle_at and requests ascending lifecycle sort", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    renderList("/credentials?sort=issued_at");
+    await screen.findByText("All Credentials");
+
+    await waitFor(() => {
+      expect(activeLocation?.search).toBe("?sort=lifecycle_at");
+      const requests = listRequestsOf(recorded);
+      expect(
+        requests.some((url) => url.searchParams.getAll("sorts").includes("lifecycle_at")),
+      ).toBe(true);
+    });
+  });
+
+  it("normalizes legacy ?sort=-issued_at to canonical default and clears the sort query parameter", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    renderList("/credentials?sort=-issued_at");
+    await screen.findByText("All Credentials");
+
+    await waitFor(() => {
+      expect(activeLocation?.search).toBe("");
+      const requests = listRequestsOf(recorded);
+      expect(
+        requests.some((url) => url.searchParams.getAll("sorts").includes("-lifecycle_at")),
+      ).toBe(true);
+    });
+  });
+
+  it("updates the URL and requests lifecycle_at when Oldest sort option is selected", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /sort/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /^oldest$/i }));
+
+    await waitFor(() => {
+      expect(activeLocation?.search).toBe("?sort=lifecycle_at");
+      const requests = listRequestsOf(recorded);
+      expect(
+        requests.some((url) => url.searchParams.getAll("sorts").includes("lifecycle_at")),
+      ).toBe(true);
+    });
+  });
+
+  it("preserves active filters when sorting is changed", async () => {
+    const recorded: string[] = [];
+    server.use(
+      http.get("*/api/credentials", ({ request }) => {
+        recorded.push(request.url);
+        return pageResponse(0);
+      }),
+    );
+    const user = userEvent.setup();
+    renderList();
+    await screen.findByText("All Credentials");
+
+    await user.click(screen.getByRole("button", { name: /status/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /^revoked$/i }));
+
+    await user.click(screen.getByRole("button", { name: /sort/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /^oldest$/i }));
+
+    await waitFor(() => {
+      const requests = listRequestsOf(recorded);
+      expect(
+        requests.some(
+          (url) =>
+            url.searchParams.getAll("sorts").includes("lifecycle_at") &&
             url.searchParams.getAll("filters").includes("revoked_at!_"),
         ),
       ).toBe(true);

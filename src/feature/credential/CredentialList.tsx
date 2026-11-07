@@ -57,6 +57,11 @@ import { LoadMoreBar } from "@shared/components/LoadMoreBar";
 
 import { CredentialCard } from "@shared/components/CredentialCard";
 import { CredentialSortMenu } from "@shared/components/CredentialSortMenu";
+import {
+  DEFAULT_CREDENTIAL_SORT,
+  normalizeCredentialSortParam,
+  parseCredentialSort,
+} from "@shared/lib/credentialSort";
 import { CredentialStatusMenu } from "./components/CredentialStatusMenu";
 import type {
   CredentialExtractFilter,
@@ -147,34 +152,6 @@ const EXTRACT_FILTERS: Record<CredentialExtractFilter, string[]> = {
   failed: ["extract_failed_at!_"],
 };
 
-const SORT_OPTIONS = [
-  {
-    key: "newest",
-    getSort: (r: CredentialReviewStatus) =>
-      r === "revoked" ? "-revoked_at" : r === "expired" ? "-expires_at" : "-issued_at",
-  },
-  {
-    key: "oldest",
-    getSort: (r: CredentialReviewStatus) =>
-      r === "revoked" ? "revoked_at" : r === "expired" ? "expires_at" : "issued_at",
-  },
-  { key: "nameAZ", getSort: () => "name" },
-  { key: "nameZA", getSort: () => "-name" },
-];
-
-function adjustSortForStatus(
-  sortString: string,
-  oldReview: CredentialReviewStatus,
-  newReview: CredentialReviewStatus,
-): string {
-  for (const opt of SORT_OPTIONS) {
-    if (opt.getSort(oldReview) === sortString) {
-      return opt.getSort(newReview);
-    }
-  }
-  return sortString;
-}
-
 const REVIEW_VALUES: CredentialReviewStatus[] = [
   "all",
   "pending",
@@ -210,7 +187,14 @@ export function CredentialList() {
   const extractParam = searchParams.get("extract");
   const review: CredentialReviewStatus = isReviewStatus(reviewParam) ? reviewParam : "all";
   const extract: CredentialExtractFilter = isExtractFilter(extractParam) ? extractParam : "any";
-  const credSort = searchParams.get("sort") ?? SORT_OPTIONS[0].getSort(review);
+  const { normalizedSort: credSort } = normalizeCredentialSortParam(searchParams, "sort");
+
+  useEffect(() => {
+    const { updatedParams } = normalizeCredentialSortParam(searchParams, "sort");
+    if (updatedParams) {
+      setSearchParams(updatedParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const typeId = searchParams.get("type_id");
   const orgId = searchParams.get("org_id");
@@ -381,13 +365,10 @@ export function CredentialList() {
 
   const handleReviewChange = (value: CredentialReviewStatus) => {
     if (value === review) return;
-    const newSort = adjustSortForStatus(credSort, review, value);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (value === "all") next.delete("review");
       else next.set("review", value);
-      if (newSort === SORT_OPTIONS[0].getSort(value)) next.delete("sort");
-      else next.set("sort", newSort);
       return next;
     });
     setSelectedIds(new Set());
@@ -418,12 +399,12 @@ export function CredentialList() {
   };
 
   const handleSortChange = (sortString: string) => {
-    if (sortString === credSort) return;
+    const parsed = parseCredentialSort(sortString);
+    if (parsed === credSort) return;
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      const defaultSort = SORT_OPTIONS[0].getSort(review);
-      if (sortString === defaultSort) next.delete("sort");
-      else next.set("sort", sortString);
+      if (parsed === DEFAULT_CREDENTIAL_SORT) next.delete("sort");
+      else next.set("sort", parsed);
       return next;
     });
     setSelectedIds(new Set());
@@ -776,11 +757,7 @@ export function CredentialList() {
                 onChange={handleFilterChange("competency_id")}
               />
               <HolderUnitFilterMenu value={unitId} onChange={handleFilterChange("unit_id")} />
-              <CredentialSortMenu
-                value={credSort}
-                onChange={handleSortChange}
-                statusFilter={review === "revoked" ? "revoked" : "all"}
-              />
+              <CredentialSortMenu value={credSort} onChange={handleSortChange} />
             </div>
           </div>
         </div>

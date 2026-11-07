@@ -41,6 +41,11 @@ import { CredentialCard } from "@shared/components/CredentialCard";
 import { CredentialStatusFilterMenu } from "@shared/components/CredentialStatusFilterMenu";
 import type { CredentialStatusFilter } from "@shared/components/CredentialStatusFilterMenu";
 import { CredentialSortMenu } from "@shared/components/CredentialSortMenu";
+import {
+  DEFAULT_CREDENTIAL_SORT,
+  normalizeCredentialSortParam,
+  parseCredentialSort,
+} from "@shared/lib/credentialSort";
 import { Role, ROLE_LEVEL, canAccessAny, canEditUser, canDeleteUser } from "@shared/auth/role";
 import { formatDate, formatDateTime } from "@shared/lib/format";
 import { splitMeta, mergeMeta } from "@shared/lib/meta";
@@ -59,21 +64,6 @@ import {
   type UserUpdateInput,
 } from "./schemas/user";
 import { useStore } from "@app/store";
-
-const CRED_SORT_OPTIONS = [
-  {
-    key: "newest",
-    getSort: (s: CredentialStatusFilter) =>
-      s === "revoked" ? "-revoked_at" : s === "expired" ? "-expires_at" : "-issued_at",
-  },
-  {
-    key: "oldest",
-    getSort: (s: CredentialStatusFilter) =>
-      s === "revoked" ? "revoked_at" : s === "expired" ? "expires_at" : "issued_at",
-  },
-  { key: "nameAZ", getSort: () => "name" },
-  { key: "nameZA", getSort: () => "-name" },
-];
 
 const ROLE_OPTIONS: Role[] = [Role.HOLDER, Role.ISSUER, Role.ADMIN];
 
@@ -116,7 +106,17 @@ export function UserDetail() {
 
   const credStatus: CredentialStatusFilter =
     (searchParams.get("credential_status") as CredentialStatusFilter) ?? "all";
-  const credSort = searchParams.get("credential_sort") ?? CRED_SORT_OPTIONS[0].getSort(credStatus);
+  const { normalizedSort: credSort } = normalizeCredentialSortParam(
+    searchParams,
+    "credential_sort",
+  );
+
+  useEffect(() => {
+    const { updatedParams } = normalizeCredentialSortParam(searchParams, "credential_sort");
+    if (updatedParams) {
+      setSearchParams(updatedParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const isIssuerOrAbove = user ? ROLE_LEVEL[user.role] >= ROLE_LEVEL[Role.ISSUER] : false;
 
@@ -192,25 +192,22 @@ export function UserDetail() {
 
   const handleCredStatusChange = (status: CredentialStatusFilter) => {
     if (status === credStatus) return;
-    const newSort = adjustSortForStatus(credSort, credStatus, status);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (status === "all") next.delete("credential_status");
       else next.set("credential_status", status);
-      if (newSort === CRED_SORT_OPTIONS[0].getSort(status)) next.delete("credential_sort");
-      else next.set("credential_sort", newSort);
       return next;
     });
     credentialReset();
   };
 
   const handleCredSortChange = (sortString: string) => {
-    if (sortString === credSort) return;
+    const parsed = parseCredentialSort(sortString);
+    if (parsed === credSort) return;
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      const defaultSort = CRED_SORT_OPTIONS[0].getSort(credStatus);
-      if (sortString === defaultSort) next.delete("credential_sort");
-      else next.set("credential_sort", sortString);
+      if (parsed === DEFAULT_CREDENTIAL_SORT) next.delete("credential_sort");
+      else next.set("credential_sort", parsed);
       return next;
     });
     credentialReset();
@@ -675,11 +672,7 @@ export function UserDetail() {
             </div>
             <div className="flex flex-wrap items-center gap-2 md:ml-auto md:shrink-0">
               <CredentialStatusFilterMenu value={credStatus} onChange={handleCredStatusChange} />
-              <CredentialSortMenu
-                value={credSort}
-                onChange={handleCredSortChange}
-                statusFilter={credStatus}
-              />
+              <CredentialSortMenu value={credSort} onChange={handleCredSortChange} />
             </div>
           </div>
         </div>
@@ -744,19 +737,4 @@ export function UserDetail() {
       {dialog}
     </div>
   );
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function adjustSortForStatus(
-  sortString: string,
-  oldStatus: CredentialStatusFilter,
-  newStatus: CredentialStatusFilter,
-): string {
-  for (const opt of CRED_SORT_OPTIONS) {
-    if (opt.getSort(oldStatus) === sortString) {
-      return opt.getSort(newStatus);
-    }
-  }
-  return sortString;
 }
