@@ -114,7 +114,7 @@ describe("NavbarOverview notifications bell", () => {
 
   it("shows unread badge with exact count in aria-label when count > 0", async () => {
     server.use(
-      http.get("*/api/credential-notifications/unread-count", () => {
+      http.get("*/api/notifications/unread-count", () => {
         return HttpResponse.json({
           code: 400100,
           message: "OK",
@@ -131,7 +131,7 @@ describe("NavbarOverview notifications bell", () => {
 
   it("shows 99+ visually but exact count in accessible label when count > 99", async () => {
     server.use(
-      http.get("*/api/credential-notifications/unread-count", () => {
+      http.get("*/api/notifications/unread-count", () => {
         return HttpResponse.json({
           code: 400100,
           message: "OK",
@@ -148,7 +148,7 @@ describe("NavbarOverview notifications bell", () => {
 
   it("hides badge when unread count is 0", async () => {
     server.use(
-      http.get("*/api/credential-notifications/unread-count", () => {
+      http.get("*/api/notifications/unread-count", () => {
         return HttpResponse.json({
           code: 400100,
           message: "OK",
@@ -165,7 +165,7 @@ describe("NavbarOverview notifications bell", () => {
 
   it("does not show zero badge on query failure", async () => {
     server.use(
-      http.get("*/api/credential-notifications/unread-count", () => {
+      http.get("*/api/notifications/unread-count", () => {
         return HttpResponse.json({ code: 500, message: "Error" }, { status: 500 });
       }),
     );

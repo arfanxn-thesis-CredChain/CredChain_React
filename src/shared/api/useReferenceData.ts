@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@app/store";
+import { canAccess, Role } from "@shared/auth/role";
 import { api } from "@shared/api/client";
 import { notify } from "@shared/lib/notify";
 import { isApiError } from "@shared/api/envelope";
@@ -135,6 +136,26 @@ export function useReferenceByIds(resource: ReferenceResource, ids: string[]) {
       });
       return response.data.items;
     },
+  });
+}
+
+export function useReferencePendingCount(resource: ReferenceResource) {
+  const user = useStore((s) => s.user);
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  return useQuery({
+    queryKey: [...referenceKeys.all(resource), "pending-count", user?.id, user?.role],
+    queryFn: async ({ signal }) => {
+      const { data } = await api.get<PaginatedResponse<ReferenceRow>>(RESOURCE_PATH[resource], {
+        params: { limit: 1, filters: ["status=pending"] },
+        signal,
+      });
+      return data.total;
+    },
+    enabled: isAuthenticated && !!user?.id && canAccess(user.role, Role.ISSUER),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 }
 

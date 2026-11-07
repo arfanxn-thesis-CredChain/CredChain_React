@@ -1113,6 +1113,71 @@ describe("CredentialList", () => {
     ).toEqual(["/credential-types", "/credential-issuer-organizations", "/competencies"]);
   });
 
+  it("shows independent live reference badges for reviewers without changing destinations", async () => {
+    for (const [path, total] of [
+      ["credential-types", 0],
+      ["issuer-organizations", 3],
+      ["competencies", 7],
+    ] as const) {
+      server.use(
+        http.get(`*/api/${path}`, ({ request }) => {
+          const url = new URL(request.url);
+          return pageResponse(url.searchParams.get("limit") === "1" ? total : 99);
+        }),
+      );
+    }
+    renderList();
+    await userEvent.click(screen.getByRole("button", { name: "References" }));
+    const menu = await screen.findByRole("menu");
+    for (const [label, path, total] of [
+      ["Credential Types", "credential-types", 0],
+      ["Issuer Organizations", "credential-issuer-organizations", 3],
+      ["Competencies", "competencies", 7],
+    ] as const) {
+      const item = within(menu).getByRole("menuitem", { name: new RegExp(label, "i") });
+      expect(item).toHaveAttribute("href", `/${path}`);
+      await waitFor(() =>
+        expect(within(item).getByLabelText(`${total} items awaiting review`)).toHaveTextContent(
+          String(total),
+        ),
+      );
+    }
+  });
+
+  it("keeps unavailable reference counts distinct from zero", async () => {
+    server.use(http.get("*/api/competencies", () => HttpResponse.json({}, { status: 500 })));
+    renderList();
+    await userEvent.click(screen.getByRole("button", { name: "References" }));
+    const item = within(await screen.findByRole("menu")).getByRole("menuitem", {
+      name: /competencies/i,
+    });
+    expect(await within(item).findByLabelText("Unable to load review count.")).toHaveTextContent(
+      "…",
+    );
+    expect(item).toHaveAttribute("href", "/competencies");
+  });
+
+  it("does not request pending reference counts for holders", async () => {
+    useStore.setState({ user: makeUser({ role: Role.HOLDER }), isAuthenticated: true });
+    const pendingRequests: string[] = [];
+    for (const path of ["credential-types", "issuer-organizations", "competencies"]) {
+      server.use(
+        http.get(`*/api/${path}`, ({ request }) => {
+          if (new URL(request.url).searchParams.get("limit") === "1") pendingRequests.push(path);
+          return pageResponse(0);
+        }),
+      );
+    }
+    renderList();
+    await userEvent.click(screen.getByRole("button", { name: "References" }));
+    const menu = await screen.findByRole("menu");
+    expect(within(menu).getAllByRole("menuitem")).toHaveLength(3);
+    expect(
+      within(menu).queryByLabelText(/awaiting review|loading review|unable to load/i),
+    ).not.toBeInTheDocument();
+    expect(pendingRequests).toEqual([]);
+  });
+
   it("requests /users/self/credentials for a holder and keeps the credentials query-key namespace", async () => {
     useStore.setState({
       user: {

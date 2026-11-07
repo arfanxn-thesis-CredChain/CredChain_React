@@ -108,8 +108,11 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
 
   async function selectStatus(label: string) {
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /^Status:/ }));
-    await user.click(screen.getByRole("menuitem", { name: label }));
+    await user.click(
+      within(screen.getByRole("group", { name: "Status" })).getByRole("button", {
+        name: new RegExp(`^${label}(?:$| )`),
+      }),
+    );
   }
 
   it("defaults to approved active references with the shared status pill", async () => {
@@ -117,25 +120,23 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     server.use(
       http.get(`*/api/${path}`, ({ request }) => {
         const url = new URL(request.url);
-        requests.push(url);
+        if (url.searchParams.get("limit") !== "1") requests.push(url);
         return response(filteredRows(url));
       }),
     );
     mount();
     await screen.findByText("Approved active");
     expect(requests[0].searchParams.getAll("filters")).toEqual(["status=approved", "active=true"]);
-    const trigger = screen.getByRole("button", { name: "Status: Active" });
-    expect(trigger).toHaveClass("rounded-xl", "h-9");
-    expect(trigger).not.toHaveClass("rounded-lg");
-    expect(trigger).not.toHaveClass("h-11");
-    expect(trigger).not.toHaveClass("border-gold");
-    expect(trigger.querySelector(".lucide-filter")).not.toBeInTheDocument();
+    const active = screen.getByRole("button", { name: "Active" });
+    expect(active).toHaveClass("rounded-xl", "h-9", "text-xs");
+    expect(active).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(screen.queryByText("Awaiting review")).not.toBeInTheDocument();
     expect(screen.queryByText("Approved inactive")).not.toBeInTheDocument();
     await selectStatus("All");
     await screen.findByText("Awaiting review");
     expect(requests.at(-1)?.searchParams.getAll("filters")).toEqual([]);
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     await screen.findByText("Awaiting review");
     await waitFor(() =>
       expect(requests.at(-1)?.searchParams.getAll("filters")).toEqual(["status=pending"]),
@@ -149,19 +150,23 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     const user = userEvent.setup();
     mount(["/?status=pending&search=Awaiting&keep=yes"]);
     await screen.findByText("Awaiting review");
-    expect(screen.getByRole("button", { name: "Status: Pending Review" })).toHaveClass(
-      "border-gold",
+    expect(screen.getByRole("button", { name: /^Pending review/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
     await selectStatus("All");
     expect(screen.getByTestId("location")).toHaveTextContent("status=all&search=Awaiting&keep=yes");
     await act(async () => {
       await navigateTo(-1);
     });
-    expect(screen.getByRole("button", { name: "Status: Pending Review" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Pending review/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await act(async () => {
       await navigateTo(1);
     });
-    expect(screen.getByRole("button", { name: "Status: All" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
     await user.clear(screen.getByRole("searchbox"));
     await user.type(screen.getByRole("searchbox"), "Next");
     await selectStatus("Active");
@@ -174,7 +179,10 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     });
     expect(screen.getByRole("searchbox")).toHaveValue("Restored");
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Status: Rejected" })).toBeInTheDocument(),
+      expect(screen.getByRole("button", { name: "Rejected" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
     );
   });
 
@@ -186,13 +194,16 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
       server.use(
         http.get(`*/api/${path}`, ({ request }) => {
           const url = new URL(request.url);
-          requests.push(url);
+          if (url.searchParams.get("limit") !== "1") requests.push(url);
           return response(filteredRows(url));
         }),
       );
       mount([`/?status=${status}&keep=yes`]);
       await screen.findByText("Approved active");
-      expect(screen.getByRole("button", { name: "Status: Active" })).not.toHaveClass("border-gold");
+      expect(screen.getByRole("button", { name: "Active" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
       expect(screen.getByTestId("location")).toHaveTextContent("?keep=yes");
       expect(
         requests.every((url) => url.searchParams.getAll("filters").includes("active=true")),
@@ -266,7 +277,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
   it("places compact rejection beside the name in one spanning responsive cell", async () => {
     const user = userEvent.setup();
     mount();
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     const name = await screen.findByText("Awaiting review");
     const row = name.closest("tr")!;
     await user.click(within(row).getByRole("button", { name: "Reject" }));
@@ -288,7 +299,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     );
     const user = userEvent.setup();
     mount();
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     await screen.findByText("Awaiting review");
     await user.click(screen.getByRole("button", { name: "Approve" }));
     const dialog = screen.getByRole("alertdialog");
@@ -320,7 +331,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
       );
       const user = userEvent.setup();
       const { getClient } = mount();
-      await selectStatus("Pending Review");
+      await selectStatus("Pending review");
       await screen.findByText("Awaiting review");
       await user.click(screen.getByRole("button", { name: "Approve" }));
       expect(screen.getByRole("alertdialog")).toBeInTheDocument();
@@ -359,7 +370,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     );
     const user = userEvent.setup();
     mount();
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     await screen.findByText("Awaiting review");
     const firstRow = () => screen.getByText("Awaiting review").closest("tr")!;
     await user.click(within(firstRow()).getByRole("button", { name: "Reject" }));
@@ -411,7 +422,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     );
     const user = userEvent.setup();
     mount();
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     await screen.findByText("Awaiting review");
     await user.click(screen.getByRole("button", { name: "Reject" }));
     await user.type(screen.getByRole("textbox"), "Duplicate entry");
@@ -439,7 +450,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     );
     const user = userEvent.setup();
     mount();
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     await screen.findByText("Awaiting review");
     await user.click(screen.getByRole("button", { name: "Reject" }));
     await user.type(screen.getByRole("textbox"), "Reason");
@@ -461,7 +472,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     await selectStatus("All");
     await screen.findByText("Awaiting review");
     await user.click(screen.getByRole("button", { name: "Reject" }));
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     await screen.findByText("Awaiting review");
     await user.click(screen.getByRole("button", { name: "Reject" }));
@@ -557,7 +568,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     );
     const user = userEvent.setup();
     mount();
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     await screen.findByText("Awaiting review");
     await user.click(screen.getByRole("button", { name: "Reject" }));
     await user.type(screen.getByRole("textbox"), "Old account draft");
@@ -587,46 +598,49 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     await screen.findByText("Approved active");
     await user.click(screen.getByRole("switch"));
     await waitFor(() => expect(screen.queryByText("Approved active")).not.toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "Status: Active" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Active" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it.each([Role.ADMIN, Role.HOLDER])(
-    "keeps creation before Status with compact spacing when collapsed, expanded and cancelled for %s",
+    "keeps search then status buttons above creation when collapsed, expanded and cancelled for %s",
     async (role) => {
       useStore.setState({ user: makeUser({ role }) });
       const user = userEvent.setup();
       mount();
       await screen.findByText("Approved active");
-      const filter = screen.getByRole("button", { name: "Status: Active" });
+      const filter = screen.getByRole("button", { name: "Active" });
       const triggerName = role === Role.ADMIN ? add : /^Request New/;
       const trigger = screen.getByRole("button", { name: triggerName });
-      expect(filter).toHaveClass("h-9", "rounded-xl");
+      expect(filter).toHaveClass("h-9", "rounded-xl", "text-xs");
       expect(trigger).toHaveClass("h-9", "rounded-xl");
-      expect(filter).not.toHaveClass("rounded-lg");
-      expect(filter).not.toHaveClass("h-11");
-      const statusWrapper = filter.parentElement!;
-      const filterRow = statusWrapper.parentElement!;
-      const toolbar = filterRow.parentElement!;
+      const statusWrapper = screen.getByRole("group", { name: "Status" });
+      const toolbar = statusWrapper.parentElement!;
       const creationWrapper = trigger.parentElement!;
       expect(toolbar).toHaveClass("space-y-4");
-      expect(toolbar).not.toHaveClass("sm:flex-row");
       expect(toolbar.firstElementChild).toContainElement(screen.getByRole("searchbox"));
-      expect(filterRow).toHaveClass("gap-2", "lg:flex-wrap");
-      expect(creationWrapper.nextElementSibling).toBe(statusWrapper);
-      expect(creationWrapper).toHaveClass("min-w-0", "max-w-full", "lg:w-fit");
-      expect(creationWrapper).not.toHaveClass("order-2", "lg:order-1", "lg:has-[form]:flex-1");
-      expect(statusWrapper).toHaveClass("self-start");
-      expect(statusWrapper).not.toHaveClass("order-1", "lg:order-2", "self-end");
+      expect(toolbar.firstElementChild?.nextElementSibling).toBe(statusWrapper);
+      expect(statusWrapper).toHaveClass("gap-2", "flex-wrap");
+      expect(statusWrapper.nextElementSibling).toBe(creationWrapper);
+      expect(creationWrapper).toHaveClass("min-w-0", "w-full", "max-w-full");
+      expect(creationWrapper).not.toHaveClass("lg:w-fit");
       await user.click(trigger);
       const input = screen.getByPlaceholderText(placeholder);
       expect(input).toHaveClass("h-9");
+      expect(input.closest("form")).toHaveClass("flex-row", "flex-wrap");
+      expect(input.parentElement?.parentElement).toHaveClass(
+        "w-full",
+        "max-w-full",
+        "flex-none",
+        "sm:max-w-full",
+        "md:w-md",
+      );
       expect(creationWrapper).toContainElement(input);
-      expect(creationWrapper.nextElementSibling).toBe(statusWrapper);
+      expect(statusWrapper.nextElementSibling).toBe(creationWrapper);
       const cancel = screen.getByRole("button", { name: "Cancel" });
       expect(cancel).toHaveClass("h-9", "rounded-xl");
       await user.click(cancel);
       expect(creationWrapper).toContainElement(screen.getByRole("button", { name: triggerName }));
-      expect(creationWrapper.nextElementSibling).toBe(statusWrapper);
+      expect(statusWrapper.nextElementSibling).toBe(creationWrapper);
       expect(screen.queryByPlaceholderText(placeholder)).not.toBeInTheDocument();
     },
   );
@@ -639,7 +653,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
       server.use(
         http.get(`*/api/${path}`, ({ request }) => {
           const url = new URL(request.url);
-          requests.push(url);
+          if (url.searchParams.get("limit") !== "1") requests.push(url);
           const filters = url.searchParams.getAll("filters");
           return response(
             rows.filter(
@@ -651,13 +665,11 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
           );
         }),
       );
-      const user = userEvent.setup();
       mount(["/?search=Approved"]);
       await screen.findByText("Approved active");
       expect(screen.getByRole("searchbox")).toHaveValue("Approved");
       await waitFor(() => expect(requests.at(-1)?.searchParams.get("search")).toBe("Approved"));
-      await user.click(screen.getByRole("button", { name: "Status: Active" }));
-      await user.click(screen.getByRole("menuitem", { name: "Inactive" }));
+      await selectStatus("Inactive");
       await waitFor(() =>
         expect(requests.at(-1)?.searchParams.getAll("filters")).toEqual([
           "status=approved",
@@ -674,8 +686,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
         expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
       }
-      await user.click(screen.getByRole("button", { name: "Status: Inactive" }));
-      await user.click(screen.getByRole("menuitem", { name: "Approved" }));
+      await selectStatus("Approved");
       await waitFor(() =>
         expect(requests.at(-1)?.searchParams.getAll("filters")).toEqual(["status=approved"]),
       );
@@ -689,7 +700,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     server.use(
       http.get(`*/api/${path}`, ({ request }) => {
         const url = new URL(request.url);
-        requests.push(url);
+        if (url.searchParams.get("limit") !== "1") requests.push(url);
         const page = Number(url.searchParams.get("page") ?? 1);
         const items =
           page === 1
@@ -775,8 +786,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     const user = userEvent.setup();
     mount();
     await screen.findByText("Approved active");
-    await user.click(screen.getByRole("button", { name: "Status: Active" }));
-    await user.click(screen.getByRole("menuitem", { name: "Inactive" }));
+    await selectStatus("Inactive");
     await waitFor(() => expect(screen.queryByText("Approved active")).not.toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: /Load more/i }));
     await screen.findByText("Second inactive");
@@ -790,7 +800,8 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
   it("does not reuse another account's fresh reference cache", async () => {
     let calls = 0;
     server.use(
-      http.get(`*/api/${path}`, async () => {
+      http.get(`*/api/${path}`, async ({ request }) => {
+        if (new URL(request.url).searchParams.get("limit") === "1") return response([rows[2]]);
         calls += 1;
         if (calls > 1) await new Promise((resolve) => setTimeout(resolve, 100));
         return response(calls === 1 ? [rows[1]] : [rows[0]]);
@@ -808,15 +819,14 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     const requests: URL[] = [];
     server.use(
       http.get(`*/api/${path}`, ({ request }) => {
-        requests.push(new URL(request.url));
+        const url = new URL(request.url);
+        if (url.searchParams.get("limit") !== "1") requests.push(url);
         return response();
       }),
     );
-    const user = userEvent.setup();
     mount();
     await screen.findByText("Approved active");
-    await user.click(screen.getByRole("button", { name: "Status: Active" }));
-    await user.click(screen.getByRole("menuitem", { name: "Inactive" }));
+    await selectStatus("Inactive");
     await waitFor(() =>
       expect(requests.at(-1)?.searchParams.getAll("filters")).toContain("active=false"),
     );
@@ -827,8 +837,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
         "active=true",
       ]),
     );
-    await user.click(screen.getByRole("button", { name: "Status: Active" }));
-    expect(screen.queryByRole("menuitem", { name: "Inactive" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Inactive" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
   });
@@ -865,7 +874,7 @@ describe.each(pages)("$path reference refinements", ({ Page, path, add, placehol
     expect(screen.getByText("My Rejected Request")).toBeInTheDocument();
     expect(screen.getByText(/Needs more info/)).toBeInTheDocument();
     expect(screen.queryByText("Approved inactive")).not.toBeInTheDocument();
-    await selectStatus("Pending Review");
+    await selectStatus("Pending review");
     await screen.findByText("My Pending Request");
     await waitFor(() => expect(screen.queryByText("My Rejected Request")).not.toBeInTheDocument());
     await selectStatus("Rejected");

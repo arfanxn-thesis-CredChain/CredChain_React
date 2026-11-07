@@ -9,7 +9,7 @@ import { useLogout } from "@feature/auth/api/useLogout";
 import { useConfirm } from "@ui/confirm-dialog";
 import { useNavSearch } from "@shared/hooks/useNavSearch";
 import { LanguageSwitcher } from "@shared/components/LanguageSwitcher";
-import { useCredentialUnreadCount } from "@shared/api/useCredentialNotifications";
+import { useNotificationUnreadCount } from "@shared/api/useNotifications";
 import { cn } from "@shared/lib/cn";
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ export function NavbarOverview({ onMenuClick }: NavbarOverviewProps) {
   const navigate = useNavigate();
   const searchResults = useNavSearch(searchQuery);
   const showDropdown = searchQuery.length > 0;
-  const { data: unreadCount } = useCredentialUnreadCount();
+  const { data: unreadCount } = useNotificationUnreadCount();
 
   const hasUnread = typeof unreadCount === "number" && unreadCount > 0;
   const unreadLabel = hasUnread

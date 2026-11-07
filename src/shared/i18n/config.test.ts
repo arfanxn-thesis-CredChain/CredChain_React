@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
+describe.each([
+  ["id", "Menunggu tinjauan"],
+  ["en", "Pending review"],
+])("pending review terminology in %s", (language, expected) => {
+  it("uses the same status label for reference and credential filters", async () => {
+    const { i18n } = await import("./config");
+    const t = i18n.getFixedT(language);
+    expect(t("cred.references.filter.pending")).toBe(expected);
+    expect(t("cred.review.pendingReview")).toBe(expected);
+  });
+});
+
 describe("readPersistedLocale", () => {
   beforeEach(() => {
     localStorage.clear();

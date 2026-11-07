@@ -57,6 +57,8 @@ export function ReferenceCreateForm({
       submitLabel={t("admin.createAction")}
       submitVariant="gold"
       isPending={upsert.isPending}
+      className="flex-row flex-wrap"
+      inputContainerClassName="w-full max-w-full flex-none sm:max-w-full md:w-md"
     />
   );
 }

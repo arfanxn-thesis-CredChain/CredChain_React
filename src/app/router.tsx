@@ -105,8 +105,8 @@ export const router = createBrowserRouter([
           {
             path: "/notifications",
             ...lazyRoute(
-              () => import("@feature/credential/CredentialNotificationsPage"),
-              "CredentialNotificationsPage",
+              () => import("@feature/notification/NotificationsPage"),
+              "NotificationsPage",
             ),
           },
           {

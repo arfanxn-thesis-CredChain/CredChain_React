@@ -294,34 +294,51 @@ export interface MetaDTO {
   last_block: number;
 }
 
-export type CredentialNotificationType = "registered" | "approved" | "rejected" | "revoked";
+export type NotificationType =
+  | "credential_registered"
+  | "credential_approved"
+  | "credential_rejected"
+  | "credential_revoked"
+  | "credential_type_submitted"
+  | "credential_issuer_organization_submitted"
+  | "competency_submitted";
 
-export interface CredentialNotificationSummaryDTO {
+export type NotificationSubjectType =
+  | "credential"
+  | "credential_type"
+  | "credential_issuer_organization"
+  | "competency";
+
+export interface NotificationSubjectDTO {
   id: string;
   name: string;
   number: string | null;
+  status?: string | null;
 }
 
-export interface CredentialNotificationDTO {
+export interface NotificationDTO {
   id: string;
   notified_user_id: string;
-  credential_id: string;
-  type: CredentialNotificationType;
+  subject_type: NotificationSubjectType | null;
+  subject_id: string | null;
+  type: NotificationType;
+  data: Record<string, unknown> | null;
   created_at: string;
+  updated_at: string | null;
   read_at: string | null;
-  credential?: CredentialNotificationSummaryDTO | null;
+  subject: NotificationSubjectDTO | null;
 }
 
-export interface CredentialNotificationListResponse {
-  items: CredentialNotificationDTO[];
+export interface NotificationListResponse {
+  items: NotificationDTO[];
   total: number;
   next_cursor: string | null;
 }
 
-export interface CredentialNotificationUnreadCountResponse {
+export interface NotificationUnreadCountResponse {
   unread_count: number;
 }
 
-export interface CredentialNotificationReadAllResponse {
+export interface NotificationReadAllResponse {
   updated_count: number;
 }

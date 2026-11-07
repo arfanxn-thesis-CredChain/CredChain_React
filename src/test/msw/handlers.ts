@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { Role } from "@shared/auth/role";
-import type { CredentialNotificationDTO, HolderUnitDTO, ReferenceRow, UserDTO } from "@shared/types/api";
+import type { NotificationDTO, HolderUnitDTO, ReferenceRow, UserDTO } from "@shared/types/api";
 import { makeUser, mockUsers } from "../fixtures";
 
 const envelope = <T>(code: number, message: string, data?: T) =>
@@ -179,15 +179,18 @@ function applySorts(users: UserDTO[], sorts: string[]): UserDTO[] {
   return out;
 }
 
-export const mockNotifications: CredentialNotificationDTO[] = [
+export const mockNotifications: NotificationDTO[] = [
   {
     id: "notif_01",
     notified_user_id: "usr_01",
-    credential_id: "cred_01HX",
-    type: "registered",
+    subject_type: "credential",
+    subject_id: "cred_01HX",
+    type: "credential_registered",
+    data: null,
+    updated_at: null,
     created_at: "2026-06-20T10:00:00Z",
     read_at: null,
-    credential: {
+    subject: {
       id: "cred_01HX",
       name: "Bachelor's Degree",
       number: "CERT-001",
@@ -196,11 +199,14 @@ export const mockNotifications: CredentialNotificationDTO[] = [
   {
     id: "notif_02",
     notified_user_id: "usr_01",
-    credential_id: "cred_02HY",
-    type: "approved",
+    subject_type: "credential",
+    subject_id: "cred_02HY",
+    type: "credential_approved",
+    data: null,
+    updated_at: null,
     created_at: "2026-06-19T10:00:00Z",
     read_at: "2026-06-19T12:00:00Z",
-    credential: {
+    subject: {
       id: "cred_02HY",
       name: "Employment Certificate",
       number: null,
@@ -1058,12 +1064,12 @@ export const handlers = [
     });
   }),
 
-  http.get("*/api/credential-notifications/unread-count", () => {
+  http.get("*/api/notifications/unread-count", () => {
     const unread_count = mockNotifications.filter((n) => n.read_at === null).length;
     return envelope(400100, "Unread count retrieved", { unread_count });
   }),
 
-  http.get("*/api/credential-notifications", ({ request }) => {
+  http.get("*/api/notifications", ({ request }) => {
     const url = new URL(request.url);
     const status = url.searchParams.get("status") ?? "all";
     const limit = Number(url.searchParams.get("limit") ?? 20);
@@ -1085,25 +1091,27 @@ export const handlers = [
     });
   }),
 
-  http.put("*/api/credential-notifications/read-all", () => {
+  http.put("*/api/notifications/read-all", () => {
     let updated_count = 0;
     const now = new Date().toISOString();
     for (const notif of mockNotifications) {
       if (notif.read_at === null) {
         notif.read_at = now;
+        notif.updated_at = now;
         updated_count++;
       }
     }
     return envelope(400100, "All notifications marked as read", { updated_count });
   }),
 
-  http.put("*/api/credential-notifications/:id/read", ({ params }) => {
+  http.put("*/api/notifications/:id/read", ({ params }) => {
     const notif = mockNotifications.find((n) => n.id === params.id);
     if (!notif) {
       return HttpResponse.json({ code: 400404, message: "Notification not found" }, { status: 404 });
     }
     if (notif.read_at === null) {
       notif.read_at = new Date().toISOString();
+      notif.updated_at = notif.read_at;
     }
     return envelope(400100, "Notification marked as read", notif);
   }),

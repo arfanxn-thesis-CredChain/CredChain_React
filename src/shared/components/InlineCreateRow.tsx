@@ -19,6 +19,7 @@ interface InlineCreateRowProps {
   /** Gold marks the committing action on the reference admin pages. */
   submitVariant?: "primary" | "gold";
   className?: string;
+  inputContainerClassName?: string;
 }
 
 /**
@@ -71,6 +72,7 @@ function ExpandedForm({
   isPending,
   submitVariant = "primary",
   className,
+  inputContainerClassName,
 }: ExpandedFormProps) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
@@ -88,7 +90,7 @@ function ExpandedForm({
       {/* flex-1 belongs on this wrapper, not on Input: Input forwards className
           to the inner <input>, so passing it there leaves the actual flex child
           unsized and the row free-stretches. */}
-      <div className="min-w-0 flex-1 sm:max-w-md">
+      <div className={cn("min-w-0 flex-1 sm:max-w-md", inputContainerClassName)}>
         <Input
           size="compact"
           value={name}

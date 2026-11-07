@@ -12,6 +12,13 @@ export const CODE_TO_MESSAGE_KEY: Record<number, string> = {
   100050: "system.internal_error",
   100040: "system.validation",
 
+  // Notifications (40 + 16)
+  401600: "success_notification_fetch",
+  401601: "success_notification_unread_count",
+  401602: "success_notification_mark_read",
+  401603: "success_notification_mark_all_read",
+  401640: "error_notification_not_found",
+
   // Overview (10 + 01)
   100100: "overview.success",
   100150: "overview.internal_error",

@@ -277,8 +277,7 @@ describe("IssuerOrganizationsPage", () => {
 
     const user = userEvent.setup();
     renderPage();
-    await user.click(screen.getByRole("button", { name: "Status: Active" }));
-    await user.click(screen.getByRole("menuitem", { name: "Pending Review" }));
+    await user.click(screen.getByRole("button", { name: /^Pending review/ }));
 
     await screen.findByText("Stanford University");
     expect(screen.getByText("Pending")).toBeInTheDocument();

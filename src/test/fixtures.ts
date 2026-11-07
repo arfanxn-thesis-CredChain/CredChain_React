@@ -1,8 +1,7 @@
 import { Role, type Role as RoleType } from "@shared/auth/role";
 import type {
   CredentialDTO,
-  CredentialNotificationDTO,
-  CredentialNotificationType,
+  NotificationDTO,
   UserDTO,
 } from "@shared/types/api";
 
@@ -69,17 +68,20 @@ export function makeCredential(overrides: Partial<CredentialDTO> = {}): Credenti
   };
 }
 
-export function makeCredentialNotification(
-  overrides: Partial<CredentialNotificationDTO> = {},
-): CredentialNotificationDTO {
+export function makeNotification(
+  overrides: Partial<NotificationDTO> = {},
+): NotificationDTO {
   return {
     id: "notif_test_1",
     notified_user_id: "usr_test_1",
-    credential_id: "cred_test_1",
-    type: "registered" as CredentialNotificationType,
+    subject_type: "credential",
+    subject_id: "cred_test_1",
+    type: "credential_registered",
+    data: null,
     created_at: "2026-01-01T00:00:00Z",
+    updated_at: null,
     read_at: null,
-    credential: {
+    subject: {
       id: "cred_test_1",
       name: "Test Credential",
       number: "CERT-001",

@@ -1,17 +1,7 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
-import {
-  Bell,
-  Check,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  FileBadge,
-  FileCheck2,
-  FileX2,
-  RefreshCw,
-} from "lucide-react";
+import { Bell, Check, ExternalLink, FileBadge, FileCheck2, FileX2, RefreshCw } from "lucide-react";
 import { PageHeader } from "@shared/components/PageHeader";
 import { EmptyState } from "@shared/components/EmptyState";
 import { LoadMoreBar } from "@shared/components/LoadMoreBar";
@@ -20,29 +10,42 @@ import { Card, CardContent } from "@ui/card";
 import { BackLink } from "@shared/components/BackLink";
 import { Skeleton } from "@ui/skeleton";
 import { useStore } from "@app/store";
-import { Role } from "@shared/auth/role";
+import { Role, canAccess } from "@shared/auth/role";
 import {
-  useCredentialNotificationsFeed,
+  useNotificationsFeed,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
-} from "@shared/api/useCredentialNotifications";
+} from "@shared/api/useNotifications";
+import { useReferencePendingCount } from "@shared/api/useReferenceData";
 import { usePendingReviewCount } from "@shared/api/usePendingReviewCount";
 import { formatDateTime } from "@shared/lib/format";
 import { notify } from "@shared/lib/notify";
 import { cn } from "@shared/lib/cn";
-import type { CredentialNotificationDTO, CredentialNotificationType } from "@shared/types/api";
+import type { NotificationDTO, NotificationType, ReferenceResource } from "@shared/types/api";
 
 const TYPE_CONFIG: Record<
-  CredentialNotificationType,
+  NotificationType,
   {
     icon: typeof FileCheck2;
     descriptionKey: string;
   }
 > = {
-  registered: { icon: FileBadge, descriptionKey: "notifications.typeDesc.registered" },
-  approved: { icon: FileCheck2, descriptionKey: "notifications.typeDesc.approved" },
-  rejected: { icon: FileX2, descriptionKey: "notifications.typeDesc.rejected" },
-  revoked: { icon: FileX2, descriptionKey: "notifications.typeDesc.revoked" },
+  credential_registered: { icon: FileBadge, descriptionKey: "notifications.typeDesc.registered" },
+  credential_approved: { icon: FileCheck2, descriptionKey: "notifications.typeDesc.approved" },
+  credential_rejected: { icon: FileX2, descriptionKey: "notifications.typeDesc.rejected" },
+  credential_revoked: { icon: FileX2, descriptionKey: "notifications.typeDesc.revoked" },
+  credential_type_submitted: {
+    icon: FileBadge,
+    descriptionKey: "notifications.typeDesc.credential_type_submitted",
+  },
+  credential_issuer_organization_submitted: {
+    icon: FileBadge,
+    descriptionKey: "notifications.typeDesc.credential_issuer_organization_submitted",
+  },
+  competency_submitted: {
+    icon: FileBadge,
+    descriptionKey: "notifications.typeDesc.competency_submitted",
+  },
 };
 
 function notificationTime(value: string, locale: string): string {
@@ -63,16 +66,124 @@ function notificationTime(value: string, locale: string): string {
   return relative.format(-Math.floor(elapsed / duration), unit);
 }
 
-export function CredentialNotificationsPage() {
+const REFERENCE_QUEUES: { resource: ReferenceResource; labelKey: string }[] = [
+  { resource: "credential-types", labelKey: "notifications.review.credentialTypes" },
+  {
+    resource: "credential-issuer-organizations",
+    labelKey: "notifications.review.issuerOrganizations",
+  },
+  { resource: "competencies", labelKey: "notifications.review.competencies" },
+];
+
+function ReviewRow({
+  title,
+  description,
+  isLoading,
+  isError,
+  onRetry,
+  to,
+  actionLabel,
+  retryLabel,
+}: {
+  title: string;
+  description: string;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  to?: string;
+  actionLabel?: string;
+  retryLabel?: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-3 border-t border-gray-200 pt-4 first:border-t-0 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 text-sm">
+        <h3 className="font-sans font-bold text-navy">{title}</h3>
+        <p className="text-gray-600" aria-live="polite" aria-busy={isLoading}>
+          {description}
+        </p>
+      </div>
+      {isError ? (
+        <Button
+          variant="outline"
+          size="md"
+          onClick={onRetry}
+          className="shrink-0 self-start focus-visible:ring-navy sm:self-center"
+          aria-label={retryLabel}
+        >
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+          {t("notifications.pendingReviewCard.retry")}
+        </Button>
+      ) : !isLoading && to ? (
+        <Button
+          variant="outline"
+          size="md"
+          asChild
+          className="shrink-0 self-start focus-visible:ring-navy sm:self-center"
+        >
+          <Link to={to} aria-label={actionLabel}>
+            {t("notifications.pendingReviewCard.action")}
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function ReferenceReviewRow({
+  resource,
+  labelKey,
+}: {
+  resource: ReferenceResource;
+  labelKey: string;
+}) {
+  const { t } = useTranslation();
+  const count = useReferencePendingCount(resource);
+  return (
+    <ReviewRow
+      title={t(labelKey)}
+      description={
+        count.isLoading
+          ? t("notifications.review.loading")
+          : count.isError
+            ? t("notifications.review.unavailable")
+            : t("notifications.review.count", { count: count.data ?? 0 })
+      }
+      isLoading={count.isLoading}
+      isError={count.isError}
+      onRetry={() => void count.refetch()}
+      to={`/${resource}?status=pending`}
+      actionLabel={t("notifications.review.action", { resource: t(labelKey) })}
+      retryLabel={t("notifications.review.retry", { resource: t(labelKey) })}
+    />
+  );
+}
+
+function notificationDestination(notification: NotificationDTO): string | null {
+  if (!notification.subject_type || !notification.subject_id || !notification.subject?.id)
+    return null;
+  if (notification.subject_type === "credential") {
+    return `/credentials?${new URLSearchParams({ search: notification.subject.id })}`;
+  }
+  const path = {
+    credential_type: "credential-types",
+    credential_issuer_organization: "credential-issuer-organizations",
+    competency: "competencies",
+  }[notification.subject_type];
+  return `/${path}?${new URLSearchParams({ status: "all", search: notification.subject.name })}`;
+}
+
+export function NotificationsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const locale = (i18n.resolvedLanguage ?? i18n.language).startsWith("id") ? "id" : "en";
   const user = useStore((s) => s.user);
 
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
+  const tabId = useId();
 
-  const isIssuerPlus =
-    user?.role === Role.ISSUER || user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
+  const isIssuerPlus = canAccess(user?.role, Role.ISSUER);
 
   const {
     data: pendingCount,
@@ -90,7 +201,7 @@ export function CredentialNotificationsPage() {
     isFetchingNextPage,
     fetchNextPage,
     refetch,
-  } = useCredentialNotificationsFeed({
+  } = useNotificationsFeed({
     status: activeTab,
     limit: 20,
   });
@@ -107,11 +218,9 @@ export function CredentialNotificationsPage() {
     }
   };
 
-  const handleNotificationClick = async (notif: CredentialNotificationDTO) => {
-    if (!notif.credential?.id) {
-      return;
-    }
-    const credId = notif.credential.id;
+  const handleNotificationClick = async (notif: NotificationDTO) => {
+    const destination = notificationDestination(notif);
+    if (!destination) return;
 
     if (!notif.read_at) {
       try {
@@ -120,10 +229,10 @@ export function CredentialNotificationsPage() {
         notify.error(t("notifications.markReadError"));
       }
     }
-    navigate(`/credentials?${new URLSearchParams({ search: credId }).toString()}`);
+    navigate(destination);
   };
 
-  const handleMarkOneRead = async (e: React.MouseEvent, notif: CredentialNotificationDTO) => {
+  const handleMarkOneRead = async (e: React.MouseEvent, notif: NotificationDTO) => {
     e.stopPropagation();
     try {
       await markReadMutation.mutateAsync(notif.id);
@@ -153,72 +262,61 @@ export function CredentialNotificationsPage() {
 
       {isIssuerPlus && (
         <Card className="border-gray-200 shadow-none">
-          <CardContent className="p-4 sm:p-6">
-            {isPendingLoading ? (
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-1">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              </div>
-            ) : isPendingError ? (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-gray-500" aria-hidden="true" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {t("notifications.pendingReviewCard.unavailable")}
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => refetchPending()}
-                  className="sm:self-end"
-                >
-                  <RefreshCw className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                  {t("notifications.pendingReviewCard.retry")}
-                </Button>
-              </div>
-            ) : (pendingCount ?? 0) === 0 ? (
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-gray-500" aria-hidden="true" />
-                <span className="text-sm font-medium text-gray-700">
-                  {t("notifications.pendingReviewCard.empty")}
-                </span>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />
-                  <div>
-                    <h4 className="font-sans text-sm font-bold text-navy">
-                      {t("notifications.pendingReviewCard.title")}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {pendingCount === 1
-                        ? t("notifications.pendingReviewCard.desc_one", { count: pendingCount })
-                        : t("notifications.pendingReviewCard.desc_other", { count: pendingCount })}
-                    </p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" asChild className="sm:self-center">
-                  <Link to="/credentials?review=pending">
-                    {t("notifications.pendingReviewCard.action")}
-                    <ExternalLink className="ml-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                  </Link>
-                </Button>
-              </div>
-            )}
+          <CardContent className="space-y-4 p-4 sm:p-6">
+            <ReviewRow
+              title={t("notifications.pendingReviewCard.title")}
+              description={
+                isPendingLoading
+                  ? t("notifications.review.loading")
+                  : isPendingError
+                    ? t("notifications.pendingReviewCard.unavailable")
+                    : (pendingCount ?? 0) === 0
+                      ? t("notifications.pendingReviewCard.empty")
+                      : t(
+                          pendingCount === 1
+                            ? "notifications.pendingReviewCard.desc_one"
+                            : "notifications.pendingReviewCard.desc_other",
+                          { count: pendingCount },
+                        )
+              }
+              isLoading={isPendingLoading}
+              isError={isPendingError}
+              onRetry={() => void refetchPending()}
+              to={(pendingCount ?? 0) > 0 ? "/credentials?review=pending" : undefined}
+            />
+            {REFERENCE_QUEUES.map((queue) => (
+              <ReferenceReviewRow key={queue.resource} {...queue} />
+            ))}
           </CardContent>
         </Card>
       )}
 
       {/* Filter Tabs */}
-      <div className="flex border-b border-gray-200">
+      <div
+        role="tablist"
+        aria-label={t("notifications.title")}
+        className="flex border-b border-gray-200"
+        onKeyDown={(event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const next =
+            event.key === "Home"
+              ? "all"
+              : event.key === "End"
+                ? "unread"
+                : activeTab === "all"
+                  ? "unread"
+                  : "all";
+          setActiveTab(next);
+          document.getElementById(`${tabId}-${next}`)?.focus();
+        }}
+      >
         <button
           type="button"
           role="tab"
+          id={`${tabId}-all`}
+          aria-controls={`${tabId}-panel`}
+          tabIndex={activeTab === "all" ? 0 : -1}
           aria-selected={activeTab === "all"}
           onClick={() => setActiveTab("all")}
           className={cn(
@@ -233,6 +331,9 @@ export function CredentialNotificationsPage() {
         <button
           type="button"
           role="tab"
+          id={`${tabId}-unread`}
+          aria-controls={`${tabId}-panel`}
+          tabIndex={activeTab === "unread" ? 0 : -1}
           aria-selected={activeTab === "unread"}
           onClick={() => setActiveTab("unread")}
           className={cn(
@@ -247,7 +348,18 @@ export function CredentialNotificationsPage() {
       </div>
 
       {/* Feed List */}
-      <div className="space-y-3">
+      <div
+        id={`${tabId}-panel`}
+        role="tabpanel"
+        aria-labelledby={`${tabId}-${activeTab}`}
+        tabIndex={0}
+        className="space-y-3"
+      >
+        {isLoading && (
+          <p role="status" className="sr-only">
+            {t("common.loading")}
+          </p>
+        )}
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -289,27 +401,34 @@ export function CredentialNotificationsPage() {
             <ul className="divide-y divide-gray-200 border-y border-gray-200">
               {items.map((notif) => {
                 const isUnread = notif.read_at === null;
-                const typeCfg = TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.registered;
+                const typeCfg = TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.credential_registered;
                 const Icon = typeCfg.icon;
-                const hasCred = Boolean(notif.credential?.id);
+                const hasSubject = notificationDestination(notif) !== null;
+                const subjectless = notif.subject_type === null && notif.subject_id === null;
                 const validDate = Number.isFinite(new Date(notif.created_at).getTime());
                 const content = (
                   <>
                     <Icon className="h-5 w-5 shrink-0 text-gray-500" aria-hidden="true" />
                     <span className="min-w-0 flex-1 space-y-1">
                       <span className="block text-sm font-normal [overflow-wrap:anywhere] text-gray-700">
-                        {hasCred ? (
+                        {hasSubject ? (
                           <Trans
                             i18nKey={typeCfg.descriptionKey}
-                            values={{ name: notif.credential?.name }}
+                            values={{ name: notif.subject?.name }}
                             components={{
                               credential: <strong key="credential" className="font-semibold" />,
                             }}
                             tOptions={{ interpolation: { escapeValue: true } }}
                             shouldUnescape
                           />
+                        ) : subjectless ? (
+                          t(`notifications.subjectless.${notif.type}`)
                         ) : (
-                          t("notifications.unavailableCredential")
+                          t(
+                            notif.subject_type === "credential"
+                              ? "notifications.unavailableCredential"
+                              : "notifications.unavailableSubject",
+                          )
                         )}
                       </span>
                       <time
@@ -324,7 +443,7 @@ export function CredentialNotificationsPage() {
                 );
                 return (
                   <li key={notif.id} className="flex items-center gap-2 sm:gap-4">
-                    {hasCred ? (
+                    {hasSubject ? (
                       <button
                         type="button"
                         onClick={() => handleNotificationClick(notif)}

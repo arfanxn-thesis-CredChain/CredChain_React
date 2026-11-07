@@ -1,4 +1,6 @@
-import { Check, Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
+import { useReferencePendingCount } from "@shared/api/useReferenceData";
+import { Button } from "@ui/button";
 import { useTranslation } from "react-i18next";
 import { RoleGate } from "@shared/auth/guards";
 import { Role, canAccess } from "@shared/auth/role";
@@ -6,15 +8,7 @@ import { useStore } from "@app/store";
 import { ReferenceCreateForm } from "@shared/components/reference/ReferenceCreateForm";
 import { ReferenceSubmitForm } from "@shared/components/reference/ReferenceSubmitForm";
 import type { ReferenceResource, ReferenceRow } from "@shared/types/api";
-import { FilterTrigger } from "@shared/components/FilterTrigger";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@ui/dropdown-menu";
 import { Input } from "@ui/input";
-import { cn } from "@shared/lib/cn";
 
 import type { ReferenceFilter } from "@shared/hooks/useReferenceStatusFilter";
 export type { ReferenceFilter } from "@shared/hooks/useReferenceStatusFilter";
@@ -52,6 +46,7 @@ export function ReferenceToolbar({
   const { t } = useTranslation();
   const user = useStore((s) => s.user);
   const canFilterInactive = canAccess(user?.role, Role.ISSUER);
+  const pendingCount = useReferencePendingCount(resource);
   const options = STATUS_OPTIONS.filter((option) => option.key !== "inactive" || canFilterInactive);
   const selected =
     statusFilter === "inactive" && !canFilterInactive ? "active" : (statusFilter ?? "active");
@@ -76,45 +71,62 @@ export function ReferenceToolbar({
           />
         </div>
       </div>
-      <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
-        <div className="max-w-full min-w-0 lg:w-fit">
-          <RoleGate
-            allowed={[Role.ADMIN, Role.SUPER_ADMIN]}
-            fallback={<ReferenceSubmitForm resource={resource} />}
-          >
-            <ReferenceCreateForm resource={resource} rows={rows} submitLabel={createLabel} />
-          </RoleGate>
+      {onStatusFilterChange && (
+        <div
+          role="group"
+          aria-label={t("cred.references.column.status")}
+          className="flex flex-wrap items-center gap-2"
+        >
+          {options.map((opt) => (
+            <Button
+              key={opt.key}
+              type="button"
+              variant={selected === opt.key ? "primary" : "outline"}
+              size="sm"
+              aria-pressed={selected === opt.key}
+              onClick={() => onStatusFilterChange(opt.key)}
+              className="focus-visible:ring-navy"
+            >
+              {t(opt.labelKey)}
+              {opt.key === "pending" && canFilterInactive && (
+                <span
+                  className="rounded-full bg-gold px-1.5 text-[10px] font-bold text-navy"
+                  aria-label={
+                    pendingCount.isError
+                      ? t("notifications.review.unavailable")
+                      : pendingCount.isLoading
+                        ? t("notifications.review.loading")
+                        : t("notifications.review.count", { count: pendingCount.data ?? 0 })
+                  }
+                >
+                  {pendingCount.isError || pendingCount.isLoading ? "…" : pendingCount.data}
+                </span>
+              )}
+            </Button>
+          ))}
+          {canFilterInactive && pendingCount.isError && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => pendingCount.refetch()}
+              aria-label={t("notifications.pendingReviewCard.retry")}
+              title={t("notifications.review.unavailable")}
+              className="focus-visible:ring-navy"
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              {t("notifications.pendingReviewCard.retry")}
+            </Button>
+          )}
         </div>
-        {onStatusFilterChange && (
-          <div className="shrink-0 self-start lg:self-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <FilterTrigger active={selected !== "active"}>
-                  {t("cred.references.column.status")}:{" "}
-                  {t(
-                    options.find((o) => o.key === selected)?.labelKey ??
-                      "cred.references.filter.all",
-                  )}
-                </FilterTrigger>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {options.map((opt) => (
-                  <DropdownMenuItem
-                    key={opt.key}
-                    onClick={() => onStatusFilterChange(opt.key)}
-                    className={cn(
-                      "flex items-center justify-between gap-2",
-                      selected === opt.key && "font-bold",
-                    )}
-                  >
-                    <span>{t(opt.labelKey)}</span>
-                    {selected === opt.key && <Check className="h-4 w-4 text-gold" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
+      )}
+      <div className="w-full max-w-full min-w-0">
+        <RoleGate
+          allowed={[Role.ADMIN, Role.SUPER_ADMIN]}
+          fallback={<ReferenceSubmitForm resource={resource} />}
+        >
+          <ReferenceCreateForm resource={resource} rows={rows} submitLabel={createLabel} />
+        </RoleGate>
       </div>
     </div>
   );

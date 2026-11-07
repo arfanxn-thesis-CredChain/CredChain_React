@@ -112,6 +112,7 @@ CredChain_React/
                                # + hooks/ (useUserListParams) + lib/ (meta) + schemas/ (user)
       credential/              # CredentialDetail, CredentialIssue, CredentialList, MyCredentials,
                                # VerifyCredential + api/ (6 hooks + keys.ts) + components/ + schemas/
+      notification/            # NotificationsPage at /notifications; generic persisted inbox
       overview/                # Overview + Settings
       landing/                 # Landing (self-wraps SplitLayout; route: /)
       about/                   # About
@@ -187,7 +188,11 @@ userKeys = { all, list, detail, self };
 credentialKeys = { all, list, detail, mine };
 ```
 
-All mutations invalidate the `all()` key on success.
+All mutations invalidate the `all()` key on success, except where settlement invalidation is required below.
+
+**Notifications:** shared `useNotifications.ts` hooks serve both navbar and `feature/notification/NotificationsPage.tsx`. Feed and unread keys include account ID and role. Read mutations capture their originating account ID and invalidate only that account on settlement, including failures. Never pass a recipient ID to the API. Generic DTOs use nullable `subject_type`, `subject_id`, `subject`, `data`, and `updated_at`; current authorized subjects determine local allowlisted navigation, never payload URLs. Credential links search by ID; reference history links use `status=all` and current-name search. Missing/subjectless entries have no subject link but remain markable.
+
+**Live review counts:** the bell counts visible unread inbox rows, not workload. Keep the credential `usePendingReviewCount` hook/key family independent. `useReferencePendingCount(resource)` lives in shared `useReferenceData.ts`, below `referenceKeys.all(resource)`, with account/role keys. It requests `limit=1`, `filters=["status=pending"]`, and uses pagination `total`, never loaded item counts or `active=false`. Issuer+ only; stale time 30 seconds, polling 60 seconds, focus/reconnect refresh. Reference mutation invalidation refreshes these counts. Mark-read does not affect workload. Toolbar Pending badges and notification review rows distinguish loading, zero, error, and retry; queue links use `status=pending`.
 
 ### API Integration & Axios Interceptors
 
@@ -240,6 +245,7 @@ lazyRoute(() => import("@feature/user/UserList"), "UserList");
 | `/about` | About | Adaptive | AdaptiveLayout |
 | `/login` | Login | PublicRoute (redirects if authenticated) | — |
 | `/overview` | Overview | ProtectedRoute (any auth) | OverviewLayout |
+| `/notifications` | NotificationsPage | ProtectedRoute (any auth) | OverviewLayout |
 | `/credentials` | CredentialList | ProtectedRoute (any auth) | OverviewLayout |
 | `/credentials/:id` | CredentialDetail | ProtectedRoute (any auth) | OverviewLayout |
 | `/account/profile` | UserSelfProfile | ProtectedRoute (any auth) | OverviewLayout |
@@ -485,7 +491,7 @@ See the **Required env vars** table under [Critical Commands](#critical-commands
 | Integration | Vitest + MSW | Feature flows with mocked `/api`                            |
 | E2E         | Playwright   | Auth flow, public routes, a11y smoke                        |
 
-**Current count:** **813 unit/component tests across 93 spec files** under `src/`, plus **~85 Playwright tests across 6 e2e specs** (`guest-flow.spec.ts`, `holder-flow.spec.ts`, `issuer-flow.spec.ts`, `admin-flow.spec.ts`, `super-admin-flow.spec.ts`, `a11y.spec.ts`).
+**Current count:** **1,370 unit/component tests across 118 spec files** under `src/`, plus **~85 Playwright tests across 6 e2e specs** (`guest-flow.spec.ts`, `holder-flow.spec.ts`, `issuer-flow.spec.ts`, `admin-flow.spec.ts`, `super-admin-flow.spec.ts`, `a11y.spec.ts`).
 
 
 **Coverage** (in `vitest.config.ts`): the `coverage` config uses a **selective `include` allowlist** (NOT global). Per-file thresholds of 90% lines / 85% branches / 90% functions / 90% statements apply only to the curated paths:
@@ -599,6 +605,8 @@ When adding tests, prefer integration tests via MSW over heavy mocking. Schema t
 Run `npm run check-locales` from the React repo after step 4 to verify drift is resolved.
 
 ## Deployment
+
+The generic `/api/notifications` routes, nullable subject DTO, and prefixed types require a coordinated Go/React cutover. Existing credential-only database rows need separately approved handling before deployment; initial-schema edits do not upgrade existing installations. Do not reset data or run live migrations as verification.
 
 **Push to master branch only when build succeeds. Do not create feature branches, bugfix branches, or any other branch types — commit directly to master.**
 

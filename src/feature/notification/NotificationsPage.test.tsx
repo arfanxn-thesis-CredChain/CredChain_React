@@ -6,10 +6,10 @@ import { server } from "@/test/msw/server";
 import { TestProviders } from "@/test/TestProviders";
 import { useStore } from "@app/store";
 import { Role } from "@shared/auth/role";
-import { makeUser, makeCredentialNotification } from "@/test/fixtures";
+import { makeUser, makeNotification } from "@/test/fixtures";
 import { i18n } from "@shared/i18n/config";
 import { formatDateTime } from "@shared/lib/format";
-import { CredentialNotificationsPage } from "./CredentialNotificationsPage";
+import { NotificationsPage } from "./NotificationsPage";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
@@ -20,7 +20,7 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-describe("CredentialNotificationsPage", () => {
+describe("NotificationsPage", () => {
   const mockHolder = makeUser({ id: "usr_h1", role: Role.HOLDER, name: "Alice Holder" });
   const mockIssuer = makeUser({ id: "usr_i1", role: Role.ISSUER, name: "Bob Issuer" });
 
@@ -31,7 +31,7 @@ describe("CredentialNotificationsPage", () => {
   });
 
   it("renders PageHeader with Notifications title and Mark all read button", async () => {
-    render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+    render(<NotificationsPage />, { wrapper: TestProviders });
     expect(screen.getByRole("heading", { name: "Notifications" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /mark all as read/i })).toBeInTheDocument();
   });
@@ -42,9 +42,9 @@ describe("CredentialNotificationsPage", () => {
     await i18n.changeLanguage("en");
   });
 
-  function mockFeed(items: ReturnType<typeof makeCredentialNotification>[]) {
+  function mockFeed(items: ReturnType<typeof makeNotification>[]) {
     server.use(
-      http.get("*/api/credential-notifications", () =>
+      http.get("*/api/notifications", () =>
         HttpResponse.json({
           code: 400100,
           message: "OK",
@@ -61,14 +61,14 @@ describe("CredentialNotificationsPage", () => {
       const types = ["registered", "approved", "rejected", "revoked"] as const;
       mockFeed(
         types.map((type) =>
-          makeCredentialNotification({
+          makeNotification({
             id: type,
-            type,
-            credential: { id: `cred_${type}`, name: `Name ${type}`, number: "HIDDEN-123" },
+            type: `credential_${type}`,
+            subject: { id: `cred_${type}`, name: `Name ${type}`, number: "HIDDEN-123" },
           }),
         ),
       );
-      const { container } = render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      const { container } = render(<NotificationsPage />, { wrapper: TestProviders });
       for (const type of types) {
         const name = await screen.findByText(`Name ${type}`);
         expect(name.tagName).toBe("STRONG");
@@ -108,19 +108,19 @@ describe("CredentialNotificationsPage", () => {
   it.each(["en", "id"])("renders compact accessible read actions in %s", async (locale) => {
     await i18n.changeLanguage(locale);
     mockFeed([
-      makeCredentialNotification({
+      makeNotification({
         id: "unread_available",
         read_at: null,
-        credential: { id: "cred_unread", name: "Unread credential", number: null },
+        subject: { id: "cred_unread", name: "Unread credential", number: null },
       }),
-      makeCredentialNotification({ id: "unread_unavailable", read_at: null, credential: null }),
-      makeCredentialNotification({
+      makeNotification({ id: "unread_unavailable", read_at: null, subject: null }),
+      makeNotification({
         id: "read_available",
         read_at: "2026-01-01T00:00:00Z",
-        credential: { id: "cred_read", name: "Read credential", number: null },
+        subject: { id: "cred_read", name: "Read credential", number: null },
       }),
     ]);
-    render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+    render(<NotificationsPage />, { wrapper: TestProviders });
     await screen.findByText("Unread credential");
     const label = i18n.t("notifications.markRead");
     const actions = screen.getAllByRole("button", { name: label });
@@ -137,13 +137,11 @@ describe("CredentialNotificationsPage", () => {
       expect(within(row).getAllByRole("button", { name: label })).toHaveLength(1);
     }
     const readRow = screen.getByText("Read credential").closest("li")!;
-    expect(
-      within(readRow).queryByRole("button", { name: label }),
-    ).not.toBeInTheDocument();
+    expect(within(readRow).queryByRole("button", { name: label })).not.toBeInTheDocument();
   });
 
   it("uses smart-back fallback", async () => {
-    render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+    render(<NotificationsPage />, { wrapper: TestProviders });
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(mockNavigate).toHaveBeenCalledWith("/overview");
   });
@@ -152,12 +150,12 @@ describe("CredentialNotificationsPage", () => {
     const name = "A & B <img src=x> <strong>not markup</strong>";
     const credentialId = "precise_id&scope=other /?";
     mockFeed([
-      makeCredentialNotification({
+      makeNotification({
         read_at: "2026-01-01T00:00:00Z",
-        credential: { id: credentialId, name, number: null },
+        subject: { id: credentialId, name, number: null },
       }),
     ]);
-    const { container } = render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+    const { container } = render(<NotificationsPage />, { wrapper: TestProviders });
     const text = await screen.findByText(name);
     expect(text.tagName).toBe("STRONG");
     expect(text.querySelector("strong, img")).toBeNull();
@@ -188,10 +186,10 @@ describe("CredentialNotificationsPage", () => {
     const dates = ages.map((age) => new Date(now - age).toISOString());
     mockFeed(
       [...dates, "invalid"].map((created_at, index) =>
-        makeCredentialNotification({ id: `time_${index}`, created_at, credential: null }),
+        makeNotification({ id: `time_${index}`, created_at, subject: null }),
       ),
     );
-    const { container } = render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+    const { container } = render(<NotificationsPage />, { wrapper: TestProviders });
     await waitFor(() => expect(container.querySelectorAll("time")).toHaveLength(9));
     const times = [...container.querySelectorAll("time")];
     const relative = new Intl.RelativeTimeFormat(locale, { numeric: "always" });
@@ -216,16 +214,16 @@ describe("CredentialNotificationsPage", () => {
   it("loads the next cursor and appends rows", async () => {
     let cursor: string | null = null;
     server.use(
-      http.get("*/api/credential-notifications", ({ request }) => {
+      http.get("*/api/notifications", ({ request }) => {
         cursor = new URL(request.url).searchParams.get("cursor");
         return HttpResponse.json({
           code: 400100,
           message: "OK",
           data: {
             items: [
-              makeCredentialNotification({
+              makeNotification({
                 id: cursor ? "second" : "first",
-                credential: {
+                subject: {
                   id: cursor ? "cred_second" : "cred_first",
                   name: cursor ? "Second credential" : "First credential",
                   number: null,
@@ -238,7 +236,7 @@ describe("CredentialNotificationsPage", () => {
         });
       }),
     );
-    render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+    render(<NotificationsPage />, { wrapper: TestProviders });
     await screen.findByText("First credential");
     await userEvent.click(screen.getByRole("button", { name: /load more/i }));
     expect(await screen.findByText("Second credential")).toBeInTheDocument();
@@ -246,9 +244,173 @@ describe("CredentialNotificationsPage", () => {
     expect(cursor).toBe("next_page");
   });
 
+  it.each([
+    ["credential_type", "credential-types"],
+    ["credential_issuer_organization", "credential-issuer-organizations"],
+    ["competency", "competencies"],
+  ] as const)(
+    "opens resolved %s history with a literal current name",
+    async (subject_type, path) => {
+      const name = "A & B <img src=x> /?";
+      mockFeed([
+        makeNotification({
+          subject_type,
+          subject_id: "reference",
+          type: `${subject_type}_submitted`,
+          subject: { id: "reference", name, number: null, status: "rejected" },
+          read_at: "2026-01-01T00:00:00Z",
+        }),
+      ]);
+      const { container } = render(<NotificationsPage />, { wrapper: TestProviders });
+      const text = await screen.findByText(name);
+      expect(container.querySelector("img")).toBeNull();
+      await userEvent.click(text);
+      const destination = new URL(mockNavigate.mock.calls[0][0], "http://localhost");
+      expect(destination.pathname).toBe(`/${path}`);
+      expect([...destination.searchParams.entries()]).toEqual([
+        ["status", "all"],
+        ["search", name],
+      ]);
+    },
+  );
+
+  it.each([
+    "credential_registered",
+    "credential_approved",
+    "credential_rejected",
+    "credential_revoked",
+    "credential_type_submitted",
+    "credential_issuer_organization_submitted",
+    "competency_submitted",
+  ] as const)("renders and marks subjectless %s without navigation", async (type) => {
+    mockFeed([makeNotification({ type, subject_type: null, subject_id: null, subject: null })]);
+    let marked = false;
+    server.use(
+      http.put("*/api/notifications/:id/read", () => {
+        marked = true;
+        return HttpResponse.json({
+          code: 401602,
+          data: makeNotification({ read_at: "2026-01-01T00:00:00Z" }),
+        });
+      }),
+    );
+    render(<NotificationsPage />, { wrapper: TestProviders });
+    const message = await screen.findByText(i18n.t(`notifications.subjectless.${type}`));
+    expect(message.closest("button")).toBeNull();
+    await userEvent.click(
+      within(message.closest("li")!).getByRole("button", { name: "Mark as read" }),
+    );
+    await waitFor(() => expect(marked).toBe(true));
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("keeps missing reference subjects unavailable and noninteractive", async () => {
+    mockFeed([
+      makeNotification({
+        subject_type: "competency",
+        subject_id: "missing",
+        type: "competency_submitted",
+        subject: null,
+      }),
+    ]);
+    render(<NotificationsPage />, { wrapper: TestProviders });
+    const message = await screen.findByText("Subject unavailable");
+    expect(message.closest("button")).toBeNull();
+    await userEvent.click(message);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("shows three independent reference totals and pending queue links", async () => {
+    useStore.setState({ user: mockIssuer });
+    for (const [path, total] of [
+      ["credential-types", 0],
+      ["issuer-organizations", 3],
+      ["competencies", 7],
+    ] as const) {
+      server.use(
+        http.get(`*/api/${path}`, () =>
+          HttpResponse.json({ code: 100000, data: { items: [], total } }),
+        ),
+      );
+    }
+    render(<NotificationsPage />, { wrapper: TestProviders });
+    for (const [label, path, count] of [
+      ["Credential types", "credential-types", 0],
+      ["Issuer organizations", "credential-issuer-organizations", 3],
+      ["Competencies", "competencies", 7],
+    ] as const) {
+      const heading = screen.getByRole("heading", { name: label });
+      await waitFor(() =>
+        expect(heading.parentElement).toHaveTextContent(`${count} items awaiting review`),
+      );
+      expect(screen.getByRole("link", { name: `Review ${label}` })).toHaveAttribute(
+        "href",
+        `/${path}?status=pending`,
+      );
+    }
+  });
+
+  it("uses matching icon-free summary rows and touch-sized actions for all four queues", async () => {
+    useStore.setState({ user: mockIssuer });
+    for (const path of [
+      "credentials",
+      "credential-types",
+      "issuer-organizations",
+      "competencies",
+    ]) {
+      server.use(
+        http.get(`*/api/${path}`, () =>
+          HttpResponse.json({ code: 100000, data: { items: [], total: 2 } }),
+        ),
+      );
+    }
+    render(<NotificationsPage />, { wrapper: TestProviders });
+    await screen.findByText("2 credentials awaiting review");
+    for (const label of [
+      "Pending reviews",
+      "Credential types",
+      "Issuer organizations",
+      "Competencies",
+    ]) {
+      const heading = screen.getByRole("heading", { name: label });
+      const row = heading.parentElement!.parentElement!;
+      expect(row.querySelector(".lucide-clock")).toBeNull();
+      expect(heading).toHaveClass("font-bold");
+      const action = within(row).getByRole("link");
+      expect(action).toHaveClass("h-11");
+      expect(action.querySelector(".lucide-external-link")).not.toBeNull();
+    }
+  });
+
+  it("keeps reference count failures distinct from zero and retries", async () => {
+    useStore.setState({ user: mockIssuer });
+    let failed = true;
+    server.use(
+      http.get("*/api/competencies", () =>
+        failed
+          ? HttpResponse.json({}, { status: 500 })
+          : HttpResponse.json({ code: 100000, data: { items: [], total: 0 } }),
+      ),
+    );
+    render(<NotificationsPage />, { wrapper: TestProviders });
+    const retry = await screen.findByRole("button", {
+      name: "Retry review count for Competencies",
+    });
+    expect(screen.getByRole("heading", { name: "Competencies" }).parentElement).toHaveTextContent(
+      "Unable to load review count.",
+    );
+    failed = false;
+    await userEvent.click(retry);
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Competencies" }).parentElement).toHaveTextContent(
+        "0 items awaiting review",
+      ),
+    );
+  });
+
   describe("Issuer+ workload card", () => {
     it("does NOT render pending review card for Holder", async () => {
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       await waitFor(() => {
         expect(screen.queryByText(/awaiting review/i)).not.toBeInTheDocument();
       });
@@ -270,8 +432,8 @@ describe("CredentialNotificationsPage", () => {
         }),
       );
 
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
-      expect(await screen.findByText(/awaiting review/i)).toBeInTheDocument();
+      render(<NotificationsPage />, { wrapper: TestProviders });
+      expect(await screen.findByText(/15 credentials awaiting review/i)).toBeInTheDocument();
       expect(screen.getByText(/15 credentials awaiting review/i)).toBeInTheDocument();
 
       const reviewLink = screen.getByRole("link", { name: /review now/i });
@@ -294,7 +456,7 @@ describe("CredentialNotificationsPage", () => {
         }),
       );
 
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       expect(await screen.findByText(/no credentials awaiting review/i)).toBeInTheDocument();
     });
 
@@ -310,35 +472,35 @@ describe("CredentialNotificationsPage", () => {
         }),
       );
 
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       expect(await screen.findByText(/unable to load review count/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
     });
   });
 
   describe("Personal notifications feed", () => {
-    const notifRegistered = makeCredentialNotification({
+    const notifRegistered = makeNotification({
       id: "notif_reg",
-      type: "registered",
+      type: "credential_registered",
       read_at: null,
-      credential: { id: "cred_reg", name: "Degree of Computer Science", number: "CS-2026" },
+      subject: { id: "cred_reg", name: "Degree of Computer Science", number: "CS-2026" },
     });
-    const notifApproved = makeCredentialNotification({
+    const notifApproved = makeNotification({
       id: "notif_app",
-      type: "approved",
+      type: "credential_approved",
       read_at: "2026-06-20T12:00:00Z",
-      credential: { id: "cred_app", name: "AI Certification", number: null },
+      subject: { id: "cred_app", name: "AI Certification", number: null },
     });
-    const notifUnavailable = makeCredentialNotification({
+    const notifUnavailable = makeNotification({
       id: "notif_unav",
-      type: "revoked",
+      type: "credential_revoked",
       read_at: null,
-      credential: null,
+      subject: null,
     });
 
     beforeEach(() => {
       server.use(
-        http.get("*/api/credential-notifications", ({ request }) => {
+        http.get("*/api/notifications", ({ request }) => {
           const url = new URL(request.url);
           const status = url.searchParams.get("status");
           let items = [notifRegistered, notifApproved, notifUnavailable];
@@ -355,7 +517,7 @@ describe("CredentialNotificationsPage", () => {
     });
 
     it("renders notification items with types and credential summaries", async () => {
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
 
       expect(await screen.findByText("Degree of Computer Science")).toBeInTheDocument();
       expect(screen.queryByText("CS-2026")).not.toBeInTheDocument();
@@ -365,7 +527,7 @@ describe("CredentialNotificationsPage", () => {
     });
 
     it("switches filter between All and Unread tabs", async () => {
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
 
       expect(await screen.findByText("Degree of Computer Science")).toBeInTheDocument();
       expect(screen.getByText("AI Certification")).toBeInTheDocument();
@@ -379,20 +541,38 @@ describe("CredentialNotificationsPage", () => {
       expect(screen.getByText("Degree of Computer Science")).toBeInTheDocument();
     });
 
+    it("supports arrow, Home, and End keys with one tabbable filter", async () => {
+      render(<NotificationsPage />, { wrapper: TestProviders });
+      const all = screen.getByRole("tab", { name: "All" });
+      const unread = screen.getByRole("tab", { name: "Unread" });
+      expect(screen.getByRole("tablist")).toBeInTheDocument();
+      expect(all).toHaveAttribute("tabindex", "0");
+      expect(unread).toHaveAttribute("tabindex", "-1");
+      all.focus();
+      await userEvent.keyboard("{ArrowRight}");
+      expect(unread).toHaveFocus();
+      expect(unread).toHaveAttribute("aria-selected", "true");
+      await userEvent.keyboard("{Home}");
+      expect(all).toHaveFocus();
+      await userEvent.keyboard("{End}");
+      expect(unread).toHaveFocus();
+      expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", unread.id);
+    });
+
     it("clicking notification with credential marks read and navigates to credential search", async () => {
       let markedId: string | null = null;
       server.use(
-        http.put("*/api/credential-notifications/:id/read", ({ params }) => {
+        http.put("*/api/notifications/:id/read", ({ params }) => {
           markedId = params.id as string;
           return HttpResponse.json({
             code: 400100,
             message: "OK",
-            data: makeCredentialNotification({ id: markedId, read_at: "2026-06-20T14:00:00Z" }),
+            data: makeNotification({ id: markedId, read_at: "2026-06-20T14:00:00Z" }),
           });
         }),
       );
 
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       const credElement = await screen.findByText("Degree of Computer Science");
       await userEvent.click(credElement);
 
@@ -402,12 +582,12 @@ describe("CredentialNotificationsPage", () => {
 
     it("navigates even if markRead mutation fails", async () => {
       server.use(
-        http.put("*/api/credential-notifications/:id/read", () => {
+        http.put("*/api/notifications/:id/read", () => {
           return HttpResponse.json({ code: 500, message: "Server error" }, { status: 500 });
         }),
       );
 
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       const credElement = await screen.findByText("Degree of Computer Science");
       await userEvent.click(credElement);
 
@@ -415,7 +595,7 @@ describe("CredentialNotificationsPage", () => {
     });
 
     it("notification with null credential does NOT navigate on click", async () => {
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       const unavailableElement = await screen.findByText("Credential unavailable");
       await userEvent.click(unavailableElement);
 
@@ -425,17 +605,17 @@ describe("CredentialNotificationsPage", () => {
     it("mark one notification read via button", async () => {
       let markedId: string | null = null;
       server.use(
-        http.put("*/api/credential-notifications/:id/read", ({ params }) => {
+        http.put("*/api/notifications/:id/read", ({ params }) => {
           markedId = params.id as string;
           return HttpResponse.json({
             code: 400100,
             message: "OK",
-            data: makeCredentialNotification({ id: markedId, read_at: "2026-06-20T14:00:00Z" }),
+            data: makeNotification({ id: markedId, read_at: "2026-06-20T14:00:00Z" }),
           });
         }),
       );
 
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       await screen.findByText("Degree of Computer Science");
 
       const markReadButtons = screen.getAllByRole("button", { name: /mark as read/i });
@@ -448,20 +628,20 @@ describe("CredentialNotificationsPage", () => {
     it("marks unavailable notifications read without navigating", async () => {
       let markedId: string | null = null;
       server.use(
-        http.put("*/api/credential-notifications/:id/read", ({ params }) => {
+        http.put("*/api/notifications/:id/read", ({ params }) => {
           markedId = params.id as string;
           return HttpResponse.json({
             code: 400100,
             message: "OK",
-            data: makeCredentialNotification({
+            data: makeNotification({
               id: markedId,
               read_at: "2026-06-20T14:00:00Z",
-              credential: null,
+              subject: null,
             }),
           });
         }),
       );
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       const unavailable = await screen.findByText("Credential unavailable");
       const row = unavailable.closest("li");
       expect(row).not.toBeNull();
@@ -475,7 +655,7 @@ describe("CredentialNotificationsPage", () => {
     it("mark all read via header button", async () => {
       let called = false;
       server.use(
-        http.put("*/api/credential-notifications/read-all", () => {
+        http.put("*/api/notifications/read-all", () => {
           called = true;
           return HttpResponse.json({
             code: 400100,
@@ -485,7 +665,7 @@ describe("CredentialNotificationsPage", () => {
         }),
       );
 
-      render(<CredentialNotificationsPage />, { wrapper: TestProviders });
+      render(<NotificationsPage />, { wrapper: TestProviders });
       await screen.findByText("Degree of Computer Science");
 
       const markAllBtn = screen.getByRole("button", { name: /mark all as read/i });

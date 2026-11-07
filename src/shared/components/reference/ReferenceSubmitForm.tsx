@@ -43,6 +43,8 @@ export function ReferenceSubmitForm({
       submitLabel={t("cred.references.submitBtn")}
       submitVariant="gold"
       isPending={submit.isPending}
+      className="flex-row flex-wrap"
+      inputContainerClassName="w-full max-w-full flex-none sm:max-w-full md:w-md"
     />
   );
 }

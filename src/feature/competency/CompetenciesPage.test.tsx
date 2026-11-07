@@ -251,8 +251,7 @@ describe("CompetenciesPage", () => {
 
     const user = userEvent.setup();
     renderPage();
-    await user.click(screen.getByRole("button", { name: "Status: Active" }));
-    await user.click(screen.getByRole("menuitem", { name: "Pending Review" }));
+    await user.click(screen.getByRole("button", { name: /^Pending review/ }));
 
     await screen.findByText("Cybersecurity");
     expect(screen.getByText("Pending")).toBeInTheDocument();
