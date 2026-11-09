@@ -203,7 +203,7 @@ Single axios instance at `@shared/api/client.ts` with:
 - **Request interceptor:** adds `Accept-Language` from Zustand locale
 - **Response interceptor:** unwraps `{code, message, data}` envelope → returns just `data`
 - **Error interceptor:**
-  - 401 → single silent refresh attempt (deduplicated via `refreshInFlight` promise) → retry with `X-Retry: 1` header
+  - Session-authentication 401 (`200140`/`200141`, or no code) → coordinated silent refresh → replay with `X-Retry: 1`; a probe-only replay may rotate once if access expires in between. Domain-specific reauthentication failures do not invalidate the session
   - 429 → maps to `system.rate_limited` or `system.rate_limited_with_retry` if `Retry-After` header present
   - other → wraps in `ApiError` with translated `messageKey`
 
@@ -217,13 +217,15 @@ Backend response codes (6-digit `AABBCC`) map to i18n keys via `CODE_TO_MESSAGE_
 
 **Frontend never reads or writes tokens.** Axios sends them automatically via cookies.
 
-**Silent refresh:** axios interceptor catches 401, calls `POST /api/auth/refresh` once, retries original request. On refresh failure, clears Zustand session and redirects to `/login`.
+**Session duration:** checked backend configuration uses 15-minute access tokens and 168-hour (7-day) refresh tokens. Each successful rotation renews the refresh lifetime; there is no fixed one-hour session. Login on another device, email changes, SuperAdmin transfer, logout, and account deletion can legitimately invalidate refresh credentials.
 
-**Session hydration:** `SessionHydrator` (mounted under `Providers`) calls `GET /users/self` on mount. If 200 → sets user. If 401 → clears session. Renders full-page spinner until first load completes.
+**Silent refresh:** `refreshInFlight` deduplicates within a tab; request generations avoid rotating again for delayed pre-refresh 401 responses. Same-origin tabs use the native Web Locks API and probe `GET /users/self` under the lock before rotating shared cookies. Web Locks requires a secure context (HTTPS or localhost); unavailable browsers fall back to per-tab deduplication, so cross-tab races remain possible there. Tokens remain HttpOnly and single-use; no revoked-token grace period. Only definitive refresh rejection or an authentication 401 after replay clears Zustand and private Query cache. Network errors, 429, and 5xx propagate without clearing authentication.
+
+**Session hydration:** `SessionHydrator` (mounted under `Providers`) calls `GET /users/self` on mount. Successful data updates an existing authenticated session; authentication invalidation belongs to the interceptor, not arbitrary query 401 errors. Renders full-page spinner until first load completes.
 
 **Email update with Google reauth:** `UserSelfEmail` is a 2-step form. Step 1 captures new email. Step 2 prompts Google sign-in for the new address; the resulting ID token is sent to `PUT /users/self/email` along with the email. Backend verifies the token's email matches.
 
-**Logout:** `POST /api/auth/logout` clears cookies, then frontend clears Zustand + Query cache.
+**Logout:** `logoutSession()` waits for the tab's refresh promise and serializes `POST /api/auth/logout` through the same Web Lock, preventing a late browser refresh response from restoring cookies after cleanup. The tab suppresses new automatic refresh until successful Google login. Frontend clears Zustand + Query cache on settlement; revocation failures show an error, not a success toast. Cross-client server-side revocation/rotation ordering is not covered by the browser lock.
 
 ### Routing & Lazy Loading
 
@@ -491,7 +493,7 @@ See the **Required env vars** table under [Critical Commands](#critical-commands
 | Integration | Vitest + MSW | Feature flows with mocked `/api`                            |
 | E2E         | Playwright   | Auth flow, public routes, a11y smoke                        |
 
-**Current count:** **1,395 unit/component tests across 120 spec files** under `src/`, plus **~85 Playwright tests across 6 e2e specs** (`guest-flow.spec.ts`, `holder-flow.spec.ts`, `issuer-flow.spec.ts`, `admin-flow.spec.ts`, `super-admin-flow.spec.ts`, `a11y.spec.ts`).
+**Current count:** **1,407 unit/component tests across 122 spec files** under `src/`. The session regression spec `e2e/session-refresh.spec.ts` adds two standalone Chromium checks using the production client, native Web Locks, and mocked API responses: simultaneous cross-tab expiry plus reload, and logout ordering behind a pending refresh. Run with `npx playwright test e2e/session-refresh.spec.ts --project=chromium`; no OAuth recording is required. These are not live backend/cookie-database integration tests. Other role-based E2E specs require their recorded auth state.
 
 
 **Coverage** (in `vitest.config.ts`): the `coverage` config uses a **selective `include` allowlist** (NOT global). Per-file thresholds of 90% lines / 85% branches / 90% functions / 90% statements apply only to the curated paths:
@@ -618,6 +620,8 @@ Before pushing, run the repo's canonical verification command and confirm it pas
 - `CredChain_React`: `make lint && make build && make test && npm run check-locales`
 
 ## Change Log
+
+- **2026-11-09 — Session refresh and logout reliability.** Restrict automatic recovery to session-authentication failures; preserve session state on transport, rate-limit, and server errors. Coordinate refreshes across same-origin tabs with Web Locks and cookie probes, avoid redundant delayed-401 rotations, and handle access expiry between probe and replay. Serialize logout behind refresh, clear private query data on invalidation, and report logout failures honestly. Backend keeps 15-minute access / 7-day sliding refresh lifetimes, atomically consumes refresh tokens, rejects deleted accounts, batch-revokes on deletion, and permits expired-access logout cleanup. Added 12 Vitest tests (1,407 total across 122 files) and two standalone browser regressions. No new dependencies or relaxed token validation.
 
 - **2026-11-07 — Credential list lifecycle sorting unification.** Fixed reversed Newest/Oldest credential sorting by unifying sorting around credential lifecycle milestones instead of physical certificate printing dates (`issued_at`):
   - Added virtual sort column `lifecycle_at` in Go backend `gorm_credential_repository.go` mapping to `COALESCE(credentials.revoked_at, credentials.rejected_at, credentials.activated_at, credentials.created_at)` with `credentials.id ASC` tiebreaker.

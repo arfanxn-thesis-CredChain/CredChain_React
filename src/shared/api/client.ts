@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type AxiosResponse } from "axios";
+import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { env } from "@shared/lib/env";
 import { ApiError, type ApiErrorResponse, type ApiResponse } from "./envelope";
 import { codeToMessageKey } from "./codes";
@@ -35,29 +35,76 @@ export function configureLocaleResolver(resolver: () => string) {
   getLocale = resolver;
 }
 
-api.interceptors.request.use((config) => {
+type SessionRequestConfig = InternalAxiosRequestConfig & {
+  sessionGeneration?: number;
+  skipSessionRefresh?: boolean;
+  retryAfterProbe?: boolean;
+};
+
+let sessionGeneration = 0;
+let refreshInFlight: Promise<boolean> | null = null;
+let loggingOut = false;
+
+export async function logoutSession() {
+  loggingOut = true;
+  await refreshInFlight?.catch(() => {});
+  const logout = () => api.post("/auth/logout");
+  if (typeof navigator !== "undefined" && navigator.locks) {
+    return navigator.locks.request("credchain-session-refresh", logout);
+  }
+  return logout();
+}
+
+api.interceptors.request.use((config: SessionRequestConfig) => {
+  config.sessionGeneration = sessionGeneration;
   if (getLocale && config.headers) {
     config.headers["Accept-Language"] = getLocale();
   }
   return config;
 });
 
-let refreshInFlight: Promise<void> | null = null;
+function isSessionUnauthorized(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 401 &&
+    (error.code === 200140 || error.code === 200141 || error.code === undefined)
+  );
+}
 
-async function refreshSession(): Promise<void> {
+async function refreshSession(forceRotation = false): Promise<boolean> {
   if (!refreshInFlight) {
-    refreshInFlight = api
-      .post("/auth/refresh")
-      .then(() => undefined)
-      .finally(() => {
-        refreshInFlight = null;
-      });
+    const renew = async () => {
+      await api.post("/auth/refresh");
+      sessionGeneration++;
+      return true;
+    };
+    const coordinate = async () => {
+      if (typeof navigator !== "undefined" && navigator.locks) {
+        return navigator.locks.request("credchain-session-refresh", async () => {
+          if (forceRotation) return renew();
+          // Another tab may have renewed the shared HttpOnly cookies while we waited.
+          try {
+            await api.get("/users/self", { skipSessionRefresh: true } as SessionRequestConfig);
+            sessionGeneration++;
+            return false;
+          } catch (error) {
+            if (!isSessionUnauthorized(error)) throw error;
+            return renew();
+          }
+        });
+      }
+      return renew();
+    };
+    refreshInFlight = coordinate().finally(() => {
+      refreshInFlight = null;
+    });
   }
   return refreshInFlight;
 }
 
 api.interceptors.response.use(
   (response: AxiosResponse<ApiResponse<unknown>>) => {
+    if (response.config.url === "/auth/google") loggingOut = false;
     const envelope = response.data;
     if (envelope && typeof envelope === "object" && "code" in envelope) {
       (response as EnvelopeResponse).__envelope = envelope;
@@ -80,26 +127,36 @@ api.interceptors.response.use(
       return Promise.reject(new ApiError(status, code, messageKey, error, fieldErrors));
     }
 
+    const config = error.config as SessionRequestConfig | undefined;
     if (
       status === 401 &&
-      !url.includes("/auth/refresh") &&
-      !url.includes("/auth/google") &&
-      !url.includes("/auth/logout") &&
-      error.config &&
-      error.config.headers?.["X-Retry"] !== "1"
+      (code === 200140 || code === 200141 || code === undefined) &&
+      !url.includes("/auth/") &&
+      config &&
+      !config.skipSessionRefresh
     ) {
-      try {
-        await refreshSession();
-        const retryConfig = { ...error.config };
-        if (retryConfig.headers) {
-          retryConfig.headers.set("X-Retry", "1");
-        }
-        return api.request(retryConfig);
-      } catch {
+      const isReplay = config.headers?.["X-Retry"] === "1";
+      if (loggingOut || (isReplay && !config.retryAfterProbe)) {
         onUnauthenticated?.();
-        return Promise.reject(
-          new ApiError(status, code, codeToMessageKey(code), error, fieldErrors),
-        );
+      } else {
+        try {
+          if (isReplay || config.sessionGeneration === sessionGeneration) {
+            config.retryAfterProbe = !(await refreshSession(isReplay));
+          } else {
+            config.retryAfterProbe = true;
+          }
+        } catch (refreshError) {
+          // Network failures, rate limits and server outages do not invalidate a session.
+          if (
+            refreshError instanceof ApiError &&
+            (refreshError.status === 401 || refreshError.code === 200343)
+          ) {
+            onUnauthenticated?.();
+          }
+          return Promise.reject(refreshError);
+        }
+        config.headers.set("X-Retry", "1");
+        return api.request(config);
       }
     }
 

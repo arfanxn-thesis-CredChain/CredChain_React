@@ -4,7 +4,7 @@ import { useUserSelf } from "@feature/user/api/useUserSelf";
 import { useStore } from "@app/store";
 import { configureAuthHandler, configureLocaleResolver } from "@shared/api/client";
 import { FullPageSpinner } from "@shared/components/LoadingSpinner";
-import { isApiError } from "@shared/api/envelope";
+import { useQueryClient } from "@tanstack/react-query";
 import { router } from "@app/router";
 
 // Routes accessible without auth — visiting them should NOT trigger a redirect
@@ -23,11 +23,13 @@ export function SessionHydrator({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const locale = useStore((s) => s.locale);
   const { i18n } = useTranslation();
+  const queryClient = useQueryClient();
 
   // Wire axios interceptor handlers
   useEffect(() => {
     configureAuthHandler(() => {
       clearUser();
+      queryClient.clear();
       // Don't navigate if already on a public route — the page should just
       // render without auth. Prevents the refresh loop on landing/login.
       const currentPath = window.location.pathname;
@@ -36,7 +38,7 @@ export function SessionHydrator({ children }: { children: React.ReactNode }) {
       void router.navigate("/login", { replace: true });
     });
     configureLocaleResolver(() => locale);
-  }, [clearUser, locale]);
+  }, [clearUser, locale, queryClient]);
 
   // Sync i18n language with stored locale on mount and locale change
   useEffect(() => {
@@ -45,14 +47,11 @@ export function SessionHydrator({ children }: { children: React.ReactNode }) {
     }
   }, [locale, i18n]);
 
-  const { data, isLoading, isError, error } = useUserSelf({ enabled: isAuthenticated });
+  const { data, isLoading } = useUserSelf({ enabled: isAuthenticated });
 
   useEffect(() => {
-    if (data) setUser(data);
-    if (isError && isApiError(error) && error.status === 401) {
-      clearUser();
-    }
-  }, [data, isError, error, setUser, clearUser]);
+    if (data && isAuthenticated) setUser(data);
+  }, [data, isAuthenticated, setUser]);
 
   // Only gate rendering on the probe if we have a persisted session.
   // First-time visitors (isAuthenticated=false) go straight through — no spinner.
