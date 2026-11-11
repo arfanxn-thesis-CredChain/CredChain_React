@@ -4,7 +4,7 @@
 >
 > **Document responsibilities:** For operational instructions (commands, patterns, conventions, checklists, pitfalls), see `AGENTS.md`. This file owns design decisions — tokens, typography, layout, component recipes, visual philosophy, accessibility. When updating design decisions, update this file; when updating how to work in the repo, update `AGENTS.md`.
 
-Status: Draft v1.10 | Last updated: 2026-08-29 | Related: ../AGENTS.md, ../CredChain_Golang/
+Status: Draft v1.10 | Last updated: 2026-11-11 | Related: ../AGENTS.md, ../CredChain_Golang/
 
 ---
 
@@ -64,13 +64,13 @@ Frontend surfaces:
 
 - Public: credential public verification page (no auth required)
 - Auth: Google OAuth login only (no email/password)
-- Dashboard: role-aware shell with sidebar; gates Admin/Issuer/Holder views
+- Overview: role-aware shell with sidebar; gates Admin/Issuer/Holder views
 
 Backend contract (see ../CredChain_Golang/AGENTS.md):
 
 - All routes under /api
 - Response envelope: { code: number, message: string, data?: T }
-- 6-digit response codes (AABBCC): category 10/20/30/40, feature, status
+- 6-digit response codes (AABBCC): category 10/20/30/40/50, feature, status; Python owns category 50 and Go translates downstream failures
 - Locales: en, id - frontend keys must match backend message keys
 - Auth: Google OAuth only -> access (JWT, stateless) + refresh (DB-rotated) tokens
 - Rate limits: login 300/min, refresh 200/min, logout 100/min, API 1200/min
@@ -93,11 +93,11 @@ Backend contract (see ../CredChain_Golang/AGENTS.md):
 | Client state  | Zustand                                | ^5        | Auth, UI, ephemeral state                                        |
 | Forms         | React Hook Form                        | ^7        | Performance; batch/dynamic forms                                 |
 | Validation    | Zod                                    | ^3        | Mirrors Go Ozzo rules; type inference                            |
-| i18n          | i18next + react-i18next                | ^23 / ^14 | Mature, ICU-style, lazy bundles, matches go-i18n keys            |
+| i18n          | i18next + react-i18next                | ^23 / ^14 | Statically imported en/id catalogs; backend-key presence check   |
 | Auth (OAuth)  | @react-oauth/google                    | ^0.12     | Google Sign-In button, ID token retrieval                        |
 | Toasts        | sonner                                 | ^1.5      | Headless, Tailwind-friendly                                      |
 | Class utils   | clsx + tailwind-merge                  | ^2 / ^3   | cn() helper                                                      |
-| Drawer        | vaul                                   | ^1.1      | Content drawer (admin user edit); NOT used for sidebar nav       |
+| Drawer        | vaul                                   | ^1.1      | Declared dependency; no current production source usage          |
 | Tests         | Vitest + Testing Library               | ^3 / ^16  | Vite-native, Jest-compatible API                                 |
 | API mocking   | MSW                                    | ^2        | Service worker fetch interception                                |
 | E2E           | Playwright                             | ^1        | Cross-browser, trace viewer                                      |
@@ -109,9 +109,9 @@ Backend contract (see ../CredChain_Golang/AGENTS.md):
 
 The demo hand-rolls everything (selects, modals via window.confirm, no popovers). Production needs accessible select dropdowns, dialogs, command palettes, dropdown menus, toasts, tabs - building all of that from scratch is months of work and an accessibility liability. shadcn/ui gives us Radix primitives (WAI-ARIA compliant, keyboard navigation, focus traps) as source files in our repo that we restyle to our tokens. We own the code; we don't depend on a versioned package. This is the 2026 default for Tailwind apps.
 
-**Components installed in `src/shared/components/ui/` (14 primitives):** badge, button, card, confirm-dialog, dialog, dropdown-menu, form-field, input, label, select, skeleton, table, toaster.
+**Components installed in `src/shared/components/ui/`:** badge, button, card, confirm-dialog, dialog, dropdown-menu, file-dropzone, form-field, input, label, select, skeleton, table, textarea, toaster.
 
-All shadcn components live in `src/shared/components/ui/` and are restyled to use our tokens (`navy`, `gold`, `error`) before any feature code consumes them. The `vaul` `Drawer` primitive is used outside `ui/` by `feature/user/components/UserEditDrawer.tsx` for the admin batch-edit flow; it is the only content drawer in the app and is **not** used for sidebar navigation (the mobile sidebar is hand-rolled — see §8.7).
+All shadcn components live in `src/shared/components/ui/` and are restyled to use our tokens (`navy`, `gold`, `error`) before any feature code consumes them. `vaul` remains declared, but current production source has no `Drawer` usage or `UserEditDrawer.tsx`. The mobile sidebar is hand-rolled (see §8.7).
 
 ---
 
@@ -124,7 +124,7 @@ Feature-driven, evolved from the demo:
 ```
 CredChain_React/
   public/
-  e2e/                  # Playwright specs (auth, public, a11y)
+  e2e/                  # session-refresh.spec.ts (mocked browser regressions)
   scripts/
     check-locales-sync.mjs
   src/
@@ -132,7 +132,7 @@ CredChain_React/
       App.tsx              # mounts Providers → SessionHydrator → RouterProvider
       providers.tsx        # QueryClient + I18n + GoogleOAuth + AppErrorBoundary + OfflineBanner + Toaster
       router.tsx           # createBrowserRouter (lazy via lazyRoute() helper)
-      SessionHydrator.tsx  # GET /users/self on mount; syncs i18n with Zustand locale
+      SessionHydrator.tsx  # GET /users/self for persisted auth only; syncs locale
       store/
         index.ts           # combined auth + UI slices in one file (with persist middleware)
     feature/                 # one folder per business domain
@@ -141,28 +141,23 @@ CredChain_React/
         Login.tsx
         index.ts
       user/
-        api/                 # 11 hooks + keys.ts (useUsers, useUser, useUserSelf,
-                             #   useCreateUsers, useUpdateUsers, useUpdateUserRoles,
-                             #   useUpdateSelfProfile, useUpdateSelfEmail,
-                             #   useDeleteUsers, useRestoreUsers, useTransferSuperAdmin)
-        components/          # MetaEditor, RoleFilterMenu, SortMenu,
-                             # UserCreateRow, UserEditDrawer (vaul), UserStatusBadge
+        api/                 # user queries and mutations + keys.ts
+        components/          # user forms, import modal, filters and sort menus
         hooks/               # useUserListParams
-        lib/                 # meta
         schemas/             # user (Zod)
         UserList.tsx / UserDetail.tsx / UserCreate.tsx
         UserSelfProfile.tsx / UserSelfEmail.tsx
       credential/
-        api/                 # 6 hooks + keys.ts (useCredentials, useCredential,
-                             #   useMyCredentials, useIssueCredentials,
-                             #   useRevokeCredentials, useVerifyCredential)
-        components/          # CredentialCard, CredentialIssueRow, CredentialSortMenu,
-                             # CredentialStatusBadge, CredentialStatusFilterMenu,
-                             # HolderSearchDropdown, LoadMoreBar, MetaDisplay,
-                             # MetaEditor, UserContactBlock, UserStatusBadge
+        api/                 # credential queries, mutations and keys
+        components/          # issue/submit rows, filters, preview and review modals
         schemas/             # credential (Zod)
-        CredentialList.tsx / CredentialDetail.tsx / CredentialIssue.tsx
-        MyCredentials.tsx / VerifyCredential.tsx
+        CredentialList.tsx / CredentialDetailModal.tsx / CredentialIssue.tsx
+        CredentialSubmit.tsx / VerifyCredential.tsx
+      credential-type/       # CredentialTypesPage
+      issuer-organization/   # IssuerOrganizationsPage
+      competency/            # CompetenciesPage
+      user-unit/             # UserUnitsPage
+      notification/          # NotificationsPage
       overview/
         Overview.tsx            # Main overview/dashboard page
         Settings.tsx            # @deprecated (2026-07-08), not in routes
@@ -183,12 +178,10 @@ CredChain_React/
         envelope.ts          # ApiResponse<T>, ApiError, isApiError
         query-client.ts      # TanStack QueryClient config
       auth/
-        role.ts              # Role const object, ROLE_LEVEL, canAccess, canAccessAny, formatRole
+        role.ts              # Role, ROLE_LEVEL, ROLE_LABEL_KEY, access/edit/delete/transfer helpers
         guards.tsx           # ProtectedRoute, PublicRoute, RoleGate
       components/
-        ui/                  # 13 shadcn primitives (sole Radix import location)
-                             # badge, button, card, confirm-dialog, dialog,
-                             # dropdown-menu, form-field, input, label, select, skeleton, table, toaster
+        ui/                  # shared primitives and form wrappers (sole Radix import location)
         layout/
           AdaptiveLayout.tsx # renders OverviewLayout if authed, PublicLayout otherwise
           OverviewLayout.tsx
@@ -213,10 +206,12 @@ CredChain_React/
         OfflineBanner.tsx
         PageHeader.tsx
         RouteErrorBoundary.tsx
-        StatusPill.tsx
+        UserStatusBadge.tsx
+        CredentialStatusBadge.tsx
          UserAvatar.tsx
          UserRoleBadge.tsx
-       hooks/                 # useDebouncedValue, useNavSearch, useOnline, useT
+       hooks/                 # useDebouncedValue, useLoadMore, useNavSearch, useOnline,
+                              # useReferenceStatusFilter, useScrollToTop, useSearchParam, useSmartBack, useT
       i18n/
         config.ts
         en.json              # mirrors backend locales/en.json
@@ -267,7 +262,7 @@ Define in `tsconfig.app.json` and `vite.config.ts`:
 }
 ```
 
-Import order (enforced by ESLint `import/order`):
+Required import order (the current ESLint configuration does not enforce `import/order`):
 
 1. node/react builtins
 2. third-party packages
@@ -788,8 +783,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
 ### 7.5 Status Pill
 
+This design recipe is retained as a requirement, not a current source listing. `StatusPill.tsx` is absent; `UserStatusBadge` and `CredentialStatusBadge` currently use `@ui/badge`. The recipe and implementation differ and need a design decision before reconciliation.
+
 ```tsx
-// shared/components/StatusPill.tsx
+// Design recipe: shared/components/StatusPill.tsx
 const toneClasses = {
   navy: "bg-navy/10 text-navy",
   gold: "bg-gold/20 text-navy",
@@ -977,7 +974,7 @@ return (
 
 ### 7.10 FormField (shared form control wrapper)
 
-Extracted from three duplicated inline implementations in UserCreateRow, CredentialIssueRow, and UserEditDrawer. Wraps a `<Label>` + children + optional error/hint/optional tag. For explicit accessibility associations, pass `htmlFor` matching the control's `id`, and `errorId` matching its conditional `aria-describedby` (used by inline reference rejection):
+Wraps a `<Label>` + children + optional error/hint/optional tag. Current callers include UserCreateRow, CredentialIssueRow, CredentialSubmitRow, and credential review modals. For explicit accessibility associations, pass `htmlFor` matching the control's `id`, and `errorId` matching its conditional `aria-describedby` (used by inline reference rejection):
 
 ```tsx
 // shared/components/ui/form-field.tsx
@@ -1020,7 +1017,7 @@ export function FormField({
 
 ### 7.11 DetailRow (dt/dd pair for read-only detail views)
 
-Extracted from the repeated `<dt>`/`<dd>` pattern in UserDetail, UserSelfProfile, Settings, and CredentialDetail. Supports optional icon and error tone:
+Renders the shared `<dt>`/`<dd>` pattern used by UserDetail, UserSelfProfile, CredentialSystemFacts, and VerificationResult. Supports optional icon and error tone:
 
 ```tsx
 // shared/components/DetailRow.tsx
@@ -1149,7 +1146,7 @@ Credential Types, Issuer Organizations, and Competencies share `ReferenceToolbar
 
 Keep `CredentialFileInput` in the same Card before, during and after verification: existing thumbnail, filename, size/MIME, Eye preview and X remove. No separate completed filename bar or text Preview/Change controls. Escape returns preview focus to Eye; removal/reset clears the result and focuses the restored upload dropzone. Validate replacements before discarding the accepted file/result and ignore late responses for removed/replaced uploads.
 
-Use one permission-aware action: **View credential details** for confirmed live exact evidence; **View compared credential** for a text-comparison candidate with existing private access. Anonymous and unrelated Holders open the public snapshot from the same verification response. Own Holders and Issuer+ open the existing private modal. A denied private lookup preserves exact public fallback. AI100%, cached verdicts and token presence alone grant no public details. Keep concise, contextual limits on the result, not inside the modal: always state that recipient identity and direct issuance confirmation with the issuer organization are outside this check; add current organization/type-name provenance when a summary exists; add current Holder-account provenance only when qualified public details contain Holder information. This yields one, two or three relevant bullets, not a fixed count or different verification strictness. Do not repeat organization/type provenance in the Holder notice.
+Use one permission-aware action: **View credential details** for confirmed live exact evidence; **View compared credential** for a text-comparison candidate with existing private access. Anonymous and unrelated Holders open the public snapshot from the same verification response. Own Holders and Issuer+ open the existing private modal. A denied private lookup preserves exact public fallback. AI 100%, cached verdicts and token presence alone grant no public details. Keep concise, contextual limits on the result, not inside the modal: always state that recipient identity and direct issuance confirmation with the issuer organization are outside this check; add current organization/type-name provenance when a summary exists; add current Holder-account provenance only when qualified public details contain Holder information. This yields one, two or three relevant bullets, not a fixed count or different verification strictness. Do not repeat organization/type provenance in the Holder notice.
 
 Both adapters reuse `CredentialDetailLayout`, `buildCredentialReadFields`, `UserContactBlock`, `CredentialFilePreview` and `CredentialSystemFacts`. Preserve original `max-w-5xl`, padding, typography, badges, copy controls and responsive grid. Body order: file panel; applicable protected rejection/revocation notices; Details; Holder and authorized lifecycle parties; always-visible original technical/lifecycle footer. Read-field order: Name, Number, Credential Type, Issuer Organization, Issued Date, Expiry Date, Competencies, Additional Information. No verification strip, separate lifecycle section or collapsed technical disclosure. Pending-only private editing/save/cancel stays in the private adapter.
 
@@ -1165,7 +1162,7 @@ The public file panel previews the uploaded `File` with original filename/size a
 
 | Layout           | Used by                   | Pattern                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PublicLayout`   | `/credentials/verify/:id` | Navy header (`min-h-[64px]` flat, no `sm:` breakpoint) with **gold brand mark** + gold underline, white card body, `<CopyrightFooter />` strip (transparent background — see §8.1.1). Container is `h-dvh overflow-y-scroll scrollbar-gutter-stable` (NOT `min-h-dvh`, NOT `min-h-screen`) with `id="main"` — the root itself is the sole scroll surface (window never scrolls), keeping the footer anchored to the _visible_ viewport on mobile the same way `min-h-dvh` did (`h-dvh` is also a dynamic-viewport unit, so mobile chrome collapse/expand is still handled) while also closing the `VerifyCredential` → `CredentialFileModal` Radix `Dialog` scroll-lock shift — see §5.3. `NavbarPublic`/`<main>`/`CopyrightFooter` all scroll together inside this one container, same as before. `<main>` has `mx-auto max-w-7xl` so the public content area (About/Help at `max-w-4xl`, VerifyCredential at `max-w-3xl`) centers within a 1280px band that aligns with the `NavbarPublic` width. `<main>` padding `px-4 pt-4 pb-12 sm:px-8` mirrors `OverviewLayout` so unauthed Help/About sit identically to their authed counterparts.                                                                                                                                                                                                                        |
+| `PublicLayout`   | `/credentials/verify` | Navy header (`min-h-[64px]` flat, no `sm:` breakpoint) with **gold brand mark** + gold underline, white card body, `<CopyrightFooter />` strip (transparent background; see §8.1.1). Container is `h-dvh overflow-y-scroll scrollbar-gutter-stable` (NOT `min-h-dvh`, NOT `min-h-screen`) with `id="main"`; the root itself is the sole scroll surface (window never scrolls), keeping the footer anchored to the _visible_ viewport on mobile the same way `min-h-dvh` did (`h-dvh` is also a dynamic-viewport unit, so mobile chrome collapse/expand is still handled) while also closing the `VerifyCredential` → `CredentialFileModal` Radix `Dialog` scroll-lock shift (see §5.3). `NavbarPublic`/`<main>`/`CopyrightFooter` all scroll together inside this one container, same as before. `<main>` has `mx-auto max-w-7xl` so the public content area (About/Help at `max-w-4xl`, VerifyCredential at `max-w-3xl`) centers within a 1280px band that aligns with the `NavbarPublic` width. `<main>` padding `px-4 pt-4 pb-12 sm:px-8` mirrors `OverviewLayout` so unauthed Help/About sit identically to their authed counterparts.                                                                                                                                                                                                                        |
 | `SplitLayout`    | `/` (Landing), `/login`   | Fixed 100dvh — no scrollbars. Outer container and right panel both use `h-dvh overflow-hidden`. Mobile: 33/67 vertical split — navy brand band `h-[33dvh]` with `flex items-center justify-center` to center brand content; white content area `flex-1` fills remaining 67dvh. Desktop: 50/50 horizontal split with navy brand panel left + light content right, gold + blue `<DecorBlob>`s. Mobile: navy band on top + content below, no blobs (too cramped). `AttestationStamp` now accepts a `className` prop for responsive sizing; mobile brand band renders it with `max-w-[min(160px,18vh)]` to scale down on short screens instead of hiding. Landing content vertically centered (`flex items-center justify-center`). Login content top-aligned on mobile (`justify-start`) and centered on desktop (`lg:justify-center`). Login `<BackLink>` uses `self-start` to align left within the card. Language switcher floats top-right on desktop (light variant), inside the navy band on mobile (dark variant). No copyright footer (Landing/Login are conversion surfaces). Landing/Login content refactored to viewport-relative units: `py-[2dvh]`, `space-y-[1.5dvh]`, card padding `p-6 sm:p-8`. Forced `min-h-[Xlh]` removed from headings and subtitles so content can shrink to fit short viewports.                                         |
 | `OverviewLayout` | All authenticated routes  | Fixed navy sidebar (`w-72`) with **gold brand mark cluster**, transparent top navbar (`min-h-[64px]` flat, no `sm:` breakpoint) with `mx-auto max-w-7xl` content row so menu/search/avatar align with the widest page content below, scrollable `main` (`flex-1 overflow-y-scroll [scrollbar-gutter:stable]` — the **sole** scroll surface on this layout) so route-switches with differing content heights don't reflow the navbar. Container is `h-dvh overflow-hidden` (NOT `min-h-dvh`, NOT `min-h-screen`) with `bg-base` (NOT `bg-gray-100` or hardcoded `bg-[#F4F7F6]`) so the page background matches `PublicLayout` and the window itself never scrolls — see §5.3's scroll-lock guard for why. Sidebar uses `sm:h-dvh` (NOT `sm:h-screen`) to match the container. On every route change, `useScrollToTop()` resets both the window scroller and the `#main` overflow container to the top so the next page never opens mid-scroll inherited from the previous one. Mobile: hand-rolled CSS-transform slide (`-translate-x-full` ↔ `translate-x-0`) with `bg-navy/80` click backdrop. `<main>` padding `px-4 pt-4 pb-12 sm:px-8` (full width — no `max-w-7xl` on the main wrapper; the sidebar takes the fixed `w-72` and the content area fills the remaining space). No copyright footer (authenticated chrome; brand presence is the sidebar). |
 | `AdaptiveLayout` | `/help`, `/about`         | Renders `OverviewLayout` if `isAuthenticated`, `PublicLayout` otherwise. Because both layouts use identical `<main>` padding (`px-4 pt-4 pb-12 sm:px-8`) and matching header heights, unauthed and authed Help/About pages render identically — the only delta is the copyright strip, which appears only on the unauthenticated `PublicLayout` branch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
@@ -1285,7 +1282,7 @@ The icon color follows the active state via the `children` render prop (`isActiv
 </aside>
 ```
 
-> A shadcn `Sheet` was originally specced for this but never adopted — the hand-rolled transform is the live implementation. The `vaul` `Drawer` primitive _is_ installed, but it is reserved for **content** drawers (e.g. `UserEditDrawer`, the admin batch-edit panel), not navigation.
+> A shadcn `Sheet` was originally specced for this but never adopted; the hand-rolled transform is the live implementation. `vaul` is declared but unused in current production source. Content-drawer guidance does not describe an existing admin edit panel.
 
 ### 8.8 Responsive Breakpoints
 
@@ -1581,11 +1578,11 @@ After successful login, navigate to `/overview`. The backend sets httpOnly cooki
 
 ### 11.3 Logout Pattern
 
-`useLogout` calls `POST /api/auth/logout`, then clears Zustand session + Query cache and navigates to `/`.
+`useLogout` calls `POST /api/auth/logout`, then clears Zustand session + Query cache and navigates to `/` on settlement, including failure. Failed revocation shows an error instead of a success toast. Refresh/logout serialization and its limits are documented in `AGENTS.md`.
 
 ### 11.4 Email Update with Google Reauth
 
-`UserSelfEmail` is a 2-step form. Step 1 captures new email. Step 2 prompts Google sign-in for the new address; the resulting ID token is sent to `PUT /users/self/email` along with the email. Backend verifies the token's email matches.
+`UserSelfEmail` displays the current email read-only and offers Google sign-in. It reads the new email from the returned ID token, asks for confirmation, then sends that email and token to `PUT /users/self/email`. There is no editable new-email input. Backend verifies the token's email matches.
 
 For token management, refresh flow, and backend auth coordination, see [AGENTS.md §Authentication](AGENTS.md).
 
@@ -1595,7 +1592,7 @@ For token management, refresh flow, and backend auth coordination, see [AGENTS.m
 
 ### 12.1 Route Guards
 
-- `ProtectedRoute` — redirects unauthenticated to `/login` (with `state.from`); role-mismatched to `/overview`. Optional `allowedRoles?: Role[]`.
+- `ProtectedRoute`: redirects unauthenticated to `/login` (with `state.from`); role-mismatched Holders to `/credentials`, other roles to `/overview`. Optional `allowedRoles?: Role[]`.
 - `PublicRoute` — redirects authenticated away to `state.from ?? /overview` (login is public-only).
 - `RoleGate` — inline UI gating for show/hide based on role, with optional `fallback`.
 
@@ -1603,7 +1600,7 @@ See the route guard implementations in `@shared/auth/guards.tsx`.
 
 ### 12.2 Sidebar Nav Items
 
-`NAV_ITEMS` in `@shared/components/layout/nav-items.ts` carry `minRole` (Issuer+ for overview/users/credentials, Admin+ for settings) and `exactRole` (HOLDER-only "My Credentials"). The `inSidebar` flag controls whether an item renders in the sidebar vs. only the global search / profile menu.
+`NAV_ITEMS` in `@shared/components/layout/nav-items.ts` currently show Overview and Credentials for Holder+, Users for Issuer+. Profile, Help, and About are not sidebar items. The item type supports `minRole`, `exactRole`, and `inSidebar`; no current entry uses `exactRole`. Settings and a separate My Credentials entry are absent.
 
 For the complete route table with paths, components, guards, and shells, see [AGENTS.md §Route Map](AGENTS.md).
 
@@ -1627,18 +1624,9 @@ For Zod schema definitions and RHF integration, see [AGENTS.md §Forms & Validat
 
 ---
 
-        </FormItem>
-      )}
-    />
-
-);
-}
-
-````
-
 ### 13.4 Server-Side Validation Errors
 
-Backend returns `400` with `code: 400001` (validation) and per-field details. Map to RHF errors:
+Backend validation returns HTTP `400` with per-field arrays of already-localized messages. Generic system validation uses `100040`; endpoint-specific codes also exist. Map available field errors to RHF rather than gating on one code:
 
 ```ts
 import { setServerErrors } from "@shared/lib/forms";
@@ -1646,14 +1634,14 @@ import { setServerErrors } from "@shared/lib/forms";
 const createUsers = useMutation({
   mutationFn: ...,
   onError: (error: ApiError) => {
-    if (error.code === 400001 && error.cause.response?.data.errors) {
-      setServerErrors(form, error.cause.response.data.errors);
+    if (error.fieldErrors) {
+      setServerErrors(form, error.fieldErrors);
     } else {
-      toast.error(t(error.messageKey));
+      notify.error(error.messageKey);
     }
   },
 });
-````
+```
 
 ---
 
@@ -1672,7 +1660,7 @@ export function MyComponent() {
 
 ### 14.2 Language Switcher
 
-Lives in `NavbarOverview` and `NavbarPublic`. Persists choice to `useStore.locale`:
+Lives in `NavbarOverview` and `NavbarPublic`. Persists choice to `useStore.locale`. Authenticated changes also save through `PUT /users/self/language`, with same-account cache updates and rollback on failure. The following local-only sketch is not the complete account-save implementation:
 
 ```tsx
 export function LanguageSwitcher() {
@@ -1708,8 +1696,9 @@ For i18n configuration see [AGENTS.md §Internationalization](AGENTS.md).
 
 | Error type                 | UI surface                | Resolution                |
 | -------------------------- | ------------------------- | ------------------------- |
-| Validation (`code 400001`) | Inline form field error   | Fix input                 |
-| Auth (`status 401`)        | Silent refresh + redirect | Auto                      |
+| Validation (generic `100040` or endpoint-specific code) | Inline form field error | Fix input |
+| Session-authentication 401 | Coordinated refresh; redirect on definitive rejection | Auto |
+| Domain reauthentication 401 | Error without clearing the session | Complete required reauthentication |
 | Forbidden (`status 403`)   | Toast + route fallback    | Sign in as different user |
 | Not Found (`status 404`)   | Empty state on page       | Navigate back             |
 | Server (5xx)               | Toast                     | Retry button              |
@@ -1767,19 +1756,18 @@ onError: (e: ApiError) => notify.error(e.messageKey),
 
 ### 15.4 Inline Validation Errors
 
-shadcn `<FormMessage />` automatically reads from RHF state. Backend validation errors should be mapped onto the form:
+Use `@ui/form-field` with the RHF field's error message. There is no installed `FormMessage` component. Backend errors use `Record<string, string[]>`; preserve their localized messages and dot paths:
 
 ```ts
 // shared/lib/forms.ts
 export function setServerErrors<T extends FieldValues>(
   form: UseFormReturn<T>,
-  errors: Record<string, string>,
+  errors: Record<string, string[]>,
 ) {
-  Object.entries(errors).forEach(([path, key]) => {
-    form.setError(path as Path<T>, {
-      type: "server",
-      message: i18n.t(key),
-    });
+  Object.entries(errors).forEach(([path, messages]) => {
+    const message = Array.isArray(messages) ? messages[0] : String(messages);
+    if (!message) return;
+    form.setError(path as Path<T>, { type: "server", message });
   });
 }
 ```
@@ -1872,9 +1860,11 @@ See [AGENTS.md §Testing Strategy](AGENTS.md) for Vitest/RTL/MSW/Playwright conf
 
 ### 18.1 Code Splitting
 
-Lazy-load every route via React Router's `lazy:` (already shown in 12.3). Vite produces one chunk per route.
+Lazy-load every route remains the design requirement. Current page routes use the `lazyRoute()` helper built on React `lazy` and `Suspense`, not React Router's `lazy:` property. Login, the credential-detail redirect, and NotFound are eager. Shared imports and manual chunks mean output is not guaranteed to be one chunk per route. See the routing section in `AGENTS.md`.
 
 ### 18.2 Vite Config
+
+Selected build/proxy configuration is shown below. The complete file also loads `VITE_PORT` (default 5173), defines `__APP_VERSION__`, excludes `pdfjs-dist` from dependency optimization, and configures development allowed hosts.
 
 ```ts
 // vite.config.ts
@@ -1896,7 +1886,7 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -1995,7 +1985,7 @@ See [AGENTS.md §Coding Conventions](AGENTS.md) for naming conventions and ESLin
 | `App.css` (Vite scaffold)                        | Deleted                                    |
 | Empty `shared/{api,component,hook,util}` folders | Populated per Section 4                    |
 | Inline `clsx` everywhere                         | `cn()` helper (`shared/lib/cn.ts`)         |
-| Raw `bg-blue-100 text-blue-800` role badge       | Token-based via `<StatusPill tone="navy">` |
+| Raw `bg-blue-100 text-blue-800` role badge       | Token-based via the `<StatusPill tone="navy">` design recipe (§7.5); current status badges use `@ui/badge` |
 
 ### 20.3 What Gets Deleted
 
@@ -2228,18 +2218,18 @@ For each violation, show the line and the correct fix.
 | UI primitives  | shadcn/ui + Radix UI               | Owned in-repo, accessible by default, 2026 default for Tailwind |
 | Server state   | TanStack Query + axios             | Industry standard, handles caching/refetch/mutations            |
 | Forms          | React Hook Form + Zod              | Best DX for batch/dynamic forms, Zod mirrors Ozzo               |
-| Token storage  | httpOnly cookies (backend-set)     | XSS-immune, SameSite=Strict for CSRF                            |
+| Token storage  | httpOnly cookies (backend-set); SameSite=Strict required | HttpOnly prevents script access to cookie values, not XSS itself; cookie policy and CSRF protection still require backend review |
 | i18n           | i18next + react-i18next            | Mature, ICU-style, matches backend go-i18n keys                 |
 | Demo migration | Hard - greenfield                  | Demo DTOs do not match real backend                             |
 | AI prompts     | Section 21                         | Component, feature, backend integration, audit prompts          |
 
 ### 22.2 Open Questions for Backend
 
-1. **Cookie strategy on `/api/auth/google`** - Backend currently returns tokens in response body. Coordinate change to set httpOnly cookies + omit tokens from body. CORS must allow credentials.
+1. **Cookie strategy on `/api/auth/google`**: HttpOnly access and refresh cookies are implemented. Tokens also remain in the response DTO; omitting body tokens is still a coordination decision. Cookie Secure/SameSite settings are configurable. Credentialed CORS requires explicit origins.
 2. **CSRF token endpoint** - With cookies, do we need a `/api/csrf-token` endpoint, or rely on SameSite=Strict alone?
 3. **`/api/users/self/email` Google reauth** - Does backend accept the same Google ID token format as login? Audience claim?
-4. **Pagination response shape** - Confirm `{ data, total, page, page_size }` (snake_case) is final.
-5. **Validation error shape** - When backend returns `code: 400001`, what is the exact `errors` field shape? `{ field: messageKey }` or `{ field: { code, message } }`?
+4. **Pagination response shape**: list data uses `{ items, total, page, limit, last_page, from, to, ...URL helpers }` inside the response envelope. See `PaginatedResponse<T>` and Go `response.Pagination`.
+5. **Validation error shape**: `errors` maps field paths to localized string arrays, including dot paths such as `users.0.email`. Generic validation uses `100040`; endpoint-specific codes also exist.
 6. **Rate limit headers** - Does backend return `Retry-After` or `X-RateLimit-Reset` so frontend can show "try again in X seconds"?
 
 ### 22.3 Open Questions for Frontend
@@ -2248,13 +2238,13 @@ For each violation, show the line and the correct fix.
 2. **Empty `meta` field UX** - JSON editor vs key-value input grid?
 3. **Date display locale** - `Intl.DateTimeFormat` with user locale, or fixed format?
 4. **Mobile-only screens** - Do any flows need mobile-only UX (camera-based credential scanning)?
-5. **Dark mode** - Future consideration. Token structure already supports it via `:root.dark` overrides.
+5. **Dark mode**: future consideration. Current application is light-only; `:root.dark` overrides were removed. Older dark-mode recipes elsewhere in this document remain unresolved design guidance, not current functionality.
 6. **Real-time updates** - WebSocket from backend for credential issuance notifications? Phase 2.
 7. **Public verification page UX** - QR code support? File drag-and-drop?
 
 ### 22.4 Phase 2 Considerations
 
-Deferred for initial release:
+Historical initial-release deferrals follow. CSV/Excel user import and a persisted notification inbox now exist; a real-time feed remains separate from that inbox.
 
 - Cmd+K command palette (`shadcn/ui` Command primitive)
 - Notifications bell with real-time feed

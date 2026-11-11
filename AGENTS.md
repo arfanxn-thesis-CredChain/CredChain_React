@@ -38,27 +38,28 @@ make test                     # Vitest run
 
 # Unwrapped scripts (run via npm):
 npm run preview               # serve production build locally
-npm run format:check          # Prettier check (CI)
+npm run format:check          # Prettier check (available locally; not in CI)
 npm run test:watch            # Vitest watch mode
 npm run test:coverage         # Vitest with v8 coverage
-npm run test:e2e              # Playwright E2E (requires :5173 + .auth/*.json files)
-npm run check-locales         # verify en.json/id.json sync with backend locales/
+npm run test:e2e              # Playwright session regressions with mocked API responses
+npm run check-locales         # check backend keys except mail_ against frontend catalogs
 ```
 
 **Env setup:** copy `.env.example` to `.env` and fill `VITE_GOOGLE_CLIENT_ID`. Tests use `.env.test` (committed, placeholder values).
 
-**Required env vars** (validated at startup in `src/shared/lib/env.ts`):
+**Environment variables** (browser settings use `src/shared/lib/env.ts`; Vite and Playwright read their own settings):
 
 | Var                     | Required | Default                 | Purpose                                                     |
 | ----------------------- | -------- | ----------------------- | ----------------------------------------------------------- |
 | `VITE_GOOGLE_CLIENT_ID` | **yes**  | —                       | fatal if missing (thrown by `env.ts` at module load)        |
 | `VITE_API_BASE_URL`     | no       | `/api`                  | base URL for axios                                          |
-| `VITE_API_PROXY`        | no       | `http://localhost:8080` | dev-server proxy target for `/api` (Vite only, not bundled) |
+| `VITE_API_PROXY`        | no       | `http://localhost:8080` | dev-server proxy target for `/api` from the process environment (Vite only, not bundled) |
 | `VITE_APP_ENV`          | no       | `development`           | `development` / `staging` / `production`                    |
 | `VITE_SUPPORT_EMAIL`    | no       | `support@credchain.app` | contact address shown on Help & About pages                 |
-| `E2E_BASE_URL`          | no       | `http://localhost:5173` | Playwright and save-auth base URL (overrides default)      |
+| `VITE_PORT`            | no       | `5173`                 | Vite development server port (not read by `env.ts`)          |
+| `E2E_BASE_URL`          | no       | `http://localhost:5173` | Playwright base URL (overrides default)      |
 
-Engine note: tested on Node 20.x; `package.json` does not pin `engines`.
+Engine note: CI selects Node 20; `package.json` does not pin `engines`.
 
 A `prepare` script wires `husky`; commits trigger `lint-staged` (Prettier on `*.{ts,tsx,css,json,md}`, ESLint `--fix` on `*.{ts,tsx}`).
 
@@ -80,19 +81,10 @@ For testing: `.env.test` is committed and contains placeholder values. Tests do 
 ```
 CredChain_React/
   public/
-  e2e/                         # Playwright specs (guest, holder, issuer, admin, super-admin, a11y)
-    guest-flow.spec.ts
-    holder-flow.spec.ts
-    issuer-flow.spec.ts
-    admin-flow.spec.ts
-    super-admin-flow.spec.ts
-    a11y.spec.ts
-    helpers/
-      screenshots.ts
-    scripts/
-      save-auth.ts
+  e2e/
+    session-refresh.spec.ts    # two mocked browser session regressions
   scripts/
-    check-locales-sync.mjs     # verifies en.json/id.json sync with ../CredChain_Golang/locales/
+    check-locales-sync.mjs     # checks backend keys except mail_; frontend extras warn
   src/
     app/                       # cross-cutting wiring (no business logic)
       App.tsx                  # RouterProvider mount
@@ -103,36 +95,35 @@ CredChain_React/
     feature/                   # one folder per business domain
       auth/                    # Login + api/ (useGoogleLogin, useLogout)
       user/                    # UserCreate, UserDetail, UserList, UserSelfEmail, UserSelfProfile
-                               # + api/ (11 hooks: useCreateUsers, useDeleteUsers, useRestoreUsers,
-                               #         useTransferSuperAdmin, useUpdateSelfEmail, useUpdateSelfProfile,
-                               #         useUpdateUserRoles, useUpdateUsers, useUser, useUsers, useUserSelf)
-                                # + components/ (CredentialSortMenu, CredentialStatusFilterMenu, MetaEditor,
-                                #                RoleFilterMenu, SortMenu, StatusFilterMenu, UserCreateRow,
-                                #                UserEditDrawer, UserStatusBadge)
-                               # + hooks/ (useUserListParams) + lib/ (meta) + schemas/ (user)
-      credential/              # CredentialDetail, CredentialIssue, CredentialList, MyCredentials,
-                               # VerifyCredential + api/ (6 hooks + keys.ts) + components/ + schemas/
+                               # + api/, components/, hooks/, schemas/
+      credential/              # CredentialIssue, CredentialSubmit, CredentialList,
+                               # CredentialDetailModal, VerifyCredential + api/, components/, schemas/
+      credential-type/         # CredentialTypesPage
+      issuer-organization/     # IssuerOrganizationsPage
+      competency/              # CompetenciesPage
+      user-unit/               # UserUnitsPage
       notification/            # NotificationsPage at /notifications; generic persisted inbox
-      overview/                # Overview + Settings
+      overview/                # Overview; Settings exists but is not routed
       landing/                 # Landing (self-wraps SplitLayout; route: /)
       about/                   # About
       help/                    # Help
     shared/
       api/                     # client.ts + codes.ts + envelope.ts + query-client.ts
       auth/                    # role.ts + guards.tsx
-      components/              # 28 shared components
-        ui/                    # 14 shadcn-style primitives (sole Radix import location)
+      components/              # shared components
+        ui/                    # shared primitives and form wrappers (sole Radix import location)
         layout/                # AdaptiveLayout, OverviewLayout, PublicLayout, SplitLayout,
-                               # OverviewSidebar, NavbarOverview, nav-items.ts
-      hooks/                   # useDebouncedValue, useLoadMore, useNavSearch, useOnline, useSmartBack, useT
+                               # OverviewSidebar, NavbarOverview, NavbarPublic, nav-items.ts
+      hooks/                   # useDebouncedValue, useLoadMore, useNavSearch, useOnline,
+                               # useReferenceStatusFilter, useScrollToTop, useSearchParam, useSmartBack, useT
       i18n/                    # config.ts + en.json + id.json
-      lib/                     # cn, env, format, forms, hash, jwt, notify
+      lib/                     # cn, env, format, forms, hash, jwt, notify, credential helpers
       types/api.ts             # DTO mirrors (UserDTO, AuthResponseDTO, CredentialDTO, PaginatedResponse)
     styles/index.css           # Tailwind v4 @theme tokens + base + utilities
     test/                      # setup.ts, fixtures.ts, msw/{handlers.ts,server.ts}, TestProviders.tsx
   .env.example / .env.test     # .env.test committed, used by Vitest
   components.json              # shadcn/ui config
-  DESIGN_SYSTEM.md             # full visual + engineering spec (87.9K)
+  DESIGN_SYSTEM.md             # full visual + engineering spec
   AGENTS.md                    # this file
   README.md
   eslint.config.js / prettier.config.js
@@ -188,7 +179,7 @@ userKeys = { all, list, detail, self };
 credentialKeys = { all, list, detail, mine };
 ```
 
-All mutations invalidate the `all()` key on success, except where settlement invalidation is required below.
+List-changing user and credential mutations generally invalidate their `all()` key on success. Self-email updates invalidate only `userKeys.self()` and update the session; language saves update the self-query cache directly. Notification mutations use the account-scoped settlement invalidation described below.
 
 **Notifications:** shared `useNotifications.ts` hooks serve both navbar and `feature/notification/NotificationsPage.tsx`. Feed and unread keys include account ID and role. Read mutations capture their originating account ID and invalidate only that account on settlement, including failures. Never pass a recipient ID to the API. Generic DTOs use nullable `subject_type`, `subject_id`, `subject`, `data`, and `updated_at`; current authorized subjects determine local allowlisted navigation, never payload URLs. Credential links search by ID; reference history links use `status=all` and current-name search. Missing/subjectless entries have no subject link but remain markable.
 
@@ -221,15 +212,15 @@ Backend response codes (6-digit `AABBCC`) map to i18n keys via `CODE_TO_MESSAGE_
 
 **Silent refresh:** `refreshInFlight` deduplicates within a tab; request generations avoid rotating again for delayed pre-refresh 401 responses. Same-origin tabs use the native Web Locks API and probe `GET /users/self` under the lock before rotating shared cookies. Web Locks requires a secure context (HTTPS or localhost); unavailable browsers fall back to per-tab deduplication, so cross-tab races remain possible there. Tokens remain HttpOnly and single-use; no revoked-token grace period. Only definitive refresh rejection or an authentication 401 after replay clears Zustand and private Query cache. Network errors, 429, and 5xx propagate without clearing authentication.
 
-**Session hydration:** `SessionHydrator` (mounted under `Providers`) calls `GET /users/self` on mount. Successful data updates an existing authenticated session; authentication invalidation belongs to the interceptor, not arbitrary query 401 errors. Renders full-page spinner until first load completes.
+**Session hydration:** `SessionHydrator` enables `GET /users/self` only when persisted `isAuthenticated` is true. Successful data updates that existing session; authentication invalidation belongs to the interceptor, not arbitrary query 401 errors. The full-page spinner appears only while an authenticated session's query is initially loading. First-time visitors do not probe or wait for this query.
 
-**Email update with Google reauth:** `UserSelfEmail` is a 2-step form. Step 1 captures new email. Step 2 prompts Google sign-in for the new address; the resulting ID token is sent to `PUT /users/self/email` along with the email. Backend verifies the token's email matches.
+**Email update with Google reauth:** `UserSelfEmail` displays the current email read-only and offers Google sign-in. It reads the new email from the returned ID token, asks for confirmation, then sends that email and token to `PUT /users/self/email`. There is no editable new-email input. Backend verifies the token's email matches.
 
 **Logout:** `logoutSession()` waits for the tab's refresh promise and serializes `POST /api/auth/logout` through the same Web Lock, preventing a late browser refresh response from restoring cookies after cleanup. The tab suppresses new automatic refresh until successful Google login. Frontend clears Zustand + Query cache on settlement; revocation failures show an error, not a success toast. Cross-client server-side revocation/rotation ordering is not covered by the browser lock.
 
 ### Routing & Lazy Loading
 
-Every route except `/login` is loaded via the `lazyRoute()` helper in `app/router.tsx`. The helper wraps the component in `Suspense` (with `LoadingSpinner` fallback) and attaches `RouteErrorBoundary` automatically. This means **route components must be named exports** — the helper takes the export name as a string.
+Page routes use the `lazyRoute()` helper in `app/router.tsx`, except eager `/login`, the credential-detail redirect, and the catch-all `NotFound`. The helper wraps the component in `Suspense` (with `LoadingSpinner` fallback) and attaches `RouteErrorBoundary` automatically. This means **route components must be named exports**; the helper takes the export name as a string.
 
 ```ts
 lazyRoute(() => import("@feature/user/UserList"), "UserList");
@@ -249,7 +240,12 @@ lazyRoute(() => import("@feature/user/UserList"), "UserList");
 | `/overview` | Overview | ProtectedRoute (any auth) | OverviewLayout |
 | `/notifications` | NotificationsPage | ProtectedRoute (any auth) | OverviewLayout |
 | `/credentials` | CredentialList | ProtectedRoute (any auth) | OverviewLayout |
-| `/credentials/:id` | CredentialDetail | ProtectedRoute (any auth) | OverviewLayout |
+| `/credentials/:id` | Redirect to `/credentials?credential_id=:id` | ProtectedRoute (any auth) | OverviewLayout |
+| `/credentials/submit` | CredentialSubmit | ProtectedRoute (any auth) | OverviewLayout |
+| `/credential-types` | CredentialTypesPage | ProtectedRoute (any auth) | OverviewLayout |
+| `/credential-issuer-organizations` | IssuerOrganizationsPage | ProtectedRoute (any auth) | OverviewLayout |
+| `/competencies` | CompetenciesPage | ProtectedRoute (any auth) | OverviewLayout |
+| `/user-units` | UserUnitsPage | ProtectedRoute (any auth) | OverviewLayout |
 | `/account/profile` | UserSelfProfile | ProtectedRoute (any auth) | OverviewLayout |
 | `/account/email` | UserSelfEmail | ProtectedRoute (any auth) | OverviewLayout |
 | `/users` | UserList | ProtectedRoute (Issuer/Admin/SuperAdmin) | OverviewLayout |
@@ -262,7 +258,7 @@ lazyRoute(() => import("@feature/user/UserList"), "UserList");
 
 ### Authorization & Role Guards
 
-**Single source of role logic:** `@shared/auth/role.ts` exports `Role` (a string-valued const object), `ROLE_LEVEL` hierarchy, `canAccess(userRole, minRole)`, `canAccessAny(userRole, allowed[])`, `formatRole`.
+**Single source of role logic:** `@shared/auth/role.ts` exports `Role` (a string-valued const object), `ROLE_LEVEL` hierarchy, `canAccess(userRole, minRole)`, `canAccessAny(userRole, allowed[])`, `ROLE_LABEL_KEY`, `canEditUser`, `canDeleteUser`, and `canTransferTo`. `canAccessAny` applies the lowest listed role as a hierarchy threshold, not an exact-membership test.
 
 ```
 Role.HOLDER     = "holder"     (level 1)  - receives credentials
@@ -275,11 +271,11 @@ Role.SUPER_ADMIN= "super_admin"(level 4)  - bootstrapped via Go CLI only
 
 **Guards** (`@shared/auth/guards.tsx`):
 
-- `ProtectedRoute` — redirects unauthenticated to `/login` (with `state.from`); role-mismatched to `/overview` (HOLDER) or `/overview`. Optional `allowedRoles?: Role[]`.
+- `ProtectedRoute`: redirects unauthenticated to `/login` (with `state.from`); role-mismatched to `/credentials` (HOLDER) or `/overview` (other roles). Optional `allowedRoles?: Role[]`.
 - `PublicRoute` — redirects authenticated away to `state.from ?? /overview` (login is public-only)
 - `RoleGate` — inline UI gating for show/hide based on role, with optional `fallback`
 
-**Sidebar nav** (`@shared/components/layout/nav-items.ts`): `NAV_ITEMS` carry `minRole` (Issuer+ for overview/users/credentials, Admin+ for settings) and `exactRole` (HOLDER-only "My Credentials"). The `inSidebar` flag controls whether an item renders in the sidebar vs. only the global search / profile menu.
+**Sidebar nav** (`@shared/components/layout/nav-items.ts`): current sidebar entries are Overview (Holder+), Users (Issuer+), and Credentials (Holder+). Profile, Help, and About are outside the sidebar. `NavSearchItem` supports `minRole`, `exactRole`, and `inSidebar`, but no current entry uses `exactRole`. There is no Settings or separate My Credentials entry.
 
 ### Forms & Validation (RHF + Zod)
 
@@ -287,9 +283,8 @@ Role.SUPER_ADMIN= "super_admin"(level 4)  - bootstrapped via Go CLI only
 
 **Schemas mirror Go Ozzo rules** (see `feature/*/schemas/`):
 
-- E.164 phone via `STRICT_E164` regex `/^\+[1-9]\d{6,14}$/`
 - ISO date via `/^\d{4}-\d{2}-\d{2}$/`
-- Email max 256, name 1–256, batch limits 50–100
+- Email max 256, name 1–256, batch sizes 1–100
 - `optionalEmptyToNull` helper treats empty strings as undefined
 
 **Field arrays for batch forms** (`UserCreate`, `CredentialIssue`):
@@ -298,7 +293,7 @@ Role.SUPER_ADMIN= "super_admin"(level 4)  - bootstrapped via Go CLI only
 const { fields, append, remove } = useFieldArray({ control: form.control, name: "users" });
 ```
 
-**Server validation errors:** mutation hooks accept the form via generic param (`useCreateUsers<T>(form)`), and `setServerErrors(form, errors)` from `@shared/lib/forms` maps `{ field: messageKey }` shape onto `form.setError`.
+**Server validation errors:** mutation hooks accept the form via generic param (`useCreateUsers<T>(form)`). `setServerErrors(form, errors)` from `@shared/lib/forms` accepts `Record<string, string[]>`, takes the first already-localized message per field, and passes dot paths such as `users.0.email` to `form.setError`.
 
 **Always wire `notify` for non-validation errors:**
 
@@ -316,11 +311,11 @@ onError: (error) => {
 
 **Locales:** `en` and `id` only, mirroring backend `CredChain_Golang/locales/`.
 
-**Sync verification:** `npm run check-locales` reads both files, flattens keys, and exits 1 if any backend key is missing from frontend. Run in CI or pre-commit.
+**Sync verification:** `npm run check-locales` checks flattened keys for both locales, excluding backend keys beginning `mail_`. Missing frontend keys fail; frontend-only keys warn. It does not compare values, response-code constants, or complete locale equivalence. CI runs this check; the current pre-commit hook does not.
 
 **Backend code → frontend key:** `CODE_TO_MESSAGE_KEY` map in `@shared/api/codes.ts`. Mirrors `CredChain_Golang/infrastructure/http/responder/mapper.go`. Adding a domain code requires updating: (a) this map, (b) both `locales/{en,id}.json` files, (c) backend's `CodeToMessageKey` and `HttpCodes` maps, (d) backend's locale files.
 
-**Locale state:** `useStore.locale` is the source of truth. `LanguageSwitcher` updates both i18next AND Zustand. `SessionHydrator` syncs `i18next.changeLanguage()` with stored locale on mount. Axios sends `Accept-Language` header so backend serves the matching locale.
+**Locale state:** `useStore.locale` is persisted locally. `LanguageSwitcher` updates i18next and Zustand; for authenticated users it also saves through `PUT /users/self/language`, updates the self-query cache, and rolls back on failure for the same account. `setUser` adopts account `language` unless a same-account language save is pending. `SessionHydrator` synchronizes i18next with the store. Axios sends `Accept-Language`.
 
 **Default locale:** Indonesian (`id`). The persisted locale is read from localStorage in `i18n/config.ts` before i18next initializes, so users never see a flash of English on Indonesian-default pages.
 
@@ -338,9 +333,9 @@ className={`base classes ${isActive ? "active" : ""} ${className}`}
 
 **Always use `notify`** from `@shared/lib/notify` for toasts. It auto-translates keys via i18n and applies consistent styling. Available: `notify.success`, `notify.error`, `notify.info`, `notify.warning`.
 
-**shadcn primitives** (in `@ui/*` — 14 primitives, the sole Radix import location):
+**Shared primitives and wrappers** (in `@ui/*`, the sole Radix import location; representative APIs):
 
-- `Button` — variants: `primary` (navy), `gold`, `destructive`, `outline`, `ghost`, `link`, `dashed`. All use `focus-visible:ring-gold` except `gold`/`destructive`/`link` which keep their own ring colors. Sizes: `sm`, `md`, `lg`, `icon`, `icon-mobile`.
+- `Button`: variants: `primary` (navy), `gold`, `destructive`, `outline`, `ghost`, `link`, `dashed`. All use `focus-visible:ring-gold` except `destructive`, which uses `focus-visible:ring-error`. Sizes: `sm`, `md`, `lg`, `icon`, `icon-mobile`.
 - `Card` + `CardHeader` + `CardTitle` (now `font-sans text-lg font-bold`) + `CardDescription` + `CardContent` + `CardFooter`
 - `Input` — accepts `leadingIcon` and `trailingAction` props
 - `Label` — Radix-based, supports peer-disabled
@@ -348,25 +343,25 @@ className={`base classes ${isActive ? "active" : ""} ${className}`}
 - `Dialog` + `ConfirmDialog` + `useConfirm()` hook (NEVER use `window.confirm`); `useConfirm()` returns `{ confirm, dialog }`
 - `DropdownMenu` — full Radix DropdownMenu with `destructive` item variant. The shared primitive defaults `modal={false}` (Radix would otherwise mount `react-remove-scroll` and shift the page horizontally — see scroll-lock note below). Pass `modal` explicitly only for true menus that need scroll-trapping.
 - `Table` + `TableHeader` + `TableBody` + `TableRow` + `TableHead` + `TableCell`
-- `Badge` — tones: navy, gold, error, green, gray
+- `Badge`: tones navy, gold, error, green, gray, amber
 - `Skeleton` — animate-pulse rounded gray box
 - `Toaster` — sonner integration with token-styled toasts (hardcoded `theme="light"`)
 
-> The `vaul` `Drawer` primitive is used by `feature/user/components/UserEditDrawer.tsx` (admin batch user edit). It lives in the feature, not in `@ui/`, and is the only content-drawer in the app — the mobile sidebar is NOT a `vaul`/`Sheet` drawer (see Error Handling / layout notes).
+> `vaul` remains a declared dependency, but current production source has no `Drawer` usage or `UserEditDrawer.tsx`. The mobile sidebar is not a `vaul`/`Sheet` drawer (see Error Handling / layout notes).
 
-**Custom shared components** (`@shared/components/*` — 28):
+**Custom shared components** (`@shared/components/*`; representative list):
 
-`BackLink`, `CopyInlineButton`, `CopyrightFooter`, `DecorBlob`, `DetailRow`, `EmptyState`, `ErrorBoundary` (`AppErrorBoundary`), `EyebrowLabel`, `FormField` (in `@ui/form-field`), `LanguageSwitcher`, `LoadMoreBar`, `LoadingSpinner` / `FullPageSpinner`, `MonoId`, `NotFound`, `OfflineBanner`, `PageHeader`, `RouteErrorBoundary`, `StatusPill`, `UserAvatar`, `UserRoleBadge`.
+`BackLink`, `CopyInlineButton`, `CopyrightFooter`, `DecorBlob`, `DetailRow`, `EmptyState`, `ErrorBoundary` (`AppErrorBoundary`), `EyebrowLabel`, `FormField` (in `@ui/form-field`), `LanguageSwitcher`, `LoadMoreBar`, `LoadingSpinner` / `FullPageSpinner`, `MonoId`, `NotFound`, `OfflineBanner`, `PageHeader`, `RouteErrorBoundary`, `UserStatusBadge`, `CredentialStatusBadge`, `UserAvatar`, `UserRoleBadge`.
 
-`DetailRow` renders a dt/dd pair (`label` + `value`) with optional icon and error/default tone. Extracted from the repeated pattern in UserDetail, UserSelfProfile, Settings, and CredentialDetail.
+`DetailRow` renders a dt/dd pair (`label` + `value`) with an optional icon and default, error, or amber tone. Current callers include `UserDetail`, `UserSelfProfile`, `CredentialSystemFacts`, and `VerificationResult`.
 
-`FormField` wraps a `<Label>` + children + optional error/hint/optional tag. Used by `UserCreateRow`, `CredentialIssueRow`, and `UserEditDrawer` (extracted from 3 duplicated inline implementations).
+`FormField` wraps a `<Label>` + children + optional error/hint/optional tag. Current callers include `UserCreateRow`, `CredentialIssueRow`, `CredentialSubmitRow`, and credential review modals.
 
-`CopyrightFooter` is the shared copyright strip rendered by `PublicLayout` at the bottom of public pages (and `AdaptiveLayout` when unauthenticated). It uses `font-sans` (DM Sans) for the copyright text — not `font-display` (reserved for headings) or `font-mono` (reserved for identifiers) — and renders the current year dynamically via `new Date().getFullYear()`. The footer background is `bg-transparent` (not `bg-surface`) so the page's `bg-base` shows through, eliminating the "white void" gap between short content and the footer when `bg-base` (#F8FAFC) and `bg-surface` (#FFFFFF) are nearly indistinguishable. Includes `safe-area-bottom` and `no-print` classes. The container that hosts it uses `min-h-dvh` (not `min-h-screen`) so the footer stays anchored to the bottom of the _visible_ viewport on mobile, where `100vh` over-counts due to browser chrome.
+`CopyrightFooter` is the shared copyright strip rendered by `PublicLayout` at the bottom of public pages (and `AdaptiveLayout` when unauthenticated). It uses `font-sans` (DM Sans) for the copyright text, not `font-display` (reserved for headings) or `font-mono` (reserved for identifiers), and renders the current year dynamically via `new Date().getFullYear()`. The footer background is `bg-transparent` (not `bg-surface`) so the page's `bg-base` shows through, eliminating the "white void" gap between short content and the footer when `bg-base` (#F8FAFC) and `bg-surface` (#FFFFFF) are nearly indistinguishable. Includes `safe-area-bottom` and `no-print` classes. `PublicLayout` hosts it in a `h-dvh overflow-y-scroll scrollbar-gutter-stable` flex column with a `flex-1` main slot. Navbar, content, and footer scroll together inside this dynamic-viewport container rather than the window.
 
-`LoadMoreBar` replaces `PaginationBar` for list pagination. Used in `CredentialList`, `UserList`, and `MyCredentials` with `useLoadMore` hook (cumulative offset-based pagination with count label + Load More button).
+`LoadMoreBar` replaces `PaginationBar` for list pagination. `CredentialList` and `UserList` use it with `useLoadMore` (cumulative offset-based pagination with count label + Load More button).
 
-`SearchableCreateSelect` (taxonomy picker) has two modes via `mode` prop: `create` (default) POSTs a new taxonomy row when the user picks the create row — Issuer+ only, since taxonomy writes are role-guarded; `propose` emits the typed name via `onProposeChange` / `onProposedNamesChange` instead, so a holder submitting a credential stages the name on the row and a reviewer resolves it later. Never wire `create` mode into a holder-facing form.
+`SearchableCreateSelect` supports `create` (default), `propose`, and `select` modes. `create` posts a new reference row; `propose` emits a typed name through callbacks; `select` chooses existing rows only. Current `CredentialSubmitRow` uses `select` for type, organization, and competencies rather than staging names. Never wire `create` mode into a holder-facing form.
 
 ### Error Handling Layers
 
@@ -441,7 +436,7 @@ Step-by-step checklist for adding a new domain feature (e.g., `feature/audit-log
 5. Add locale keys to BOTH `src/shared/i18n/en.json` and `id.json`. Run `npm run check-locales` to verify sync with backend.
 6. Add MSW handlers in `src/test/msw/handlers.ts` for the new endpoints.
 7. Wire the route in `src/app/router.tsx` using `lazyRoute(() => import("..."), "ExportName")`.
-8. Add nav entry to `OverviewSidebar.tsx` if user-facing. Filter by role using `NAV_ITEMS.minRole`.
+8. Add a nav entry to `src/shared/components/layout/nav-items.ts` if user-facing. Filter by role using `NAV_ITEMS.minRole`.
 9. Add Vitest tests:
    - Schema tests (deeply, all edge cases)
    - Component test using `TestProviders` wrapper
@@ -473,14 +468,14 @@ Documented in `DESIGN_SYSTEM.md` §22.2. These require Go-team agreement before 
 
 1. `/api/auth/google` must `Set-Cookie: access_token` and `refresh_token` (HttpOnly, Secure, SameSite=Strict).
 2. CORS: `Access-Control-Allow-Credentials: true` and explicit origin (not `*`).
-3. Validation error response shape: `{ code: 400001, errors: { fieldName: messageKey } }` — confirm field path format (dot-notation for nested? `users[0].email`?).
+3. Validation errors carry `{ code, errors: { fieldName: [localizedMessage] } }`; generic system validation uses `100040`, while endpoint-specific validation has its own code. Nested fields use dot paths such as `users.0.email`.
 4. `Retry-After` header on 429 responses (frontend reads it).
 5. Confirm `/api/users/self/email` accepts the same Google ID token format as login (audience claim handling).
 6. CSRF protection: with httpOnly cookies + `SameSite=Strict`, dedicated CSRF token may not be needed. Confirm with backend security review.
 
 ## Configuration / Env Vars
 
-See the **Required env vars** table under [Critical Commands](#critical-commands). All env vars must be prefixed with `VITE_` to be exposed to the browser. Reading `import.meta.env` directly is prohibited — always use the typed `env` export from `@shared/lib/env.ts`.
+See the **Environment variables** table under [Critical Commands](#critical-commands). All env vars must be prefixed with `VITE_` to be exposed to the browser. Reading `import.meta.env` directly is prohibited; always use the typed `env` export from `@shared/lib/env.ts`.
 
 ## Testing
 
@@ -491,9 +486,9 @@ See the **Required env vars** table under [Critical Commands](#critical-commands
 | Unit        | Vitest       | Pure functions: `cn`, `role`, `format`, `hash`, Zod schemas |
 | Component   | Vitest + RTL | Render, interactions, form validation                       |
 | Integration | Vitest + MSW | Feature flows with mocked `/api`                            |
-| E2E         | Playwright   | Auth flow, public routes, a11y smoke                        |
+| Browser regression | Playwright | Cross-tab refresh and logout ordering with mocked API |
 
-**Current count:** **1,407 unit/component tests across 122 spec files** under `src/`. The session regression spec `e2e/session-refresh.spec.ts` adds two standalone Chromium checks using the production client, native Web Locks, and mocked API responses: simultaneous cross-tab expiry plus reload, and logout ordering behind a pending refresh. Run with `npx playwright test e2e/session-refresh.spec.ts --project=chromium`; no OAuth recording is required. These are not live backend/cookie-database integration tests. Other role-based E2E specs require their recorded auth state.
+**Historical test count:** the 2026-11-09 change log records 1,407 unit/component tests across 122 files; this audit did not rerun or recount assertions. The session regression spec `e2e/session-refresh.spec.ts` adds two standalone Chromium checks using the production client, native Web Locks, and mocked API responses: simultaneous cross-tab expiry plus reload, and logout ordering behind a pending refresh. Run with `npx playwright test e2e/session-refresh.spec.ts --project=chromium`; no OAuth recording is required. These are not live backend/cookie-database integration tests. No role-based E2E specs or OAuth recording scripts are present in the current `e2e/` tree.
 
 
 **Coverage** (in `vitest.config.ts`): the `coverage` config uses a **selective `include` allowlist** (NOT global). Per-file thresholds of 90% lines / 85% branches / 90% functions / 90% statements apply only to the curated paths:
@@ -515,46 +510,13 @@ This is intentional: not all of the codebase is covered to threshold yet. Add ne
 
 **File API polyfill:** jsdom doesn't implement `File.prototype.arrayBuffer`. `setup.ts` polyfills it from `Blob.prototype.arrayBuffer`. The hash module uses `FileReader` for broad compatibility.
 
-**Playwright** runs against `localhost:5173` by default. Set `E2E_BASE_URL` for staging. Configures `chromium` and `mobile` (Pixel 5) projects. ~85 tests across 5 spec files (`guest-flow.spec.ts`, `holder-flow.spec.ts`, `issuer-flow.spec.ts`, `admin-flow.spec.ts`, `super-admin-flow.spec.ts`).
+**Playwright** defaults to `http://localhost:5173` and configures `chromium` and `mobile` (Pixel 5) projects. Set `E2E_BASE_URL` to change the target. Outside CI, Playwright starts `npm run dev` and can reuse an existing server. In CI, the server must already be available; the current CI workflow does not run Playwright.
 
-**E2E test setup — one-time auth recording:**
-
-Role-authenticated tests require `storageState` files. Record once per role via Google OAuth.
-
-**All roles (sequential):** launches a browser for each role. Complete Google OAuth to record, or close the browser window to skip:
+The only current spec is `e2e/session-refresh.spec.ts`. No `globalSetup`, recorded role states, `save-auth.ts`, or auth-refresh helper is configured. Historical plans describing those suites are not current setup instructions.
 
 ```bash
-npx tsx e2e/scripts/save-auth.ts
+npx playwright test e2e/session-refresh.spec.ts --project=chromium
 ```
-
-**Single role:** record one role only:
-
-```bash
-npx tsx e2e/scripts/save-auth.ts issuer
-```
-
-Files saved to `e2e/.auth/{role}.json` (gitignored). Guest-flow public page tests work without auth.
-
-**E2E auth auto-refresh:**
-
-The test suite includes automatic token refresh via `e2e/helpers/auth-refresh.ts`:
-
-- **`globalSetup`** (in `playwright.config.ts`) validates all 4 auth files exist at test start
-- **`test.beforeAll`** in each spec file calls `refreshAuthState(role)` to refresh the `access_token` via `POST /api/auth/refresh` before tests run. A lock-file mechanism serializes refreshes across parallel workers: each worker checks the file's `mtime` (60s cooldown) and an exclusive lock file (30s TTL) before attempting a refresh
-- On success: updated cookies are saved back to the `.auth/{role}.json` file
-- On failure (refresh token expired): a warning is logged; the auth file is preserved (tests may fail with stale tokens, but it's safer than deleting the file mid-run)
-- The `afterAll` in `issuer-flow.spec.ts` no longer manually extracts `access_token` from JSON — Playwright's `context.request` sends cookies from `storageState` automatically
-
-This means you no longer need to re-run `save-auth` when tokens expire. The refresh happens automatically before each test run.
-
-After recording all roles, run:
-
-```bash
-npx playwright test --project=chromium   # all ~85 tests
-npx playwright test e2e/guest-flow.spec.ts --project=chromium   # public-only (no auth needed)
-```
-
-Screenshots captured to `e2e/screenshots/{spec-file}/{feature-group}/`. Failure screenshots saved to `e2e/screenshots/{spec-file}/{test-slug}-failed-test.png`.
 
 When adding tests, prefer integration tests via MSW over heavy mocking. Schema tests should cover every required field, every max-length boundary, every enum value, and every regex format constraint.
 
@@ -579,8 +541,8 @@ When adding tests, prefer integration tests via MSW over heavy mocking. Schema t
 | Avatar        | @dicebear/core + @dicebear/identicon          | ^9.4                                                 |
 | Toasts        | sonner                                        | ^1.5 (via `notify` helper)                           |
 | Class merge   | clsx + tailwind-merge                         | ^2 / ^3 (via `cn()`)                                 |
-| Drawer        | vaul                                          | ^1.1 (used by `UserEditDrawer`; not for sidebar nav) |
-| Crypto        | ethers                                        | ^6.16                                                |
+| Drawer        | vaul                                          | ^1.1 (declared dependency; no current source usage) |
+| Crypto        | ethers                                        | ^6.16 (declared dependency; no current source imports) |
 | PDF           | pdfjs-dist                                    | ^5.6                                                 |
 | XLSX          | xlsx                                          | ^0.18                                                |
 | Git hooks     | husky + lint-staged                           | ^9 / ^15                                             |
@@ -589,11 +551,11 @@ When adding tests, prefer integration tests via MSW over heavy mocking. Schema t
 
 ## Cross-Repo Integration
 
-- **`../CredChain_Golang/AGENTS.md`** — sole HTTP backend. Frontend mirrors `domain.Code*` constants from `CredChain_Golang/domain/codes.go` into `@shared/api/codes.ts`. Locale files in `src/shared/i18n/{en,id}.json` are mirrored from `CredChain_Golang/locales/` and verified by `npm run check-locales`.
-- **`../CredChain_Solidity/AGENTS.md`** — frontend never talks to contracts directly. Role enum (`None/Holder/Issuer/Admin/SuperAdmin`) is mirrored from `CredentialAuthority.Role` via `@shared/auth/role.ts`.
-- **`../CredChain_Python/AGENTS.md`** — frontend never talks to the AI service directly. AI flows (OCR, similarity verdict) come through the Go API. Python owns response code category `50` — these codes propagate untouched and resolve to i18n keys via `CODE_TO_MESSAGE_KEY`.
+- **`../CredChain_Golang/AGENTS.md`**: sole HTTP backend. Maintain frontend response-code mappings alongside Go codes. The locale checker validates key presence with the exclusions above, not code parity or translated values.
+- **`../CredChain_Solidity/AGENTS.md`**: frontend never talks to contracts directly. React exposes four application roles as strings, without `None`.
+- **`../CredChain_Python/AGENTS.md`**: frontend never talks to the AI service directly. Go translates Python failures into backend errors; Python `50xxxx` values do not propagate untouched through verification.
 
-**Role enum (mirrored in all four repos):** `None(0) → Holder(1) → Issuer(2) → Admin(3) → SuperAdmin(4)`. Same enum in Solidity (`CredentialAuthority.Role`), Go (`domain.Role`), and React (`@shared/auth/role.ts`).
+**Role representations:** Solidity and Go chain use `None(0)`, `Holder(1)`, `Issuer(2)`, `Admin(3)`, `SuperAdmin(4)`. Go database roles and React expose the four named application roles as strings. Python defines no platform roles.
 
 **Response code format (mirrored in all four repos):** 6-digit `AABBCC`. Categories: `10` (system), `20` (auth), `30` (user), `40` (credential), `50` (AI service).
 
@@ -604,7 +566,7 @@ When adding tests, prefer integration tests via MSW over heavy mocking. Schema t
 3. `CredChain_Golang/locales/{en,id}.json` — message templates
 4. `CredChain_React/src/shared/api/codes.ts` + `src/shared/i18n/{en,id}.json` — mirror entries
 
-Run `npm run check-locales` from the React repo after step 4 to verify drift is resolved.
+Run `npm run check-locales` after step 4 for key-presence checks; review response-code mappings and translation values separately.
 
 ## Deployment
 
@@ -679,15 +641,15 @@ Before pushing, run the repo's canonical verification command and confirm it pas
 
 ## See Also
 
-- `DESIGN_SYSTEM.md` — full visual + engineering specification (87.9K)
+- `DESIGN_SYSTEM.md`: full visual + engineering specification
 - `README.md` — quickstart for human contributors
-- `package.json` — frozen tech-stack version pins + npm scripts
+- `package.json`: declared dependency ranges + npm scripts (resolved versions in package-lock.json)
 - `vite.config.ts` — proxy setup, manual chunks, ES2022 target
 - `vitest.config.ts` — jsdom env, coverage thresholds, setup files
 - `playwright.config.ts` — chromium + mobile projects
 - `eslint.config.js` / `prettier.config.js` — formatting + lint rules
 - `scripts/check-locales-sync.mjs` — locale drift verification
-- `../AGENTS.md` (workspace root, uncommitted) — multi-repo reference
+- `../AGENTS.md` (workspace root): multi-repo reference
 - `../CredChain_Golang/AGENTS.md` — backend contract reference
 - `../CredChain_Solidity/AGENTS.md` — smart contract reference
 - `../CredChain_Python/AGENTS.md` — AI service reference
